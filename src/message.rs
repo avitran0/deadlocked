@@ -27,7 +27,7 @@ impl Game {
 }
 
 #[derive(Clone, Debug)]
-pub enum AimbotMessage {
+pub enum Message {
     ConfigEnableAimbot(bool),
     ConfigHotkey(KeyCode),
     ConfigStartBullet(i32),

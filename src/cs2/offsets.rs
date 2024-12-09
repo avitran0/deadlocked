@@ -4,8 +4,6 @@ pub struct LibraryOffsets {
     pub engine: u64,
     pub tier0: u64,
     pub input: u64,
-    pub sdl: u64,
-    pub matchmaking: u64,
 }
 
 #[derive(Debug, Default)]
@@ -21,8 +19,6 @@ pub struct InterfaceOffsets {
 pub struct DirectOffsets {
     pub local_player: u64,
     pub button_state: u64,
-    pub view_matrix: u64,
-    pub sdl_window: u64,
 }
 
 #[derive(Debug, Default)]
@@ -58,7 +54,6 @@ pub struct PawnOffsets {
     pub shots_fired: u64,       // i32 (m_iShotsFired)
     pub view_angles: u64,       // Vec2 (v_angle)
     pub spotted_state: u64,     // SpottedState (m_entitySpottedState)
-    pub observer_services: u64, // Pointer -> ObserverServices (m_pObserverServices)
 }
 
 impl PawnOffsets {
@@ -75,7 +70,6 @@ impl PawnOffsets {
             && self.shots_fired != 0
             && self.view_angles != 0
             && self.spotted_state != 0
-            && self.observer_services != 0
     }
 }
 
@@ -105,17 +99,6 @@ impl SpottedStateOffsets {
 }
 
 #[derive(Debug, Default)]
-pub struct ObserverServiceOffsets {
-    pub target: u64, // pointer -> Pawn (m_hObserverTarget)
-}
-
-impl ObserverServiceOffsets {
-    pub fn all_found(&self) -> bool {
-        self.target != 0
-    }
-}
-
-#[derive(Debug, Default)]
 pub struct Offsets {
     pub library: LibraryOffsets,
     pub interface: InterfaceOffsets,
@@ -125,7 +108,6 @@ pub struct Offsets {
     pub pawn: PawnOffsets,
     pub game_scene_node: GameSceneNodeOffsets,
     pub spotted_state: SpottedStateOffsets,
-    pub observer_service: ObserverServiceOffsets,
 }
 
 impl Offsets {
@@ -134,6 +116,5 @@ impl Offsets {
             && self.pawn.all_found()
             && self.game_scene_node.all_found()
             && self.spotted_state.all_found()
-            && self.observer_service.all_found()
     }
 }

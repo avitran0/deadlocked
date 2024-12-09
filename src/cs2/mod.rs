@@ -372,8 +372,6 @@ impl CS2 {
         offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
         offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
         offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
-        offsets.library.sdl = process.module_base_address(Constants::SDL_LIB)?;
-        offsets.library.matchmaking = process.module_base_address(Constants::MATCHMAKING_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -397,19 +395,6 @@ impl CS2 {
         }
         offsets.interface.input = input_address?;
 
-        let view_matrix = process.scan_pattern(
-            &[
-                0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00,
-                0x48, 0x8D, 0x0D,
-            ],
-            "xxx????xxx????xxx".as_bytes(),
-            offsets.library.client,
-        );
-        if view_matrix.is_none() {
-            warn!("could not find view matrix offset");
-        }
-        offsets.direct.view_matrix = process.get_relative_address(view_matrix? + 0x07, 0x03, 0x07);
-
         // seems to be in .text section (executable instructions)
         let local_player = process.scan_pattern(
             &[
@@ -425,27 +410,6 @@ impl CS2 {
         offsets.direct.button_state = process
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
-
-        #[allow(unused)]
-        // todo: map name?
-        let game_types = process
-            .scan_pattern(
-                &[
-                    0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x0F, 0x1F, 0x84, 0x00, 0x00,
-                    0x00, 0x00, 0x00, 0x48, 0x8B, 0x07,
-                ],
-                "xxx????xxxx?????xxx".as_bytes(),
-                offsets.library.matchmaking,
-            )
-            .unwrap();
-
-        let sdl_window = process.get_module_export(offsets.library.sdl, "SDL_GetKeyboardFocus");
-        if sdl_window.is_none() {
-            warn!("could not find sdl window offset");
-        }
-        let sdl_window = process.get_relative_address(sdl_window?, 0x02, 0x06);
-        let sdl_window = process.read::<u64>(sdl_window);
-        offsets.direct.sdl_window = process.get_relative_address(sdl_window, 0x03, 0x07);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
@@ -588,12 +552,6 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
-                "m_pObserverServices" => {
-                    if offsets.pawn.observer_services != 0 {
-                        continue;
-                    }
-                    offsets.pawn.observer_services = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -627,13 +585,6 @@ impl CS2 {
                     }
                     offsets.spotted_state.mask =
                         read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
-                }
-                "m_hObserverTarget" => {
-                    if offsets.observer_service.target != 0 {
-                        continue;
-                    }
-                    offsets.observer_service.target =
-                        read_vec::<u32>(&client_dump, i + 0x08) as u64;
                 }
                 _ => {}
             }
@@ -781,31 +732,6 @@ impl CS2 {
 
     fn get_spotted_mask(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.spotted_state + self.offsets.spotted_state.mask)
-    }
-
-    #[allow(unused)]
-    fn get_spectator_target(&self, process: &Process, pawn: u64) -> Option<u64> {
-        let observer_services = process.read::<u64>(pawn + self.offsets.pawn.observer_services);
-        if observer_services == 0 {
-            return None;
-        }
-
-        let target =
-            process.read::<u32>(observer_services + self.offsets.observer_service.target) & 0x7fff;
-        if target == 0 {
-            return None;
-        }
-
-        let v2 = process.read::<u64>(self.offsets.interface.player + 8 * (target as u64 >> 9));
-        if v2 == 0 {
-            return None;
-        }
-
-        let entity = process.read(v2 + 120 * (target as u64 & 0x1ff));
-        if entity == 0 {
-            return None;
-        }
-        Some(entity)
     }
 
     fn is_pawn_valid(&self, process: &Process, pawn: u64) -> bool {

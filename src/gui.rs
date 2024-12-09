@@ -4,22 +4,22 @@ use strum::IntoEnumIterator;
 
 use crate::{
     color::Colors,
-    config::{parse_config, write_config, AimbotConfig, AimbotStatus, Config},
+    config::{parse_config, write_config, AimbotConfig, AimbotStatus, Config, VERSION},
     key_codes::KeyCode,
-    message::{AimbotMessage, Game},
+    message::{Game, Message},
     mouse::MouseStatus,
 };
 
 pub struct Gui {
-    tx_aimbot: mpsc::Sender<AimbotMessage>,
-    rx: mpsc::Receiver<AimbotMessage>,
+    tx_aimbot: mpsc::Sender<Message>,
+    rx: mpsc::Receiver<Message>,
     config: Config,
     status: AimbotStatus,
     mouse_status: MouseStatus,
 }
 
 impl Gui {
-    pub fn new(tx_aimbot: mpsc::Sender<AimbotMessage>, rx: mpsc::Receiver<AimbotMessage>) -> Self {
+    pub fn new(tx_aimbot: mpsc::Sender<Message>, rx: mpsc::Receiver<Message>) -> Self {
         // read config
         let config = parse_config();
         let status = AimbotStatus::GameNotStarted;
@@ -34,7 +34,7 @@ impl Gui {
         out
     }
 
-    fn send_message(&self, message: AimbotMessage) {
+    fn send_message(&self, message: Message) {
         self.tx_aimbot.send(message).unwrap();
     }
 
@@ -48,12 +48,12 @@ impl Gui {
 
         egui::Grid::new("aimbot")
             .num_columns(2)
-            .min_col_width(84.0)
+            .min_col_width(80.0)
             .show(ui, |ui| {
                 ui.label("Enable Aimbot")
                     .on_hover_text("general aimbot enable");
                 if ui.checkbox(&mut game_config.enabled, "").changed() {
-                    self.send_message(AimbotMessage::ConfigEnableAimbot(game_config.enabled));
+                    self.send_message(Message::ConfigEnableAimbot(game_config.enabled));
                     self.write_game_config(&game_config);
                 }
 
@@ -68,7 +68,7 @@ impl Gui {
                                 .selectable_value(&mut game_config.hotkey, key_code, text)
                                 .clicked()
                             {
-                                self.send_message(AimbotMessage::ConfigHotkey(game_config.hotkey));
+                                self.send_message(Message::ConfigHotkey(game_config.hotkey));
                                 self.write_game_config(&game_config);
                             }
                         }
@@ -78,17 +78,21 @@ impl Gui {
                 ui.label("Aim Lock")
                     .on_hover_text("whether the aim should lock onto the target");
                 if ui.checkbox(&mut game_config.aim_lock, "").changed() {
-                    self.send_message(AimbotMessage::ConfigAimLock(game_config.aim_lock));
+                    self.send_message(Message::ConfigAimLock(game_config.aim_lock));
                     self.write_game_config(&game_config);
                 }
 
                 ui.label("Start Bullet")
                     .on_hover_text("after how many bullets fired in a row the aimbot should start");
                 if ui
-                    .add(egui::Slider::new(&mut game_config.start_bullet, 0..=5))
+                    .add(
+                        egui::DragValue::new(&mut game_config.start_bullet)
+                            .range(0..=5)
+                            .speed(0.05),
+                    )
                     .changed()
                 {
-                    self.send_message(AimbotMessage::ConfigStartBullet(game_config.start_bullet));
+                    self.send_message(Message::ConfigStartBullet(game_config.start_bullet));
                     self.write_game_config(&game_config);
                 }
                 ui.end_row();
@@ -96,9 +100,7 @@ impl Gui {
                 ui.label("Visibility Check")
                     .on_hover_text("whether to check for player visibility");
                 if ui.checkbox(&mut game_config.visibility_check, "").changed() {
-                    self.send_message(AimbotMessage::ConfigVisibilityCheck(
-                        game_config.visibility_check,
-                    ));
+                    self.send_message(Message::ConfigVisibilityCheck(game_config.visibility_check));
                     self.write_game_config(&game_config);
                 }
 
@@ -106,13 +108,15 @@ impl Gui {
                     .on_hover_text("how much around the crosshair the aimbot should \"see\"");
                 if ui
                     .add(
-                        egui::Slider::new(&mut game_config.fov, 0.1..=10.0)
+                        egui::DragValue::new(&mut game_config.fov)
+                            .range(0.1..=10.0)
                             .suffix("°")
-                            .step_by(0.1),
+                            .speed(0.02)
+                            .max_decimals(1),
                     )
                     .changed()
                 {
-                    self.send_message(AimbotMessage::ConfigFOV(game_config.fov));
+                    self.send_message(Message::ConfigFOV(game_config.fov));
                     self.write_game_config(&game_config);
                 }
                 ui.end_row();
@@ -121,17 +125,22 @@ impl Gui {
                     "whether the aimbot should aim at all of the body, or just the head",
                 );
                 if ui.checkbox(&mut game_config.multibone, "").changed() {
-                    self.send_message(AimbotMessage::ConfigMultibone(game_config.multibone));
+                    self.send_message(Message::ConfigMultibone(game_config.multibone));
                     self.write_game_config(&game_config);
                 }
 
                 ui.label("Smooth")
                     .on_hover_text("how much the aimbot input should be smoothed, higher is more");
                 if ui
-                    .add(egui::Slider::new(&mut game_config.smooth, 1.0..=10.0))
+                    .add(
+                        egui::DragValue::new(&mut game_config.smooth)
+                            .range(1.0..=10.0)
+                            .speed(0.02)
+                            .max_decimals(1),
+                    )
                     .changed()
                 {
-                    self.send_message(AimbotMessage::ConfigSmooth(game_config.smooth));
+                    self.send_message(Message::ConfigSmooth(game_config.smooth));
                     self.write_game_config(&game_config);
                 }
                 ui.end_row();
@@ -140,7 +149,7 @@ impl Gui {
                     "whether recoil should be compensated when the aimbot is not active",
                 );
                 if ui.checkbox(&mut game_config.rcs, "").changed() {
-                    self.send_message(AimbotMessage::ConfigEnableRCS(game_config.rcs));
+                    self.send_message(Message::ConfigEnableRCS(game_config.rcs));
                     self.write_game_config(&game_config);
                 }
             });
@@ -199,8 +208,8 @@ impl eframe::App for Gui {
 
         while let Ok(message) = self.rx.try_recv() {
             match message {
-                AimbotMessage::Status(status) => self.status = status,
-                AimbotMessage::MouseStatus(status) => self.mouse_status = status,
+                Message::Status(status) => self.status = status,
+                Message::MouseStatus(status) => self.mouse_status = status,
                 _ => {}
             }
         }
@@ -223,7 +232,7 @@ impl eframe::App for Gui {
                                     )
                                     .clicked()
                                 {
-                                    self.send_message(AimbotMessage::ChangeGame(
+                                    self.send_message(Message::ChangeGame(
                                         self.config.current_game.clone(),
                                     ));
                                     write_config(&self.config);
@@ -249,14 +258,10 @@ impl eframe::App for Gui {
             self.aimbot_grid(ui);
         });
 
-        let version = format!(
-            "version: {}",
-            option_env!("CARGO_PKG_VERSION").unwrap_or("unknown")
-        );
         let font = egui::FontId::proportional(12.0);
         let text_size = ctx.fonts(|fonts| {
             fonts
-                .layout_no_wrap(version.clone(), font.clone(), Color32::WHITE)
+                .layout_no_wrap(String::from(VERSION), font.clone(), Color32::WHITE)
                 .size()
         });
 
@@ -265,7 +270,7 @@ impl eframe::App for Gui {
                 .align_size_within_rect(text_size, ctx.screen_rect().shrink(4.0))
                 .max,
             Align2::RIGHT_BOTTOM,
-            version,
+            VERSION,
             font,
             Colors::SUBTEXT,
         );

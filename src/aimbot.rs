@@ -11,7 +11,7 @@ use crate::{
 
 use crate::{
     config::{parse_config, AimbotStatus, LOOP_DURATION},
-    message::AimbotMessage,
+    message::Message,
     mouse::open_mouse,
 };
 
@@ -22,8 +22,8 @@ pub trait Aimbot: std::fmt::Debug {
 }
 
 pub struct AimbotManager {
-    tx: mpsc::Sender<AimbotMessage>,
-    rx: mpsc::Receiver<AimbotMessage>,
+    tx: mpsc::Sender<Message>,
+    rx: mpsc::Receiver<Message>,
     config: Config,
     mouse: File,
     mouse_status: MouseStatus,
@@ -31,7 +31,7 @@ pub struct AimbotManager {
 }
 
 impl AimbotManager {
-    pub fn new(tx_gui: mpsc::Sender<AimbotMessage>, rx: mpsc::Receiver<AimbotMessage>) -> Self {
+    pub fn new(tx_gui: mpsc::Sender<Message>, rx: mpsc::Receiver<Message>) -> Self {
         let (mouse, status) = open_mouse();
 
         let config = parse_config();
@@ -48,17 +48,17 @@ impl AimbotManager {
             aimbot,
         };
 
-        aimbot.send_message(AimbotMessage::MouseStatus(status));
+        aimbot.send_message(Message::MouseStatus(status));
 
         aimbot
     }
 
-    fn send_message(&mut self, message: AimbotMessage) {
+    fn send_message(&mut self, message: Message) {
         let _ = self.tx.send(message);
     }
 
     pub fn run(&mut self) {
-        self.send_message(AimbotMessage::Status(AimbotStatus::GameNotStarted));
+        self.send_message(Message::Status(AimbotStatus::GameNotStarted));
         let mut previous_status = AimbotStatus::GameNotStarted;
         loop {
             let start = Instant::now();
@@ -79,14 +79,14 @@ impl AimbotManager {
 
             if !self.aimbot.is_valid() {
                 if previous_status == AimbotStatus::Working {
-                    self.send_message(AimbotMessage::Status(AimbotStatus::GameNotStarted));
+                    self.send_message(Message::Status(AimbotStatus::GameNotStarted));
                     previous_status = AimbotStatus::GameNotStarted;
                 }
                 self.aimbot.setup();
             }
             if mouse_valid && self.aimbot.is_valid() {
                 if previous_status == AimbotStatus::GameNotStarted {
-                    self.send_message(AimbotMessage::Status(AimbotStatus::Working));
+                    self.send_message(Message::Status(AimbotStatus::Working));
                     previous_status = AimbotStatus::Working;
                 }
                 self.aimbot.run(&self.config, &mut self.mouse);
@@ -106,8 +106,8 @@ impl AimbotManager {
         }
     }
 
-    fn parse_message(&mut self, message: AimbotMessage) {
-        if let AimbotMessage::ChangeGame(game) = message {
+    fn parse_message(&mut self, message: Message) {
+        if let Message::ChangeGame(game) = message {
             self.config.current_game = game;
             return;
         }
@@ -117,24 +117,24 @@ impl AimbotManager {
             .get_mut(&self.config.current_game)
             .unwrap();
         match message {
-            AimbotMessage::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
-            AimbotMessage::ConfigHotkey(hotkey) => config.hotkey = hotkey,
-            AimbotMessage::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
-            AimbotMessage::ConfigAimLock(aim_lock) => config.aim_lock = aim_lock,
-            AimbotMessage::ConfigVisibilityCheck(visibility_check) => {
+            Message::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
+            Message::ConfigHotkey(hotkey) => config.hotkey = hotkey,
+            Message::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
+            Message::ConfigAimLock(aim_lock) => config.aim_lock = aim_lock,
+            Message::ConfigVisibilityCheck(visibility_check) => {
                 config.visibility_check = visibility_check
             }
-            AimbotMessage::ConfigFOV(fov) => config.fov = fov,
-            AimbotMessage::ConfigSmooth(smooth) => config.smooth = smooth,
-            AimbotMessage::ConfigMultibone(multibone) => config.multibone = multibone,
-            AimbotMessage::ConfigEnableRCS(rcs) => config.rcs = rcs,
+            Message::ConfigFOV(fov) => config.fov = fov,
+            Message::ConfigSmooth(smooth) => config.smooth = smooth,
+            Message::ConfigMultibone(multibone) => config.multibone = multibone,
+            Message::ConfigEnableRCS(rcs) => config.rcs = rcs,
             _ => {}
         }
     }
 
     fn find_mouse(&mut self) -> bool {
         let mut mouse_valid = false;
-        self.send_message(AimbotMessage::MouseStatus(MouseStatus::Disconnected));
+        self.send_message(Message::MouseStatus(MouseStatus::Disconnected));
         self.mouse_status = MouseStatus::Disconnected;
         let (mouse, status) = open_mouse();
         if let MouseStatus::Working(path) = &status {
@@ -142,7 +142,7 @@ impl AimbotManager {
                 mouse_valid = true;
             }
         }
-        self.send_message(AimbotMessage::MouseStatus(status.clone()));
+        self.send_message(Message::MouseStatus(status.clone()));
         self.mouse_status = status;
         self.mouse = mouse;
         mouse_valid

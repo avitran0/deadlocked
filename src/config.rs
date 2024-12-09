@@ -7,10 +7,11 @@ use crate::{key_codes::KeyCode, message::Game};
 
 pub const DEBUG_WITHOUT_MOUSE: bool = false;
 
-const REFRESH_RATE: u64 = 1000;
+const REFRESH_RATE: u64 = 100;
 pub const LOOP_DURATION: Duration = Duration::from_millis(1000 / REFRESH_RATE);
 pub const SLEEP_DURATION: Duration = Duration::from_secs(1);
 pub const CONFIG_FILE_NAME: &str = "config.toml";
+pub const VERSION: &str = concat!("version: ", env!("CARGO_PKG_VERSION"));
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub enum AimbotStatus {
