@@ -1,7 +1,7 @@
-use std::{collections::HashMap, fs::File};
+use std::fs::File;
 
 use bones::Bones;
-use glam::{IVec4, Mat4, Vec2, Vec3};
+use glam::{Vec2, Vec3};
 use log::warn;
 use strum::IntoEnumIterator;
 
@@ -12,12 +12,9 @@ use crate::{
     cs2::{offsets::Offsets, player::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_fov, vec2_clamp},
-    message::PlayerInfo,
     mouse::mouse_move,
-    proc::{
-        get_module_base_address, get_pid, open_process, read_string_vec, read_vec, validate_pid,
-    },
-    process_handle::ProcessHandle,
+    proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
+    process::Process,
     weapon_class::WeaponClass,
 };
 
@@ -28,7 +25,7 @@ mod player;
 #[derive(Debug)]
 pub struct CS2 {
     is_valid: bool,
-    process: Option<ProcessHandle>,
+    process: Option<Process>,
     offsets: Offsets,
     target: Target,
     pid: u64,
@@ -79,39 +76,6 @@ impl Aimbot for CS2 {
             mouse_move(mouse, coords);
         }
     }
-
-    fn get_player_info(&mut self) -> Vec<PlayerInfo> {
-        self.player_info()
-    }
-
-    fn get_view_matrix(&mut self) -> glam::Mat4 {
-        let process = match &self.process {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return Mat4::IDENTITY;
-            }
-        };
-
-        process.read(self.offsets.direct.view_matrix)
-    }
-
-    fn get_window_size(&mut self) -> IVec4 {
-        let process = match &self.process {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return IVec4::ZERO;
-            }
-        };
-
-        let sdl_window = process.read::<u64>(self.offsets.direct.sdl_window);
-        if sdl_window == 0 {
-            return IVec4::ZERO;
-        }
-
-        process.read::<IVec4>(sdl_window + 0x18)
-    }
 }
 
 impl CS2 {
@@ -128,83 +92,6 @@ impl CS2 {
         }
     }
 
-    fn player_info(&mut self) -> Vec<PlayerInfo> {
-        let process = match &self.process {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return vec![];
-            }
-        };
-
-        let local_controller = self.get_local_controller(process);
-        let local_pawn = match self.get_pawn(process, local_controller) {
-            Some(pawn) => {
-                let spectator_target = self.get_spectator_target(process, pawn);
-                if let Some(target) = spectator_target {
-                    target
-                } else {
-                    pawn
-                }
-            }
-            None => {
-                self.target = Target::default();
-                return vec![];
-            }
-        };
-
-        let team = self.get_team(process, local_pawn);
-        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
-            return vec![];
-        }
-
-        let mut pawns = Vec::with_capacity(64);
-        let mut local_pawn_index = 0;
-        for i in 1..=64 {
-            let controller = match self.get_client_entity(process, i) {
-                Some(controller) => controller,
-                None => continue,
-            };
-
-            let pawn = match self.get_pawn(process, controller) {
-                Some(pawn) => pawn,
-                None => continue,
-            };
-
-            if pawn == local_pawn {
-                local_pawn_index = i - 1;
-            }
-
-            pawns.push(pawn);
-        }
-
-        let mut players = vec![];
-        for pawn in pawns {
-            if self.get_team(process, pawn) == team {
-                continue;
-            }
-
-            if !self.is_pawn_valid(process, pawn) {
-                continue;
-            }
-
-            let info = PlayerInfo {
-                health: self.get_health(process, pawn),
-                armor: self.get_armor(process, pawn),
-                weapon: self.get_weapon_name(process, pawn).replace("weapon_", ""),
-                position: self.get_position(process, pawn),
-                head: self.get_bone_position(process, pawn, Bones::Head.u64()),
-                bones: self.get_bones(process, pawn),
-                visible: self.get_spotted_mask(process, self.target.pawn) & (1 << local_pawn_index)
-                    != 0,
-            };
-
-            players.push(info);
-        }
-
-        players
-    }
-
     fn rcs(&mut self, config: &Config) -> Option<Vec2> {
         let process = match &self.process {
             Some(process) => process,
@@ -214,7 +101,7 @@ impl CS2 {
             }
         };
         let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.aimbot.rcs {
+        if !config.rcs {
             return None;
         }
 
@@ -308,7 +195,7 @@ impl CS2 {
             return None;
         }
 
-        let aimbot_active = self.is_button_down(process, &config.aimbot.hotkey);
+        let aimbot_active = self.is_button_down(process, &config.hotkey);
         let view_angles = self.get_view_angles(process, local_pawn);
         let ffa = self.is_ffa(process);
         let shots_fired = self.get_shots_fired(process, local_pawn);
@@ -357,7 +244,7 @@ impl CS2 {
                 let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
                 let fov = angles_to_fov(view_angles, angle);
 
-                if fov > config.aimbot.fov {
+                if fov > config.fov {
                     continue;
                 }
 
@@ -372,11 +259,11 @@ impl CS2 {
             }
         }
 
-        if highest_priority > config.aimbot.fov && self.target.pawn == 0 {
+        if highest_priority > config.fov && self.target.pawn == 0 {
             return None;
         }
 
-        if config.aimbot.visibility_check {
+        if config.visibility_check {
             let spotted_mask = self.get_spotted_mask(process, self.target.pawn);
             if (spotted_mask & (1 << local_pawn_index)) == 0 {
                 return None;
@@ -384,7 +271,7 @@ impl CS2 {
         }
 
         // update target angle
-        if self.target.pawn != 0 && config.aimbot.multibone {
+        if self.target.pawn != 0 && config.multibone {
             let mut smallest_fov = 360.0;
             for bone in Bones::iter() {
                 let bone_position = self.get_bone_position(process, self.target.pawn, bone.u64());
@@ -411,7 +298,7 @@ impl CS2 {
             return None;
         }
 
-        if angles_to_fov(view_angles, self.target.angle) > config.aimbot.fov {
+        if angles_to_fov(view_angles, self.target.angle) > config.fov {
             return None;
         }
 
@@ -419,7 +306,7 @@ impl CS2 {
             return None;
         }
 
-        if shots_fired < config.aimbot.start_bullet {
+        if shots_fired < config.start_bullet {
             return None;
         }
 
@@ -435,12 +322,12 @@ impl CS2 {
         );
         let mut smooth_angles = Vec2::ZERO;
 
-        if !config.aimbot.aim_lock && config.aimbot.smooth >= 1.0 {
+        if !config.aim_lock && config.smooth >= 1.0 {
             smooth_angles.x = if xy.x.abs() > 1.0 {
                 if smooth_angles.x < xy.x {
-                    smooth_angles.x + 1.0 + (xy.x / config.aimbot.smooth)
+                    smooth_angles.x + 1.0 + (xy.x / config.smooth)
                 } else {
-                    smooth_angles.x - 1.0 + (xy.x / config.aimbot.smooth)
+                    smooth_angles.x - 1.0 + (xy.x / config.smooth)
                 }
             } else {
                 xy.x
@@ -448,9 +335,9 @@ impl CS2 {
 
             smooth_angles.y = if xy.y.abs() > 1.0 {
                 if smooth_angles.y < xy.y {
-                    smooth_angles.y + 1.0 + (xy.y / config.aimbot.smooth)
+                    smooth_angles.y + 1.0 + (xy.y / config.smooth)
                 } else {
-                    smooth_angles.y - 1.0 + (xy.y / config.aimbot.smooth)
+                    smooth_angles.y - 1.0 + (xy.y / config.smooth)
                 }
             } else {
                 xy.y
@@ -464,7 +351,7 @@ impl CS2 {
 
     fn get_target_angle(
         &self,
-        process: &ProcessHandle,
+        process: &Process,
         local_pawn: u64,
         position: Vec3,
         aim_punch: Vec2,
@@ -478,15 +365,15 @@ impl CS2 {
         angles
     }
 
-    fn find_offsets(&self, process: &ProcessHandle) -> Option<Offsets> {
+    fn find_offsets(&self, process: &Process) -> Option<Offsets> {
         let mut offsets = Offsets::default();
 
-        offsets.library.client = get_module_base_address(process, Constants::CLIENT_LIB)?;
-        offsets.library.engine = get_module_base_address(process, Constants::ENGINE_LIB)?;
-        offsets.library.tier0 = get_module_base_address(process, Constants::TIER0_LIB)?;
-        offsets.library.input = get_module_base_address(process, Constants::INPUT_LIB)?;
-        offsets.library.sdl = get_module_base_address(process, Constants::SDL_LIB)?;
-        offsets.library.matchmaking = get_module_base_address(process, Constants::MATCHMAKING_LIB)?;
+        offsets.library.client = process.module_base_address(Constants::CLIENT_LIB)?;
+        offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
+        offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
+        offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
+        offsets.library.sdl = process.module_base_address(Constants::SDL_LIB)?;
+        offsets.library.matchmaking = process.module_base_address(Constants::MATCHMAKING_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -759,11 +646,11 @@ impl CS2 {
         None
     }
 
-    fn get_local_controller(&self, process: &ProcessHandle) -> u64 {
+    fn get_local_controller(&self, process: &Process) -> u64 {
         process.read(self.offsets.direct.local_player)
     }
 
-    fn get_client_entity(&self, process: &ProcessHandle, index: u64) -> Option<u64> {
+    fn get_client_entity(&self, process: &Process, index: u64) -> Option<u64> {
         // wtf is this doing, and how?
         let v1 = process.read::<u64>(self.offsets.interface.entity + 0x08 * (index >> 9) + 0x10);
         if v1 == 0 {
@@ -777,7 +664,7 @@ impl CS2 {
         Some(entity)
     }
 
-    fn get_pawn(&self, process: &ProcessHandle, controller: u64) -> Option<u64> {
+    fn get_pawn(&self, process: &Process, controller: u64) -> Option<u64> {
         let v1 = process.read::<i32>(controller + self.offsets.controller.pawn);
         if v1 == -1 {
             return None;
@@ -799,7 +686,7 @@ impl CS2 {
     }
 
     #[allow(unused)]
-    fn get_player_name(&self, process: &ProcessHandle, controller: u64) -> String {
+    fn get_player_name(&self, process: &Process, controller: u64) -> String {
         let name_address = process.read::<u64>(controller + self.offsets.controller.name);
         if name_address == 0 {
             return String::from("?");
@@ -807,7 +694,7 @@ impl CS2 {
         process.read_string(name_address)
     }
 
-    fn get_health(&self, process: &ProcessHandle, pawn: u64) -> i32 {
+    fn get_health(&self, process: &Process, pawn: u64) -> i32 {
         let health = process.read(pawn + self.offsets.pawn.health);
         if !(0..=100).contains(&health) {
             return 0;
@@ -815,19 +702,20 @@ impl CS2 {
         health
     }
 
-    fn get_armor(&self, process: &ProcessHandle, pawn: u64) -> i32 {
+    #[allow(unused)]
+    fn get_armor(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.armor)
     }
 
-    fn get_team(&self, process: &ProcessHandle, pawn: u64) -> u8 {
+    fn get_team(&self, process: &Process, pawn: u64) -> u8 {
         process.read(pawn + self.offsets.pawn.team)
     }
 
-    fn get_life_state(&self, process: &ProcessHandle, pawn: u64) -> u8 {
+    fn get_life_state(&self, process: &Process, pawn: u64) -> u8 {
         process.read(pawn + self.offsets.pawn.life_state)
     }
 
-    fn get_weapon_name(&self, process: &ProcessHandle, pawn: u64) -> String {
+    fn get_weapon_name(&self, process: &Process, pawn: u64) -> String {
         // CEntityInstance
         let weapon_entity_instance = process.read::<u64>(pawn + self.offsets.pawn.weapon);
         if weapon_entity_instance == 0 {
@@ -846,32 +734,32 @@ impl CS2 {
         process.read_string(weapon_name_pointer)
     }
 
-    fn get_weapon_class(&self, process: &ProcessHandle, pawn: u64) -> WeaponClass {
+    fn get_weapon_class(&self, process: &Process, pawn: u64) -> WeaponClass {
         WeaponClass::from_string(&self.get_weapon_name(process, pawn))
     }
 
-    fn get_gs_node(&self, process: &ProcessHandle, pawn: u64) -> u64 {
+    fn get_gs_node(&self, process: &Process, pawn: u64) -> u64 {
         process.read(pawn + self.offsets.pawn.game_scene_node)
     }
 
-    fn is_dormant(&self, process: &ProcessHandle, pawn: u64) -> bool {
+    fn is_dormant(&self, process: &Process, pawn: u64) -> bool {
         let gs_node = self.get_gs_node(process, pawn);
         process.read::<u8>(gs_node + self.offsets.game_scene_node.dormant) != 0
     }
 
-    fn get_position(&self, process: &ProcessHandle, pawn: u64) -> Vec3 {
+    fn get_position(&self, process: &Process, pawn: u64) -> Vec3 {
         let gs_node = self.get_gs_node(process, pawn);
         process.read(gs_node + self.offsets.game_scene_node.origin)
     }
 
-    fn get_eye_position(&self, process: &ProcessHandle, pawn: u64) -> Vec3 {
+    fn get_eye_position(&self, process: &Process, pawn: u64) -> Vec3 {
         let position = self.get_position(process, pawn);
         let eye_offset = process.read::<Vec3>(pawn + self.offsets.pawn.eye_offset);
 
         position + eye_offset
     }
 
-    fn get_bone_position(&self, process: &ProcessHandle, pawn: u64, bone_index: u64) -> Vec3 {
+    fn get_bone_position(&self, process: &Process, pawn: u64, bone_index: u64) -> Vec3 {
         let gs_node = self.get_gs_node(process, pawn);
         let bone_data =
             process.read::<u64>(gs_node + self.offsets.game_scene_node.model_state + 0x80);
@@ -883,40 +771,20 @@ impl CS2 {
         process.read(bone_data + (bone_index * 32))
     }
 
-    fn get_shots_fired(&self, process: &ProcessHandle, pawn: u64) -> i32 {
+    fn get_shots_fired(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.shots_fired)
     }
 
-    fn get_fov_multiplier(&self, process: &ProcessHandle, pawn: u64) -> f32 {
+    fn get_fov_multiplier(&self, process: &Process, pawn: u64) -> f32 {
         process.read(pawn + self.offsets.pawn.fov_multiplier)
     }
 
-    fn get_spotted_mask(&self, process: &ProcessHandle, pawn: u64) -> i32 {
+    fn get_spotted_mask(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.spotted_state + self.offsets.spotted_state.mask)
     }
 
-    fn get_bones(&self, process: &ProcessHandle, pawn: u64) -> Vec<(Vec3, Vec3)> {
-        let mut bones = HashMap::new();
-
-        for bone in Bones::iter() {
-            let position = self.get_bone_position(process, pawn, bone.u64());
-            bones.insert(bone.u64(), position);
-        }
-
-        let mut connections = Vec::with_capacity(Bones::CONNECTIONS.len());
-
-        for connection in Bones::CONNECTIONS {
-            connections.push((
-                *bones.get(&connection.0.u64()).unwrap(),
-                *bones.get(&connection.1.u64()).unwrap(),
-            ));
-        }
-
-        connections
-    }
-
     #[allow(unused)]
-    fn get_spectator_target(&self, process: &ProcessHandle, pawn: u64) -> Option<u64> {
+    fn get_spectator_target(&self, process: &Process, pawn: u64) -> Option<u64> {
         let observer_services = process.read::<u64>(pawn + self.offsets.pawn.observer_services);
         if observer_services == 0 {
             return None;
@@ -940,7 +808,7 @@ impl CS2 {
         Some(entity)
     }
 
-    fn is_pawn_valid(&self, process: &ProcessHandle, pawn: u64) -> bool {
+    fn is_pawn_valid(&self, process: &Process, pawn: u64) -> bool {
         if self.is_dormant(process, pawn) {
             return false;
         }
@@ -956,11 +824,11 @@ impl CS2 {
         true
     }
 
-    fn get_view_angles(&self, process: &ProcessHandle, pawn: u64) -> Vec2 {
+    fn get_view_angles(&self, process: &Process, pawn: u64) -> Vec2 {
         process.read(pawn + self.offsets.pawn.view_angles)
     }
 
-    fn get_aim_punch(&self, process: &ProcessHandle, pawn: u64) -> Vec2 {
+    fn get_aim_punch(&self, process: &Process, pawn: u64) -> Vec2 {
         let length = process.read::<u64>(pawn + self.offsets.pawn.aim_punch_cache);
         if length < 1 {
             return Vec2::ZERO;
@@ -972,16 +840,16 @@ impl CS2 {
     }
 
     // convars
-    fn get_sensitivity(&self, process: &ProcessHandle) -> f32 {
+    fn get_sensitivity(&self, process: &Process) -> f32 {
         process.read(self.offsets.convar.sensitivity + 0x40)
     }
 
-    fn is_ffa(&self, process: &ProcessHandle) -> bool {
+    fn is_ffa(&self, process: &Process) -> bool {
         process.read::<u32>(self.offsets.convar.ffa + 0x40) == 1
     }
 
     // misc
-    fn is_button_down(&self, process: &ProcessHandle, button: &KeyCode) -> bool {
+    fn is_button_down(&self, process: &Process, button: &KeyCode) -> bool {
         // what the actual fuck is happening here?
         let value = process.read::<u32>(
             self.offsets.interface.input

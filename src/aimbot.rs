@@ -1,12 +1,11 @@
 use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
 
-use glam::{IVec4, Mat4};
 use log::warn;
 
 use crate::{
     config::{Config, DEBUG_WITHOUT_MOUSE, SLEEP_DURATION},
     cs2::CS2,
-    message::{Game, PlayerInfo, VisualsMessage},
+    message::Game,
     mouse::{mouse_valid, MouseStatus},
 };
 
@@ -20,28 +19,19 @@ pub trait Aimbot: std::fmt::Debug {
     fn is_valid(&self) -> bool;
     fn setup(&mut self);
     fn run(&mut self, config: &Config, mouse: &mut File);
-    fn get_player_info(&mut self) -> Vec<PlayerInfo>;
-    fn get_view_matrix(&mut self) -> Mat4;
-    fn get_window_size(&mut self) -> IVec4;
 }
 
 pub struct AimbotManager {
-    tx_gui: mpsc::Sender<AimbotMessage>,
-    tx_visuals: mpsc::Sender<VisualsMessage>,
+    tx: mpsc::Sender<AimbotMessage>,
     rx: mpsc::Receiver<AimbotMessage>,
     config: Config,
     mouse: File,
     mouse_status: MouseStatus,
     aimbot: Box<dyn Aimbot>,
-    should_quit: bool,
 }
 
 impl AimbotManager {
-    pub fn new(
-        tx_gui: mpsc::Sender<AimbotMessage>,
-        tx_visuals: mpsc::Sender<VisualsMessage>,
-        rx: mpsc::Receiver<AimbotMessage>,
-    ) -> Self {
+    pub fn new(tx_gui: mpsc::Sender<AimbotMessage>, rx: mpsc::Receiver<AimbotMessage>) -> Self {
         let (mouse, status) = open_mouse();
 
         let config = parse_config();
@@ -50,14 +40,12 @@ impl AimbotManager {
             Game::Deadlock => CS2::new(),
         });
         let mut aimbot = Self {
-            tx_gui,
-            tx_visuals,
+            tx: tx_gui,
             rx,
             config,
             mouse,
             mouse_status: status.clone(),
             aimbot,
-            should_quit: false,
         };
 
         aimbot.send_message(AimbotMessage::MouseStatus(status));
@@ -66,20 +54,13 @@ impl AimbotManager {
     }
 
     fn send_message(&mut self, message: AimbotMessage) {
-        let _ = self.tx_gui.send(message);
-    }
-
-    fn send_visuals_message(&mut self, message: VisualsMessage) {
-        let _ = self.tx_visuals.send(message);
+        let _ = self.tx.send(message);
     }
 
     pub fn run(&mut self) {
         self.send_message(AimbotMessage::Status(AimbotStatus::GameNotStarted));
         let mut previous_status = AimbotStatus::GameNotStarted;
         loop {
-            if self.should_quit {
-                break;
-            }
             let start = Instant::now();
             while let Ok(message) = self.rx.try_recv() {
                 self.parse_message(message);
@@ -109,12 +90,6 @@ impl AimbotManager {
                     previous_status = AimbotStatus::Working;
                 }
                 self.aimbot.run(&self.config, &mut self.mouse);
-                let players = self.aimbot.get_player_info();
-                self.send_visuals_message(VisualsMessage::PlayerInfo(players));
-                let view_matrix = self.aimbot.get_view_matrix();
-                self.send_visuals_message(VisualsMessage::ViewMatrix(view_matrix));
-                let window_info = self.aimbot.get_window_size();
-                self.send_visuals_message(VisualsMessage::WindowSize(window_info));
             }
 
             if self.aimbot.is_valid() && mouse_valid {
@@ -142,20 +117,17 @@ impl AimbotManager {
             .get_mut(&self.config.current_game)
             .unwrap();
         match message {
-            AimbotMessage::ConfigEnableAimbot(aimbot) => config.aimbot.enabled = aimbot,
-            AimbotMessage::ConfigHotkey(hotkey) => config.aimbot.hotkey = hotkey,
-            AimbotMessage::ConfigStartBullet(start_bullet) => {
-                config.aimbot.start_bullet = start_bullet
-            }
-            AimbotMessage::ConfigAimLock(aim_lock) => config.aimbot.aim_lock = aim_lock,
+            AimbotMessage::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
+            AimbotMessage::ConfigHotkey(hotkey) => config.hotkey = hotkey,
+            AimbotMessage::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
+            AimbotMessage::ConfigAimLock(aim_lock) => config.aim_lock = aim_lock,
             AimbotMessage::ConfigVisibilityCheck(visibility_check) => {
-                config.aimbot.visibility_check = visibility_check
+                config.visibility_check = visibility_check
             }
-            AimbotMessage::ConfigFOV(fov) => config.aimbot.fov = fov,
-            AimbotMessage::ConfigSmooth(smooth) => config.aimbot.smooth = smooth,
-            AimbotMessage::ConfigMultibone(multibone) => config.aimbot.multibone = multibone,
-            AimbotMessage::ConfigEnableRCS(rcs) => config.aimbot.rcs = rcs,
-            AimbotMessage::Quit => self.should_quit = true,
+            AimbotMessage::ConfigFOV(fov) => config.fov = fov,
+            AimbotMessage::ConfigSmooth(smooth) => config.smooth = smooth,
+            AimbotMessage::ConfigMultibone(multibone) => config.multibone = multibone,
+            AimbotMessage::ConfigEnableRCS(rcs) => config.rcs = rcs,
             _ => {}
         }
     }

@@ -1,13 +1,7 @@
-use glam::{IVec4, Mat4, Vec3};
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
-use crate::{
-    color::Color,
-    config::{AimbotStatus, VisualsConfig},
-    key_codes::KeyCode,
-    mouse::MouseStatus,
-};
+use crate::{config::AimbotStatus, key_codes::KeyCode, mouse::MouseStatus};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, EnumIter)]
 pub enum Game {
@@ -46,47 +40,4 @@ pub enum AimbotMessage {
     Status(AimbotStatus),
     ChangeGame(Game),
     MouseStatus(MouseStatus),
-    Quit,
-}
-
-#[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq, EnumIter)]
-pub enum DrawStyle {
-    #[default]
-    None,
-    Color,
-    Health,
-}
-
-#[derive(Clone, Debug)]
-pub enum VisualsMessage {
-    PlayerInfo(Vec<PlayerInfo>),
-    ViewMatrix(Mat4),
-    WindowSize(IVec4),
-    EnableVisuals(bool),
-    DrawBox(DrawStyle),
-    BoxColor(Color),
-    DrawSkeleton(DrawStyle),
-    SkeletonColor(Color),
-    DrawHealth(bool),
-    DrawArmor(bool),
-    ArmorColor(Color),
-    DrawWeapon(bool),
-    VisibilityCheck(bool),
-
-    VisualsFps(u64),
-    DebugWindow(bool),
-    Config(VisualsConfig),
-    Quit,
-}
-
-#[allow(unused)]
-#[derive(Clone, Debug, Default)]
-pub struct PlayerInfo {
-    pub health: i32,
-    pub armor: i32,
-    pub weapon: String,
-    pub position: Vec3,
-    pub head: Vec3,
-    pub bones: Vec<(Vec3, Vec3)>,
-    pub visible: bool,
 }

@@ -1,20 +1,20 @@
-use std::{fs::File, os::unix::fs::FileExt};
+use std::{
+    fs::File,
+    io::{BufRead, BufReader},
+    os::unix::fs::FileExt,
+};
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::{
-    constants::Constants,
-    cs2::offsets::InterfaceOffsets,
-    proc::{check_elf_header, read_vec},
-};
+use crate::{constants::Constants, cs2::offsets::InterfaceOffsets, proc::read_vec};
 
 #[derive(Debug)]
-pub struct ProcessHandle {
+pub struct Process {
     pub pid: u64,
     pub memory: File,
 }
 
-impl ProcessHandle {
+impl Process {
     pub fn new(pid: u64, memory: File) -> Self {
         Self { pid, memory }
     }
@@ -45,6 +45,22 @@ impl ProcessHandle {
         let mut buffer = vec![0u8; count as usize];
         self.memory.read_at(&mut buffer, address).unwrap_or(0);
         buffer
+    }
+
+    pub fn module_base_address(&self, module_name: &str) -> Option<u64> {
+        let maps = File::open(format!("/proc/{}/maps", self.pid)).unwrap();
+        for line in BufReader::new(maps).lines() {
+            if line.is_err() {
+                continue;
+            }
+            let line = line.unwrap();
+            if !line.contains(module_name) {
+                continue;
+            }
+            let (address, _) = line.split_once('-').unwrap();
+            return Some(u64::from_str_radix(address, 16).unwrap());
+        }
+        None
     }
 
     pub fn dump_module(&self, address: u64) -> Vec<u8> {
@@ -116,11 +132,6 @@ impl ProcessHandle {
     }
 
     pub fn get_module_export(&self, base_address: u64, export_name: &str) -> Option<u64> {
-        let module = self.dump_module(base_address);
-        if !check_elf_header(module) {
-            return None;
-        }
-
         let add = 0x18;
         let length = 0x08;
 

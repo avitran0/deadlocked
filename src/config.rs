@@ -1,18 +1,13 @@
 use std::{collections::HashMap, fs::read_to_string, time::Duration};
 
-use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
-use crate::{
-    color::Color,
-    key_codes::KeyCode,
-    message::{DrawStyle, Game},
-};
+use crate::{key_codes::KeyCode, message::Game};
 
 pub const DEBUG_WITHOUT_MOUSE: bool = false;
 
-const REFRESH_RATE: u64 = 100;
+const REFRESH_RATE: u64 = 1000;
 pub const LOOP_DURATION: Duration = Duration::from_millis(1000 / REFRESH_RATE);
 pub const SLEEP_DURATION: Duration = Duration::from_secs(1);
 pub const CONFIG_FILE_NAME: &str = "config.toml";
@@ -62,49 +57,8 @@ impl Default for AimbotConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VisualsConfig {
-    pub enabled: bool,
-    pub draw_box: DrawStyle,
-    pub box_color: Color,
-    pub draw_skeleton: DrawStyle,
-    pub skeleton_color: Color,
-    pub draw_health: bool,
-    pub draw_armor: bool,
-    pub armor_color: Color,
-    pub draw_weapon: bool,
-    pub visibility_check: bool,
-    pub fps: u64,
-    pub debug_window: bool,
-}
-
-impl Default for VisualsConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            draw_box: DrawStyle::Color,
-            box_color: Color::from_egui_color(Color32::WHITE),
-            draw_skeleton: DrawStyle::Health,
-            skeleton_color: Color::from_egui_color(Color32::WHITE),
-            draw_health: true,
-            draw_armor: true,
-            armor_color: Color::from_egui_color(Color32::BLUE),
-            draw_weapon: false,
-            visibility_check: false,
-            fps: 120,
-            debug_window: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct GameConfig {
-    pub aimbot: AimbotConfig,
-    pub visuals: VisualsConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
-    pub games: HashMap<Game, GameConfig>,
+    pub games: HashMap<Game, AimbotConfig>,
     pub current_game: Game,
 }
 
@@ -112,7 +66,7 @@ impl Default for Config {
     fn default() -> Self {
         let mut games = HashMap::new();
         for game in Game::iter() {
-            games.insert(game, GameConfig::default());
+            games.insert(game, AimbotConfig::default());
         }
         Self {
             games,

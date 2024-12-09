@@ -2,7 +2,6 @@ use std::{io::Write, sync::mpsc, thread};
 
 use color::Colors;
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
-use visuals::visuals;
 
 mod aimbot;
 mod color;
@@ -10,14 +9,12 @@ mod config;
 mod constants;
 mod cs2;
 mod gui;
-mod icons;
 mod key_codes;
 mod math;
 mod message;
 mod mouse;
 mod proc;
-mod process_handle;
-mod visuals;
+mod process;
 mod weapon_class;
 
 #[cfg(not(target_os = "linux"))]
@@ -39,28 +36,22 @@ fn main() {
         std::process::exit(0);
     }
 
-    let (tx_aimbot_to_gui, rx_gui) = mpsc::channel();
-    let (tx_gui_to_aimbot, rx_aimbot) = mpsc::channel();
-    let (tx_aimbot_to_visuals, rx_visuals) = mpsc::channel();
-    let tx_gui_to_visuals = tx_aimbot_to_visuals.clone();
+    let (tx_aimbot, rx_gui) = mpsc::channel();
+    let (tx_gui, rx_aimbot) = mpsc::channel();
 
     thread::Builder::new()
         .name(String::from("deadlocked"))
         .spawn(move || {
-            aimbot::AimbotManager::new(tx_aimbot_to_gui, tx_aimbot_to_visuals, rx_aimbot).run();
+            aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
         })
         .unwrap();
 
-    thread::Builder::new()
-        .name(String::from("deadlocked"))
-        .spawn(move || {
-            visuals(rx_visuals);
-        })
-        .unwrap();
-
+    let window_size = [650.0, 350.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_maximize_button(false),
+            .with_maximize_button(false)
+            .with_inner_size(window_size)
+            .with_resizable(false),
         ..Default::default()
     };
     eframe::run_native(
@@ -69,27 +60,23 @@ fn main() {
         Box::new(|cc| {
             cc.egui_ctx.set_pixels_per_point(1.5);
 
-            let font = include_bytes!("../resources/fonts/Nunito.ttf");
+            let font = include_bytes!("../resources/Nunito.ttf");
             let mut font_definitions = FontDefinitions::default();
             font_definitions
                 .font_data
-                .insert(String::from("inter"), FontData::from_static(font));
+                .insert(String::from("nunito"), FontData::from_static(font));
 
             font_definitions
                 .families
                 .get_mut(&egui::FontFamily::Proportional)
                 .unwrap()
-                .insert(0, String::from("inter"));
+                .insert(0, String::from("nunito"));
 
             cc.egui_ctx.set_fonts(font_definitions);
 
             cc.egui_ctx.style_mut_of(egui::Theme::Dark, gui_style);
 
-            Ok(Box::new(gui::Gui::new(
-                tx_gui_to_aimbot,
-                tx_gui_to_visuals,
-                rx_gui,
-            )))
+            Ok(Box::new(gui::Gui::new(tx_gui, rx_gui)))
         }),
     )
     .unwrap();
