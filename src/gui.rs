@@ -1,4 +1,4 @@
-use eframe::egui::{self, Align, Align2, Color32, Layout, Ui};
+use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui};
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 
@@ -16,6 +16,8 @@ pub struct Gui {
     config: Config,
     status: AimbotStatus,
     mouse_status: MouseStatus,
+    frame_times: Vec<f64>,
+    average_frame_time: f64,
 }
 
 impl Gui {
@@ -29,6 +31,8 @@ impl Gui {
             config,
             status,
             mouse_status: MouseStatus::NoMouseFound,
+            frame_times: Vec::with_capacity(50),
+            average_frame_time: 0.0,
         };
         write_config(&out.config);
         out
@@ -87,7 +91,7 @@ impl Gui {
                 if ui
                     .add(
                         egui::DragValue::new(&mut game_config.start_bullet)
-                            .range(0..=5)
+                            .range(0..=10)
                             .speed(0.05),
                     )
                     .changed()
@@ -109,7 +113,7 @@ impl Gui {
                 if ui
                     .add(
                         egui::DragValue::new(&mut game_config.fov)
-                            .range(0.1..=10.0)
+                            .range(0.1..=360.0)
                             .suffix("°")
                             .speed(0.02)
                             .max_decimals(1),
@@ -210,6 +214,14 @@ impl eframe::App for Gui {
             match message {
                 Message::Status(status) => self.status = status,
                 Message::MouseStatus(status) => self.mouse_status = status,
+                Message::FrameTime(time) => {
+                    self.frame_times.push(time);
+                    if self.frame_times.len() >= self.frame_times.capacity() {
+                        self.average_frame_time = self.frame_times.iter().sum::<f64>()
+                            / self.frame_times.capacity() as f64;
+                        self.frame_times.clear();
+                    }
+                }
                 _ => {}
             }
         }
@@ -271,6 +283,15 @@ impl eframe::App for Gui {
                 .max,
             Align2::RIGHT_BOTTOM,
             VERSION,
+            font.clone(),
+            Colors::SUBTEXT,
+        );
+
+        let frame_time = format!("{} us", self.average_frame_time);
+        ctx.layer_painter(egui::LayerId::background()).text(
+            ctx.screen_rect().left_bottom() + vec2(4.0, -4.0),
+            Align2::LEFT_BOTTOM,
+            frame_time,
             font,
             Colors::SUBTEXT,
         );

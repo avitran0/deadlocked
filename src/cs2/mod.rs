@@ -1,6 +1,7 @@
 use std::fs::File;
 
 use bones::Bones;
+use constants::Constants;
 use glam::{Vec2, Vec3};
 use log::warn;
 use strum::IntoEnumIterator;
@@ -8,7 +9,6 @@ use strum::IntoEnumIterator;
 use crate::{
     aimbot::Aimbot,
     config::Config,
-    constants::Constants,
     cs2::{offsets::Offsets, player::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_fov, vec2_clamp},
@@ -19,6 +19,7 @@ use crate::{
 };
 
 mod bones;
+mod constants;
 pub mod offsets;
 mod player;
 

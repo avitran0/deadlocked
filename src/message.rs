@@ -40,4 +40,5 @@ pub enum Message {
     Status(AimbotStatus),
     ChangeGame(Game),
     MouseStatus(MouseStatus),
+    FrameTime(f64),
 }
