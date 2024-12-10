@@ -39,7 +39,7 @@ impl Gui {
     }
 
     fn send_message(&self, message: Message) {
-        self.tx_aimbot.send(message).unwrap();
+        self.tx_aimbot.send(message).expect("aimbot thread died");
     }
 
     fn aimbot_grid(&mut self, ui: &mut Ui) {

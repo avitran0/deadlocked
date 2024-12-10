@@ -43,7 +43,7 @@ fn main() {
         .spawn(move || {
             aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
         })
-        .unwrap();
+        .expect("could not create aimbot thread");
 
     let window_size = [600.0, 350.0];
     let options = eframe::NativeOptions {

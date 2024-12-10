@@ -77,15 +77,14 @@ impl Default for Config {
 }
 
 fn get_config_path() -> String {
-    format!(
-        "{}/{}",
+    String::from(
         std::env::current_exe()
             .unwrap()
             .parent()
             .unwrap()
+            .join(CONFIG_FILE_NAME)
             .to_str()
             .unwrap(),
-        CONFIG_FILE_NAME
     )
 }
 
@@ -96,12 +95,12 @@ pub fn parse_config() -> Config {
         return Config::default();
     }
 
-    let config_string = read_to_string(get_config_path()).unwrap();
+    let config_string = read_to_string(get_config_path()).expect("could not read config file");
 
     toml::from_str(config_string.as_str()).unwrap_or_default()
 }
 
 pub fn write_config(config: &Config) {
-    let out = toml::to_string(&config).unwrap();
-    std::fs::write(get_config_path(), out).unwrap();
+    let out = toml::to_string(&config).expect("could not write config file");
+    std::fs::write(get_config_path(), out).expect("could not write config file");
 }
