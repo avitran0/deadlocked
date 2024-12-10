@@ -5,8 +5,10 @@ use strum::EnumIter;
 #[derive(Debug, Clone, Copy, EnumIter)]
 pub enum Bones {
     Pelvis = 0,
-    Spine1 = 2,
-    Spine2 = 4,
+    Spine1 = 1,
+    Spine2 = 2,
+    Spine3 = 3,
+    Spine4 = 4,
     Neck = 5,
     Head = 6,
     LeftShoulder = 8,
@@ -28,10 +30,12 @@ impl Bones {
         self as u64
     }
 
-    pub const CONNECTIONS: [(Bones, Bones); 16] = [
+    pub const CONNECTIONS: [(Bones, Bones); 18] = [
         (Bones::Pelvis, Bones::Spine1),
         (Bones::Spine1, Bones::Spine2),
-        (Bones::Spine2, Bones::Neck),
+        (Bones::Spine2, Bones::Spine3),
+        (Bones::Spine3, Bones::Spine4),
+        (Bones::Spine4, Bones::Neck),
         (Bones::Neck, Bones::Head),
         (Bones::Neck, Bones::LeftShoulder),
         (Bones::LeftShoulder, Bones::LeftElbow),

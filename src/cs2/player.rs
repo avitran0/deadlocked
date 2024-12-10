@@ -6,3 +6,9 @@ pub struct Target {
     pub angle: Vec2,
     pub bone_index: u64,
 }
+
+impl Target {
+    pub fn reset(&mut self) {
+        *self = Target::default();
+    }
+}
