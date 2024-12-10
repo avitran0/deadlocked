@@ -9,19 +9,19 @@ use strum::IntoEnumIterator;
 use crate::{
     aimbot::Aimbot,
     config::Config,
-    cs2::{offsets::Offsets, player::Target},
+    cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_fov, vec2_clamp},
     mouse::mouse_move,
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
-    weapon_class::WeaponClass,
 };
 
 mod bones;
 mod constants;
 pub mod offsets;
 mod player;
+mod weapon_class;
 
 #[derive(Debug)]
 pub struct CS2 {

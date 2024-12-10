@@ -15,7 +15,6 @@ mod message;
 mod mouse;
 mod proc;
 mod process;
-mod weapon_class;
 
 #[cfg(not(target_os = "linux"))]
 compile_error!("only linux is supported.");
