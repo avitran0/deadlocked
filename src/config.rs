@@ -5,8 +5,6 @@ use strum::IntoEnumIterator;
 
 use crate::{key_codes::KeyCode, message::Game};
 
-pub const DEBUG_WITHOUT_MOUSE: bool = false;
-
 const REFRESH_RATE: u64 = 100;
 pub const LOOP_DURATION: Duration = Duration::from_millis(1000 / REFRESH_RATE);
 pub const SLEEP_DURATION: Duration = Duration::from_secs(1);
@@ -52,7 +50,7 @@ impl Default for AimbotConfig {
             fov: 2.5,
             smooth: 5.0,
             multibone: true,
-            rcs: false,
+            rcs: true,
         }
     }
 }

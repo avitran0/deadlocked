@@ -21,7 +21,7 @@ compile_error!("only linux is supported.");
 
 fn main() {
     env_logger::builder()
-        .format(|buf, record| writeln!(buf, "{}: {}", record.level(), record.args()))
+        .format(|buf, record| writeln!(buf, "{} {}", record.level(), record.args()))
         .filter_level(log::LevelFilter::Error)
         .init();
 

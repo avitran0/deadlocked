@@ -3,7 +3,7 @@ use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
 use log::warn;
 
 use crate::{
-    config::{Config, DEBUG_WITHOUT_MOUSE, SLEEP_DURATION},
+    config::{Config, SLEEP_DURATION},
     cs2::CS2,
     message::Game,
     mouse::{mouse_valid, MouseStatus},
@@ -70,12 +70,6 @@ impl AimbotManager {
             if !mouse_valid || self.mouse_status == MouseStatus::NoMouseFound {
                 mouse_valid = self.find_mouse();
             }
-            // todo: refactor to an if let chain when that is stabilized
-            if let MouseStatus::Working(path) = &self.mouse_status {
-                if path == "/dev/null" && !DEBUG_WITHOUT_MOUSE {
-                    mouse_valid = self.find_mouse();
-                }
-            }
 
             if !self.aimbot.is_valid() {
                 if previous_status == AimbotStatus::Working {
@@ -84,6 +78,7 @@ impl AimbotManager {
                 }
                 self.aimbot.setup();
             }
+            
             if mouse_valid && self.aimbot.is_valid() {
                 if previous_status == AimbotStatus::GameNotStarted {
                     self.send_message(Message::Status(AimbotStatus::Working));
