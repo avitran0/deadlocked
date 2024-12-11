@@ -679,15 +679,6 @@ impl CS2 {
         Some(entity)
     }
 
-    #[allow(unused)]
-    fn get_player_name(&self, process: &Process, controller: u64) -> String {
-        let name_address = process.read::<u64>(controller + self.offsets.controller.name);
-        if name_address == 0 {
-            return String::from("?");
-        }
-        process.read_string(name_address)
-    }
-
     fn get_health(&self, process: &Process, pawn: u64) -> i32 {
         let health = process.read(pawn + self.offsets.pawn.health);
         if !(0..=100).contains(&health) {

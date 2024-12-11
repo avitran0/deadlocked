@@ -10,14 +10,6 @@ pub enum Game {
 }
 
 impl Game {
-    #[allow(unused)]
-    pub fn lower_string(&self) -> &str {
-        match self {
-            Game::CS2 => "cs2",
-            Game::Deadlock => "deadlock",
-        }
-    }
-
     pub fn string(&self) -> &str {
         match self {
             Game::CS2 => "CS2",

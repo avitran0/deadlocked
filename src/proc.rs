@@ -37,7 +37,7 @@ pub fn get_pid(process_name: &str) -> Option<u64> {
 }
 
 pub fn validate_pid(pid: u64) -> bool {
-    return Path::new(format!("/proc/{}", pid).as_str()).exists();
+    Path::new(&format!("/proc/{}", pid)).exists()
 }
 
 pub fn open_process(pid: u64) -> Option<Process> {

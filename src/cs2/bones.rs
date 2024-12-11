@@ -1,5 +1,4 @@
 #![allow(unused)]
-
 use strum::EnumIter;
 
 #[derive(Debug, Clone, Copy, EnumIter)]
