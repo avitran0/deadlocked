@@ -1,6 +1,6 @@
 use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
 
-use log::warn;
+use log::{info, warn};
 
 use crate::{
     config::{Config, SLEEP_DURATION},
@@ -78,7 +78,7 @@ impl AimbotManager {
                 }
                 self.aimbot.setup();
             }
-            
+
             if mouse_valid && self.aimbot.is_valid() {
                 if previous_status == AimbotStatus::GameNotStarted {
                     self.send_message(Message::Status(AimbotStatus::Working));
@@ -131,12 +131,12 @@ impl AimbotManager {
     fn find_mouse(&mut self) -> bool {
         let mut mouse_valid = false;
         self.send_message(Message::MouseStatus(MouseStatus::Disconnected));
+        info!("mouse disconnected");
         self.mouse_status = MouseStatus::Disconnected;
         let (mouse, status) = open_mouse();
-        if let MouseStatus::Working(path) = &status {
-            if path != "/dev/null" {
-                mouse_valid = true;
-            }
+        if let MouseStatus::Working(_) = status {
+            info!("mouse reconnected");
+            mouse_valid = true;
         }
         self.send_message(Message::MouseStatus(status.clone()));
         self.mouse_status = status;

@@ -3,7 +3,7 @@ use std::fs::File;
 use bones::Bones;
 use constants::Constants;
 use glam::{Vec2, Vec3};
-use log::warn;
+use log::{info, warn};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -29,7 +29,6 @@ pub struct CS2 {
     process: Option<Process>,
     offsets: Offsets,
     target: Target,
-    pid: u64,
 
     pawns: Vec<u64>,
     local_pawn_index: u64,
@@ -39,11 +38,14 @@ pub struct CS2 {
 
 impl Aimbot for CS2 {
     fn is_valid(&self) -> bool {
-        self.is_valid && validate_pid(self.pid)
+        if let Some(process) = &self.process {
+            return self.is_valid && validate_pid(process.pid);
+        }
+        false
     }
 
     fn setup(&mut self) {
-        self.pid = match get_pid(Constants::PROCESS_NAME) {
+        let pid = match get_pid(Constants::PROCESS_NAME) {
             Some(pid) => pid,
             None => {
                 self.is_valid = false;
@@ -51,13 +53,14 @@ impl Aimbot for CS2 {
             }
         };
 
-        let process = match open_process(self.pid) {
+        let process = match open_process(pid) {
             Some(process) => process,
             None => {
                 self.is_valid = false;
                 return;
             }
         };
+        info!("game started, pid: {}", pid);
 
         self.offsets = match self.find_offsets(&process) {
             Some(offsets) => offsets,
@@ -66,6 +69,7 @@ impl Aimbot for CS2 {
                 return;
             }
         };
+        info!("offsets found");
 
         self.process = Some(process);
         self.is_valid = true;
@@ -88,7 +92,6 @@ impl CS2 {
             process: None,
             offsets: Offsets::default(),
             target: Target::default(),
-            pid: 0,
 
             pawns: Vec::with_capacity(64),
             local_pawn_index: 0,
