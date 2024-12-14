@@ -4,7 +4,7 @@ version = "3.2.0"
 edition = "2021"
 
 [dependencies]
-bytemuck = "1.19"
+bytemuck = "1.20"
 eframe = "0.29"
 env_logger = "0.11"
 glam = { version = "0.29", features = ["bytemuck"] }
