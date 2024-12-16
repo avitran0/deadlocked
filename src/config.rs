@@ -1,5 +1,6 @@
-use std::{collections::HashMap, fs::read_to_string, time::Duration};
+use std::{collections::HashMap, fs::read_to_string, path::Path, time::Duration};
 
+use log::warn;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
@@ -88,14 +89,26 @@ fn get_config_path() -> String {
 
 pub fn parse_config() -> Config {
     let config_path = get_config_path();
-    let path = std::path::Path::new(config_path.as_str());
+    let path = Path::new(config_path.as_str());
     if !path.exists() {
         return Config::default();
     }
 
     let config_string = read_to_string(get_config_path()).expect("could not read config file");
 
-    toml::from_str(config_string.as_str()).unwrap_or_default()
+    toml::from_str(&config_string).unwrap_or_default()
+}
+
+pub fn parse_config_from_path(path: String) -> Config {
+    let path = Path::new(path.as_str());
+    if !path.exists() {
+        warn!("config file {} does not exist!", path.to_str().unwrap());
+        return Config::default();
+    }
+
+    let config_string = read_to_string(path).expect("could not read config file");
+
+    toml::from_str(&config_string).unwrap_or_default()
 }
 
 pub fn write_config(config: &Config) {
