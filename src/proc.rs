@@ -17,7 +17,7 @@ pub fn get_pid(process_name: &str) -> Option<u64> {
         let pid_osstr = entry.file_name();
         let pid = pid_osstr.to_str().unwrap();
 
-        if pid.parse::<u64>().is_err() {
+        if !pid.chars().all(|char| char.is_numeric()) {
             continue;
         }
 
