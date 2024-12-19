@@ -99,18 +99,6 @@ pub fn parse_config() -> Config {
     toml::from_str(&config_string).unwrap_or_default()
 }
 
-pub fn parse_config_from_path(path: String) -> Config {
-    let path = Path::new(path.as_str());
-    if !path.exists() {
-        warn!("config file {} does not exist!", path.to_str().unwrap());
-        return Config::default();
-    }
-
-    let config_string = read_to_string(path).expect("could not read config file");
-
-    toml::from_str(&config_string).unwrap_or_default()
-}
-
 pub fn write_config(config: &Config) {
     let out = toml::to_string(&config).expect("could not write config file");
     std::fs::write(get_config_path(), out).expect("could not write config file");
