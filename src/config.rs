@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fs::read_to_string, path::Path, time::Duration};
 
-use log::warn;
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
 
