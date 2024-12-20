@@ -302,7 +302,7 @@ impl CS2 {
             }
         }
 
-        if highest_priority > config.fov && self.target.pawn == 0 {
+        if self.target.pawn == 0 {
             return None;
         }
 
@@ -353,7 +353,12 @@ impl CS2 {
             return None;
         }
 
+        dbg!(self.get_position(process, self.target.pawn));
+
         let mut aim_angles = view_angles - self.target.angle;
+        if aim_angles.y < -180.0 {
+            aim_angles.y += 360.0
+        }
         vec2_clamp(&mut aim_angles);
 
         let sensitivity =
