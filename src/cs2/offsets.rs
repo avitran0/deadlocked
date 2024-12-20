@@ -41,19 +41,19 @@ impl PlayerControllerOffsets {
 
 #[derive(Debug, Default)]
 pub struct PawnOffsets {
-    pub health: u64,            // i32 (m_iHealth)
-    pub armor: u64,             // i32 (m_ArmorValue)
-    pub team: u64,              // i32 (m_iTeamNum)
-    pub life_state: u64,        // i32 (m_lifeState)
-    pub weapon: u64,            // Pointer -> WeaponBase (m_pClippingWeapon)
-    pub fov_multiplier: u64,    // f32 (m_flFOVSensitivityAdjust)
-    pub game_scene_node: u64,   // Pointer -> GameSceneNode (m_pGameSceneNode)
-    pub eye_offset: u64,        // Vec3 (m_vecViewOffset)
-    pub velocity: u64,          // Vec3 (m_vecVelocity)
-    pub aim_punch_cache: u64,   // Vector<Vec3> (m_aimPunchCache)
-    pub shots_fired: u64,       // i32 (m_iShotsFired)
-    pub view_angles: u64,       // Vec2 (v_angle)
-    pub spotted_state: u64,     // SpottedState (m_entitySpottedState)
+    pub health: u64,          // i32 (m_iHealth)
+    pub armor: u64,           // i32 (m_ArmorValue)
+    pub team: u64,            // i32 (m_iTeamNum)
+    pub life_state: u64,      // i32 (m_lifeState)
+    pub weapon: u64,          // Pointer -> WeaponBase (m_pClippingWeapon)
+    pub fov_multiplier: u64,  // f32 (m_flFOVSensitivityAdjust)
+    pub game_scene_node: u64, // Pointer -> GameSceneNode (m_pGameSceneNode)
+    pub eye_offset: u64,      // Vec3 (m_vecViewOffset)
+    pub velocity: u64,        // Vec3 (m_vecVelocity)
+    pub aim_punch_cache: u64, // Vector<Vec3> (m_aimPunchCache)
+    pub shots_fired: u64,     // i32 (m_iShotsFired)
+    pub view_angles: u64,     // Vec2 (v_angle)
+    pub spotted_state: u64,   // SpottedState (m_entitySpottedState)
 }
 
 impl PawnOffsets {

@@ -30,8 +30,6 @@ pub struct CS2 {
     offsets: Offsets,
     target: Target,
 
-    pawns: Vec<u64>,
-    local_pawn_index: u64,
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
 }
@@ -93,51 +91,9 @@ impl CS2 {
             offsets: Offsets::default(),
             target: Target::default(),
 
-            pawns: Vec::with_capacity(64),
-            local_pawn_index: 0,
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
         }
-    }
-
-    fn cache_pawns(&self) -> Option<(Vec<u64>, u64)> {
-        let process = match &self.process {
-            Some(process) => process,
-            None => return None,
-        };
-
-        let local_controller = self.get_local_controller(process);
-        let local_pawn = match self.get_pawn(process, local_controller) {
-            Some(pawn) => pawn,
-            None => {
-                return None;
-            }
-        };
-
-        let mut pawns = Vec::with_capacity(64);
-        let mut local_pawn_index = 0;
-        for i in 1..=64 {
-            let controller = match self.get_client_entity(process, i) {
-                Some(controller) => controller,
-                None => continue,
-            };
-
-            let pawn = match self.get_pawn(process, controller) {
-                Some(pawn) => pawn,
-                None => continue,
-            };
-
-            if pawn == local_pawn {
-                local_pawn_index = i - 1;
-            }
-            pawns.push(pawn);
-        }
-
-        if pawns.is_empty() {
-            return None;
-        }
-
-        Some((pawns, local_pawn_index))
     }
 
     fn rcs(&mut self, config: &Config) -> Option<Vec2> {
@@ -145,7 +101,6 @@ impl CS2 {
             Some(process) => process,
             None => {
                 self.is_valid = false;
-                self.pawns.clear();
                 return None;
             }
         };
@@ -158,23 +113,10 @@ impl CS2 {
         let local_pawn = match self.get_pawn(process, local_controller) {
             Some(pawn) => pawn,
             None => {
-                self.target = Target::default();
-                self.pawns.clear();
+                self.target.reset();
                 return None;
             }
         };
-        if !self.pawns.contains(&local_pawn) {
-            match self.cache_pawns() {
-                Some((pawns, index)) => {
-                    self.pawns = pawns;
-                    self.local_pawn_index = index
-                }
-                None => {
-                    self.pawns.clear();
-                    self.target = Target::default();
-                }
-            }
-        }
 
         let weapon_class = self.get_weapon_class(process, local_pawn);
         if [
@@ -272,17 +214,38 @@ impl CS2 {
         if !self.is_pawn_valid(process, self.target.pawn) {
             self.target.reset();
         }
+
+        let mut pawns = Vec::with_capacity(64);
+        let mut local_pawn_index = 0;
+        for i in 0..=64 {
+            let controller = match self.get_client_entity(process, i) {
+                Some(controller) => controller,
+                None => continue,
+            };
+
+            let pawn = match self.get_pawn(process, controller) {
+                Some(pawn) => pawn,
+                None => continue,
+            };
+
+            if !self.is_pawn_valid(process, pawn) {
+                continue;
+            }
+
+            if pawn == local_pawn {
+                local_pawn_index = i - 1;
+            }
+
+            pawns.push(pawn);
+        }
+
         if !aimbot_active || self.target.pawn == 0 {
-            for pawn in &self.pawns {
-                if !self.is_pawn_valid(process, *pawn) {
+            for pawn in pawns {
+                if !ffa && team == self.get_team(process, pawn) {
                     continue;
                 }
 
-                if !ffa && team == self.get_team(process, *pawn) {
-                    continue;
-                }
-
-                let head_position = self.get_bone_position(process, *pawn, Bones::Head.u64());
+                let head_position = self.get_bone_position(process, pawn, Bones::Head.u64());
                 let distance = eye_position.distance(head_position);
                 let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
                 let fov = angles_to_fov(view_angles, angle);
@@ -295,7 +258,7 @@ impl CS2 {
                 if priority > highest_priority {
                     highest_priority = priority;
 
-                    self.target.pawn = *pawn;
+                    self.target.pawn = pawn;
                     self.target.angle = angle;
                     self.target.bone_index = Bones::Head.u64();
                 }
@@ -308,7 +271,7 @@ impl CS2 {
 
         if config.visibility_check {
             let spotted_mask = self.get_spotted_mask(process, self.target.pawn);
-            if (spotted_mask & (1 << self.local_pawn_index)) == 0 {
+            if (spotted_mask & (1 << local_pawn_index)) == 0 {
                 return None;
             }
         }
@@ -639,7 +602,8 @@ impl CS2 {
                 return Some(offsets);
             }
         }
-        warn!("{:?}", offsets);
+
+        warn!("not all offsets found: {:?}", offsets);
         None
     }
 
