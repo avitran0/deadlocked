@@ -50,7 +50,7 @@ impl Default for AimbotConfig {
             fov: 2.5,
             smooth: 5.0,
             multibone: true,
-            rcs: true,
+            rcs: false,
         }
     }
 }

@@ -353,8 +353,6 @@ impl CS2 {
             return None;
         }
 
-        dbg!(self.get_position(process, self.target.pawn));
-
         let mut aim_angles = view_angles - self.target.angle;
         if aim_angles.y < -180.0 {
             aim_angles.y += 360.0
