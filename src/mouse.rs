@@ -7,6 +7,8 @@ use std::{
 
 use glam::{IVec2, Vec2};
 
+use crate::config::DEBUG_WITHOUT_MOUSE;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum MouseStatus {
     Working(String),
@@ -54,6 +56,10 @@ const AXIS_Y: u16 = 0x01;
 // const BTN_RIGHT: u16 = 0x111;
 
 pub fn open_mouse() -> (File, MouseStatus) {
+    if DEBUG_WITHOUT_MOUSE {
+        let file = OpenOptions::new().write(true).open("/dev/null").unwrap();
+        return (file, MouseStatus::Working(String::from("/dev/null")));
+    }
     for file in read_dir("/dev/input").unwrap() {
         let entry = file.unwrap();
         if !entry.file_type().unwrap().is_char_device() {
@@ -99,6 +105,10 @@ pub fn open_mouse() -> (File, MouseStatus) {
 
 pub fn mouse_move(mouse: &mut File, coords: Vec2) {
     let coords = IVec2::new(coords.x as i32, coords.y as i32);
+    if DEBUG_WITHOUT_MOUSE {
+        println!("moving mouse: ({} / {})", coords.x, coords.y);
+        return;
+    }
 
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let time = Timeval {
@@ -136,6 +146,11 @@ pub fn mouse_move(mouse: &mut File, coords: Vec2) {
 
 #[allow(unused)]
 fn mouse_left_press(mouse: &mut File) {
+    if DEBUG_WITHOUT_MOUSE {
+        println!("pressing left mouse");
+        return;
+    }
+
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let time = Timeval {
         seconds: now.as_secs(),
@@ -162,6 +177,11 @@ fn mouse_left_press(mouse: &mut File) {
 
 #[allow(unused)]
 fn mouse_left_release(mouse: &mut File) {
+    if DEBUG_WITHOUT_MOUSE {
+        println!("releasing left mouse");
+        return;
+    }
+
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let time = Timeval {
         seconds: now.as_secs(),

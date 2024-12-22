@@ -1,27 +1,29 @@
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 use bones::Bones;
-use constants::Constants;
-use glam::{Vec2, Vec3};
-use log::{info, warn};
+use glam::{IVec4, Mat4, Vec2, Vec3};
+use log::warn;
 use strum::IntoEnumIterator;
 
 use crate::{
     aimbot::Aimbot,
     config::Config,
-    cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
+    cs2::{constants::Constants, offsets::Offsets, player::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_fov, vec2_clamp},
+    message::{EntityInfo, PlayerInfo},
     mouse::mouse_move,
-    proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
+    proc::{
+        get_module_base_address, get_pid, open_process, read_string_vec, read_vec, validate_pid,
+    },
     process::Process,
+    weapon_class::WeaponClass,
 };
 
 mod bones;
 mod constants;
 pub mod offsets;
 mod player;
-mod weapon_class;
 
 #[derive(Debug)]
 pub struct CS2 {
@@ -32,14 +34,16 @@ pub struct CS2 {
 
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
+    unused_entities: Vec<u64>,
 }
 
 impl Aimbot for CS2 {
     fn is_valid(&self) -> bool {
         if let Some(process) = &self.process {
-            return self.is_valid && validate_pid(process.pid);
+            self.is_valid && validate_pid(process.pid)
+        } else {
+            false
         }
-        false
     }
 
     fn setup(&mut self) {
@@ -58,7 +62,6 @@ impl Aimbot for CS2 {
                 return;
             }
         };
-        info!("game started, pid: {}", pid);
 
         self.offsets = match self.find_offsets(&process) {
             Some(offsets) => offsets,
@@ -67,7 +70,6 @@ impl Aimbot for CS2 {
                 return;
             }
         };
-        info!("offsets found");
 
         self.process = Some(process);
         self.is_valid = true;
@@ -81,6 +83,43 @@ impl Aimbot for CS2 {
             mouse_move(mouse, coords);
         }
     }
+
+    fn get_player_info(&mut self) -> Vec<PlayerInfo> {
+        self.player_info()
+    }
+
+    fn get_entity_info(&mut self) -> Vec<EntityInfo> {
+        self.entity_info()
+    }
+
+    fn get_view_matrix(&mut self) -> glam::Mat4 {
+        let process = match &self.process {
+            Some(process) => process,
+            None => {
+                self.is_valid = false;
+                return Mat4::IDENTITY;
+            }
+        };
+
+        process.read(self.offsets.direct.view_matrix)
+    }
+
+    fn get_window_size(&mut self) -> IVec4 {
+        let process = match &self.process {
+            Some(process) => process,
+            None => {
+                self.is_valid = false;
+                return IVec4::ZERO;
+            }
+        };
+
+        let sdl_window = process.read::<u64>(self.offsets.direct.sdl_window);
+        if sdl_window == 0 {
+            return IVec4::ZERO;
+        }
+
+        process.read::<IVec4>(sdl_window + 0x18)
+    }
 }
 
 impl CS2 {
@@ -93,7 +132,147 @@ impl CS2 {
 
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
+            unused_entities: Vec::with_capacity(1024),
         }
+    }
+
+    fn player_info(&mut self) -> Vec<PlayerInfo> {
+        let process = match &self.process {
+            Some(process) => process,
+            None => {
+                self.is_valid = false;
+                return vec![];
+            }
+        };
+
+        let local_controller = self.get_local_controller(process);
+        let local_pawn = match self.get_pawn(process, local_controller) {
+            Some(pawn) => {
+                let spectator_target = self.get_spectator_target(process, pawn);
+                if let Some(target) = spectator_target {
+                    target
+                } else {
+                    pawn
+                }
+            }
+            None => {
+                self.target = Target::default();
+                return vec![];
+            }
+        };
+
+        let team = self.get_team(process, local_pawn);
+        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
+            return vec![];
+        }
+
+        let mut pawns = Vec::with_capacity(64);
+        let mut local_pawn_index = 0;
+        for i in 1..=64 {
+            let controller = match self.get_client_entity(process, i) {
+                Some(controller) => controller,
+                None => continue,
+            };
+
+            let pawn = match self.get_pawn(process, controller) {
+                Some(pawn) => pawn,
+                None => continue,
+            };
+
+            if pawn == local_pawn {
+                local_pawn_index = i - 1;
+            }
+
+            pawns.push(pawn);
+        }
+
+        let mut players = vec![];
+        for pawn in pawns {
+            if self.get_team(process, pawn) == team {
+                continue;
+            }
+
+            if !self.is_pawn_valid(process, pawn) {
+                continue;
+            }
+
+            let info = PlayerInfo {
+                health: self.get_health(process, pawn),
+                armor: self.get_armor(process, pawn),
+                weapon: self.get_weapon_name(process, pawn).replace("weapon_", ""),
+                position: self.get_position(process, pawn),
+                head: self.get_bone_position(process, pawn, Bones::Head.u64()),
+                bones: self.get_bones(process, pawn),
+                visible: self.get_spotted_mask(process, self.target.pawn) & (1 << local_pawn_index)
+                    != 0,
+            };
+
+            players.push(info);
+        }
+
+        players
+    }
+
+    fn entity_info(&mut self) -> Vec<EntityInfo> {
+        let process = match &self.process {
+            Some(process) => process,
+            None => {
+                self.is_valid = false;
+                return vec![];
+            }
+        };
+
+        let local_controller = self.get_local_controller(process);
+        let local_pawn = match self.get_pawn(process, local_controller) {
+            Some(pawn) => {
+                let spectator_target = self.get_spectator_target(process, pawn);
+                if let Some(target) = spectator_target {
+                    target
+                } else {
+                    pawn
+                }
+            }
+            None => {
+                self.target = Target::default();
+                return vec![];
+            }
+        };
+        let local_position = self.get_position(process, local_pawn);
+
+        let team = self.get_team(process, local_pawn);
+        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
+            return vec![];
+        }
+
+        let mut entities = vec![];
+        for i in 65..=1024 {
+            let controller = match self.get_client_entity(process, i) {
+                Some(controller) => controller,
+                None => continue,
+            };
+            if self.unused_entities.contains(&controller) {
+                continue;
+            }
+
+            if self.entity_has_owner(process, controller) {
+                continue;
+            }
+
+            let name = match self.get_entity_type(process, controller) {
+                Some(name) => name,
+                None => continue,
+            };
+            let position = self.get_position(process, controller);
+            let entity = EntityInfo {
+                name,
+                position,
+                distance: (position - local_position).length(),
+            };
+
+            entities.push(entity);
+        }
+
+        entities
     }
 
     fn rcs(&mut self, config: &Config) -> Option<Vec2> {
@@ -105,7 +284,7 @@ impl CS2 {
             }
         };
         let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.rcs {
+        if !config.aimbot.rcs {
             return None;
         }
 
@@ -167,6 +346,7 @@ impl CS2 {
             Some(process) => process,
             None => {
                 self.is_valid = false;
+                self.unused_entities.clear();
                 return None;
             }
         };
@@ -177,9 +357,14 @@ impl CS2 {
             Some(pawn) => pawn,
             None => {
                 self.target.reset();
+                self.unused_entities.clear();
                 return None;
             }
         };
+
+        if self.unused_entities.is_empty() {
+            self.unused_entities = self.cache_unused_entities();
+        }
 
         let team = self.get_team(process, local_pawn);
         if team != Constants::TEAM_CT && team != Constants::TEAM_T {
@@ -199,7 +384,7 @@ impl CS2 {
             return None;
         }
 
-        let aimbot_active = self.is_button_down(process, &config.hotkey);
+        let aimbot_active = self.is_button_down(process, &config.aimbot.hotkey);
         let view_angles = self.get_view_angles(process, local_pawn);
         let ffa = self.is_ffa(process);
         let shots_fired = self.get_shots_fired(process, local_pawn);
@@ -209,15 +394,9 @@ impl CS2 {
             (_, punch) => punch,
         };
 
-        let mut highest_priority = 0.0;
-        let eye_position = self.get_eye_position(process, local_pawn);
-        if !self.is_pawn_valid(process, self.target.pawn) {
-            self.target.reset();
-        }
-
         let mut pawns = Vec::with_capacity(64);
         let mut local_pawn_index = 0;
-        for i in 0..=64 {
+        for i in 1..=64 {
             let controller = match self.get_client_entity(process, i) {
                 Some(controller) => controller,
                 None => continue,
@@ -228,19 +407,23 @@ impl CS2 {
                 None => continue,
             };
 
-            if !self.is_pawn_valid(process, pawn) {
-                continue;
-            }
-
             if pawn == local_pawn {
                 local_pawn_index = i - 1;
             }
-
             pawns.push(pawn);
         }
 
+        let mut highest_priority = 0.0;
+        let eye_position = self.get_eye_position(process, local_pawn);
+        if !self.is_pawn_valid(process, self.target.pawn) {
+            self.target = Target::default();
+        }
         if !aimbot_active || self.target.pawn == 0 {
             for pawn in pawns {
+                if !self.is_pawn_valid(process, pawn) {
+                    continue;
+                }
+
                 if !ffa && team == self.get_team(process, pawn) {
                     continue;
                 }
@@ -250,7 +433,7 @@ impl CS2 {
                 let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
                 let fov = angles_to_fov(view_angles, angle);
 
-                if fov > config.fov {
+                if fov > config.aimbot.fov {
                     continue;
                 }
 
@@ -265,11 +448,11 @@ impl CS2 {
             }
         }
 
-        if self.target.pawn == 0 {
+        if highest_priority > config.aimbot.fov && self.target.pawn == 0 {
             return None;
         }
 
-        if config.visibility_check {
+        if config.aimbot.visibility_check {
             let spotted_mask = self.get_spotted_mask(process, self.target.pawn);
             if (spotted_mask & (1 << local_pawn_index)) == 0 {
                 return None;
@@ -277,7 +460,7 @@ impl CS2 {
         }
 
         // update target angle
-        if self.target.pawn != 0 && config.multibone {
+        if self.target.pawn != 0 && config.aimbot.multibone {
             let mut smallest_fov = 360.0;
             for bone in Bones::iter() {
                 let bone_position = self.get_bone_position(process, self.target.pawn, bone.u64());
@@ -304,7 +487,7 @@ impl CS2 {
             return None;
         }
 
-        if angles_to_fov(view_angles, self.target.angle) > config.fov {
+        if angles_to_fov(view_angles, self.target.angle) > config.aimbot.fov {
             return None;
         }
 
@@ -312,13 +495,13 @@ impl CS2 {
             return None;
         }
 
-        if shots_fired < config.start_bullet {
+        if shots_fired < config.aimbot.start_bullet {
             return None;
         }
 
         let mut aim_angles = view_angles - self.target.angle;
         if aim_angles.y < -180.0 {
-            aim_angles.y += 360.0
+            aim_angles.y += 360.0;
         }
         vec2_clamp(&mut aim_angles);
 
@@ -331,12 +514,12 @@ impl CS2 {
         );
         let mut smooth_angles = Vec2::ZERO;
 
-        if !config.aim_lock && config.smooth >= 1.0 {
+        if !config.aimbot.aim_lock && config.aimbot.smooth >= 1.0 {
             smooth_angles.x = if xy.x.abs() > 1.0 {
                 if smooth_angles.x < xy.x {
-                    smooth_angles.x + 1.0 + (xy.x / config.smooth)
+                    smooth_angles.x + 1.0 + (xy.x / config.aimbot.smooth)
                 } else {
-                    smooth_angles.x - 1.0 + (xy.x / config.smooth)
+                    smooth_angles.x - 1.0 + (xy.x / config.aimbot.smooth)
                 }
             } else {
                 xy.x
@@ -344,9 +527,9 @@ impl CS2 {
 
             smooth_angles.y = if xy.y.abs() > 1.0 {
                 if smooth_angles.y < xy.y {
-                    smooth_angles.y + 1.0 + (xy.y / config.smooth)
+                    smooth_angles.y + 1.0 + (xy.y / config.aimbot.smooth)
                 } else {
-                    smooth_angles.y - 1.0 + (xy.y / config.smooth)
+                    smooth_angles.y - 1.0 + (xy.y / config.aimbot.smooth)
                 }
             } else {
                 xy.y
@@ -377,10 +560,12 @@ impl CS2 {
     fn find_offsets(&self, process: &Process) -> Option<Offsets> {
         let mut offsets = Offsets::default();
 
-        offsets.library.client = process.module_base_address(Constants::CLIENT_LIB)?;
-        offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
-        offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
-        offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
+        offsets.library.client = get_module_base_address(process, Constants::CLIENT_LIB)?;
+        offsets.library.engine = get_module_base_address(process, Constants::ENGINE_LIB)?;
+        offsets.library.tier0 = get_module_base_address(process, Constants::TIER0_LIB)?;
+        offsets.library.input = get_module_base_address(process, Constants::INPUT_LIB)?;
+        offsets.library.sdl = get_module_base_address(process, Constants::SDL_LIB)?;
+        offsets.library.matchmaking = get_module_base_address(process, Constants::MATCHMAKING_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -404,6 +589,19 @@ impl CS2 {
         }
         offsets.interface.input = input_address?;
 
+        let view_matrix = process.scan_pattern(
+            &[
+                0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00,
+                0x48, 0x8D, 0x0D,
+            ],
+            "xxx????xxx????xxx".as_bytes(),
+            offsets.library.client,
+        );
+        if view_matrix.is_none() {
+            warn!("could not find view matrix offset");
+        }
+        offsets.direct.view_matrix = process.get_relative_address(view_matrix? + 0x07, 0x03, 0x07);
+
         // seems to be in .text section (executable instructions)
         let local_player = process.scan_pattern(
             &[
@@ -419,6 +617,24 @@ impl CS2 {
         offsets.direct.button_state = process
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
+
+        let planted_c4 = process.scan_pattern(
+            &[
+                0x48, 0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, 0x4C, 0x89, 0x24, 0xD8, 0x49, 0x8B, 0x44,
+                0x24,
+            ],
+            "xxx????xxxxxxxx".as_bytes(),
+            offsets.library.client,
+        );
+        offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x03, 0x07);
+
+        let sdl_window = process.get_module_export(offsets.library.sdl, "SDL_GetKeyboardFocus");
+        if sdl_window.is_none() {
+            warn!("could not find sdl window offset");
+        }
+        let sdl_window = process.get_relative_address(sdl_window?, 0x02, 0x06);
+        let sdl_window = process.read::<u64>(sdl_window);
+        offsets.direct.sdl_window = process.get_relative_address(sdl_window, 0x03, 0x07);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
@@ -472,6 +688,13 @@ impl CS2 {
                         continue;
                     }
                     offsets.controller.pawn = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                }
+                "m_hOwnerEntity" => {
+                    if !network_enable || offsets.controller.owner_entity != 0 {
+                        continue;
+                    }
+                    offsets.controller.owner_entity =
+                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
                 }
                 "m_iHealth" => {
                     if !network_enable || offsets.pawn.health != 0 {
@@ -561,6 +784,12 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
+                "m_pObserverServices" => {
+                    if offsets.pawn.observer_services != 0 {
+                        continue;
+                    }
+                    offsets.pawn.observer_services = read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -595,6 +824,13 @@ impl CS2 {
                     offsets.spotted_state.mask =
                         read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
                 }
+                "m_hObserverTarget" => {
+                    if offsets.observer_service.target != 0 {
+                        continue;
+                    }
+                    offsets.observer_service.target =
+                        read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
                 _ => {}
             }
 
@@ -602,8 +838,7 @@ impl CS2 {
                 return Some(offsets);
             }
         }
-
-        warn!("not all offsets found: {:?}", offsets);
+        warn!("{:?}", offsets);
         None
     }
 
@@ -646,6 +881,15 @@ impl CS2 {
         Some(entity)
     }
 
+    #[allow(unused)]
+    fn get_player_name(&self, process: &Process, controller: u64) -> String {
+        let name_address = process.read::<u64>(controller + self.offsets.controller.name);
+        if name_address == 0 {
+            return String::from("?");
+        }
+        process.read_string(name_address)
+    }
+
     fn get_health(&self, process: &Process, pawn: u64) -> i32 {
         let health = process.read(pawn + self.offsets.pawn.health);
         if !(0..=100).contains(&health) {
@@ -654,7 +898,6 @@ impl CS2 {
         health
     }
 
-    #[allow(unused)]
     fn get_armor(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.armor)
     }
@@ -735,6 +978,51 @@ impl CS2 {
         process.read(pawn + self.offsets.pawn.spotted_state + self.offsets.spotted_state.mask)
     }
 
+    fn get_bones(&self, process: &Process, pawn: u64) -> Vec<(Vec3, Vec3)> {
+        let mut bones = HashMap::new();
+
+        for bone in Bones::iter() {
+            let position = self.get_bone_position(process, pawn, bone.u64());
+            bones.insert(bone.u64(), position);
+        }
+
+        let mut connections = Vec::with_capacity(Bones::CONNECTIONS.len());
+
+        for connection in Bones::CONNECTIONS {
+            connections.push((
+                *bones.get(&connection.0.u64()).unwrap(),
+                *bones.get(&connection.1.u64()).unwrap(),
+            ));
+        }
+
+        connections
+    }
+
+    #[allow(unused)]
+    fn get_spectator_target(&self, process: &Process, pawn: u64) -> Option<u64> {
+        let observer_services = process.read::<u64>(pawn + self.offsets.pawn.observer_services);
+        if observer_services == 0 {
+            return None;
+        }
+
+        let target =
+            process.read::<u32>(observer_services + self.offsets.observer_service.target) & 0x7fff;
+        if target == 0 {
+            return None;
+        }
+
+        let v2 = process.read::<u64>(self.offsets.interface.player + 8 * (target as u64 >> 9));
+        if v2 == 0 {
+            return None;
+        }
+
+        let entity = process.read(v2 + 120 * (target as u64 & 0x1ff));
+        if entity == 0 {
+            return None;
+        }
+        Some(entity)
+    }
+
     fn is_pawn_valid(&self, process: &Process, pawn: u64) -> bool {
         if self.is_dormant(process, pawn) {
             return false;
@@ -783,5 +1071,60 @@ impl CS2 {
                 + (((button.u64() >> 5) * 4) + self.offsets.direct.button_state),
         );
         ((value >> (button.u64() & 31)) & 1) != 0
+    }
+
+    fn entity_has_owner(&self, process: &Process, entity: u64) -> bool {
+        // h_pOwnerEntity is a handle, which is an int
+        process.read::<i32>(entity + self.offsets.controller.owner_entity) != -1
+    }
+
+    fn get_entity_type(&self, process: &Process, entity: u64) -> Option<String> {
+        let name_pointer = process.read(process.read::<u64>(entity + 0x10) + 0x20);
+        if name_pointer == 0 {
+            return None;
+        }
+
+        let name = process.read_string(name_pointer);
+
+        if name.starts_with("weapon_") {
+            let name = name.replace("weapon_", "");
+            return Some(name);
+        } else if name.ends_with("_projectile") {
+            let name = name.replace("_projectile", "");
+            match name.as_str() {
+                "incendiarygrenade" => return Some(String::from("incgrenade")),
+                _ => return Some(name),
+            }
+        }
+
+        None
+    }
+
+    fn cache_unused_entities(&self) -> Vec<u64> {
+        let process = match &self.process {
+            Some(process) => process,
+            None => return vec![],
+        };
+
+        let mut unused_entities = Vec::with_capacity(1024);
+        for i in 65..=1024 {
+            let entity = match self.get_client_entity(process, i) {
+                Some(entity) => entity,
+                None => continue,
+            };
+
+            let name_pointer = process.read(process.read::<u64>(entity + 0x10) + 0x20);
+            if name_pointer == 0 {
+                continue;
+            }
+
+            let name = process.read_string(name_pointer);
+
+            if !name.starts_with("weapon_") && !name.ends_with("_projectile") {
+                unused_entities.push(entity);
+            }
+        }
+
+        unused_entities
     }
 }

@@ -1,4 +1,5 @@
 #![allow(unused)]
+
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 

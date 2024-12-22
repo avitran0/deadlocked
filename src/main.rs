@@ -2,6 +2,7 @@ use std::{io::Write, sync::mpsc, thread};
 
 use color::Colors;
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
+use visuals::visuals;
 
 mod aimbot;
 mod color;
@@ -9,20 +10,23 @@ mod config;
 mod constants;
 mod cs2;
 mod gui;
+mod icons;
 mod key_codes;
 mod math;
 mod message;
 mod mouse;
 mod proc;
 mod process;
+mod visuals;
+mod weapon_class;
 
 #[cfg(not(target_os = "linux"))]
 compile_error!("only linux is supported.");
 
 fn main() {
     env_logger::builder()
-        .format(|buf, record| writeln!(buf, "{} {}", record.level(), record.args()))
-        .filter_level(log::LevelFilter::Error)
+        .format(|buf, record| writeln!(buf, "{}: {}", record.level(), record.args()))
+        .filter_level(log::LevelFilter::Info)
         .init();
 
     // this runs as x11 for now, because wayland decorations for winit are not good
@@ -35,21 +39,30 @@ fn main() {
         std::process::exit(0);
     }
 
-    let (tx_aimbot, rx_gui) = mpsc::channel();
-    let (tx_gui, rx_aimbot) = mpsc::channel();
+    let (tx_aimbot_to_gui, rx_gui) = mpsc::channel();
+    let (tx_gui_to_aimbot, rx_aimbot) = mpsc::channel();
+    let (tx_aimbot_to_visuals, rx_visuals) = mpsc::channel();
+    let tx_gui_to_visuals = tx_aimbot_to_visuals.clone();
 
     thread::Builder::new()
         .name(String::from("deadlocked"))
         .spawn(move || {
-            aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
+            aimbot::AimbotManager::new(tx_aimbot_to_gui, tx_aimbot_to_visuals, rx_aimbot).run();
         })
-        .expect("could not create aimbot thread");
+        .unwrap();
 
-    let window_size = [600.0, 350.0];
+    thread::Builder::new()
+        .name(String::from("deadlocked"))
+        .spawn(move || {
+            visuals(rx_visuals);
+        })
+        .unwrap();
+
+    let size = [750.0, 450.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_maximize_button(false)
-            .with_inner_size(window_size)
+            .with_inner_size(size)
             .with_resizable(false),
         ..Default::default()
     };
@@ -59,23 +72,27 @@ fn main() {
         Box::new(|cc| {
             cc.egui_ctx.set_pixels_per_point(1.5);
 
-            let font = include_bytes!("../resources/Nunito.ttf");
+            let font = include_bytes!("../resources/fonts/Nunito.ttf");
             let mut font_definitions = FontDefinitions::default();
             font_definitions
                 .font_data
-                .insert(String::from("nunito"), FontData::from_static(font));
+                .insert(String::from("inter"), FontData::from_static(font));
 
             font_definitions
                 .families
                 .get_mut(&egui::FontFamily::Proportional)
                 .unwrap()
-                .insert(0, String::from("nunito"));
+                .insert(0, String::from("inter"));
 
             cc.egui_ctx.set_fonts(font_definitions);
 
             cc.egui_ctx.style_mut_of(egui::Theme::Dark, gui_style);
 
-            Ok(Box::new(gui::Gui::new(tx_gui, rx_gui)))
+            Ok(Box::new(gui::Gui::new(
+                tx_gui_to_aimbot,
+                tx_gui_to_visuals,
+                rx_gui,
+            )))
         }),
     )
     .unwrap();
