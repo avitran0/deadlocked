@@ -4,6 +4,7 @@ use glam::Vec2;
 pub struct Target {
     pub pawn: u64,
     pub angle: Vec2,
+    pub distance: f32,
     pub bone_index: u64,
 }
 

@@ -203,17 +203,11 @@ impl CS2 {
         let view_angles = self.get_view_angles(process, local_pawn);
         let ffa = self.is_ffa(process);
         let shots_fired = self.get_shots_fired(process, local_pawn);
-        let aim_punch = match (weapon_class, self.get_aim_punch(process, local_pawn)) {
+        let aim_punch = match (weapon_class, self.get_aim_punch(process, local_pawn) * 2.0) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
             (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.previous_aim_punch,
             (_, punch) => punch,
         };
-
-        let mut highest_priority = 0.0;
-        let eye_position = self.get_eye_position(process, local_pawn);
-        if !self.is_pawn_valid(process, self.target.pawn) {
-            self.target.reset();
-        }
 
         let mut pawns = Vec::with_capacity(64);
         let mut local_pawn_index = 0;
@@ -239,6 +233,11 @@ impl CS2 {
             pawns.push(pawn);
         }
 
+        let mut smallest_fov = 360.0;
+        let eye_position = self.get_eye_position(process, local_pawn);
+        if !self.is_pawn_valid(process, self.target.pawn) {
+            self.target.reset();
+        }
         if !aimbot_active || self.target.pawn == 0 {
             for pawn in pawns {
                 if !ffa && team == self.get_team(process, pawn) {
@@ -250,16 +249,17 @@ impl CS2 {
                 let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
                 let fov = angles_to_fov(view_angles, angle);
 
-                if fov > config.fov {
+                // scale should be 2 at 2.0 at 0 units, and 1.0 at 500+ units
+                if fov > (config.fov * self.distance_scale(distance)) {
                     continue;
                 }
 
-                let priority = 1.0 / (fov + distance);
-                if priority > highest_priority {
-                    highest_priority = priority;
+                if fov < smallest_fov {
+                    smallest_fov = fov;
 
                     self.target.pawn = pawn;
                     self.target.angle = angle;
+                    self.target.distance = distance;
                     self.target.bone_index = Bones::Head.u64();
                 }
             }
@@ -304,7 +304,9 @@ impl CS2 {
             return None;
         }
 
-        if angles_to_fov(view_angles, self.target.angle) > config.fov {
+        if angles_to_fov(view_angles, self.target.angle)
+            > (config.fov * self.distance_scale(self.target.distance))
+        {
             return None;
         }
 
@@ -783,5 +785,13 @@ impl CS2 {
                 + (((button.u64() >> 5) * 4) + self.offsets.direct.button_state),
         );
         ((value >> (button.u64() & 31)) & 1) != 0
+    }
+
+    fn distance_scale(&self, distance: f32) -> f32 {
+        if distance > 500.0 {
+            1.0
+        } else {
+            2.5 - (distance / 500.0)
+        }
     }
 }
