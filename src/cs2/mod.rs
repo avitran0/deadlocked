@@ -281,6 +281,7 @@ impl CS2 {
             let mut smallest_fov = 360.0;
             for bone in Bones::iter() {
                 let bone_position = self.get_bone_position(process, self.target.pawn, bone.u64());
+                let distance = eye_position.distance(bone_position);
                 let angle = self.get_target_angle(process, local_pawn, bone_position, aim_punch);
                 let fov = angles_to_fov(view_angles, angle);
 
@@ -288,15 +289,18 @@ impl CS2 {
                     smallest_fov = fov;
 
                     self.target.angle = angle;
+                    self.target.distance = distance;
                     self.target.bone_index = bone.u64();
                 }
             }
         } else if self.target.pawn != 0 {
             let head_position =
                 self.get_bone_position(process, self.target.pawn, Bones::Head.u64());
+            let distance = eye_position.distance(head_position);
             let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
 
             self.target.angle = angle;
+            self.target.distance = distance;
             self.target.bone_index = Bones::Head.u64();
         }
 
