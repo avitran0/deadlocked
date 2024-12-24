@@ -6,7 +6,7 @@ use target::Target;
 
 use crate::{
     aimbot::Aimbot,
-    proc::{get_pid_proton, validate_pid},
+    proc::{get_pid_proton, open_process, validate_pid},
     process::Process,
 };
 
@@ -42,7 +42,7 @@ impl Aimbot for Deadlock {
             }
         };
 
-        /*let process = match open_process(pid) {
+        let process = match open_process(pid) {
             Some(process) => process,
             None => {
                 self.is_valid = false;
@@ -51,7 +51,7 @@ impl Aimbot for Deadlock {
         };
         info!("game started, pid: {}", pid);
 
-        self.offsets = match self.find_offsets(&process) {
+        /*self.offsets = match self.find_offsets(&process) {
             Some(offsets) => offsets,
             None => {
                 self.is_valid = false;

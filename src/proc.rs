@@ -4,6 +4,7 @@ use std::{
 };
 
 use bytemuck::{Pod, Zeroable};
+use log::info;
 
 use crate::process::Process;
 
@@ -53,18 +54,20 @@ pub fn get_pid_proton(process_name: &str) -> Option<u64> {
         };
 
         let (_, exe_name) = exe_path.to_str().unwrap().rsplit_once('/').unwrap();
+        if exe_name != "wine64-preloader" {
+            continue;
+        }
 
         // read cmdline to string
-        let cmdline = read_to_string(format!("/proc/{}/cmdline", pid));
-        if cmdline.is_err() {
-            continue;
-        }
+        let cmdline = match read_to_string(format!("/proc/{}/cmdline", pid)) {
+            Ok(cmdline) => cmdline,
+            _ => continue,
+        };
 
-        let cmdline_str = cmdline.unwrap();
-        if cmdline_str.is_empty() {
+        if cmdline.is_empty() {
             continue;
         }
-        if !cmdline_str.contains(process_name) {
+        if !cmdline.contains(process_name) || cmdline.contains("steam.exe") {
             continue;
         }
 
