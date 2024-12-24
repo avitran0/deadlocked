@@ -5,6 +5,7 @@ use log::{info, warn};
 use crate::{
     config::{Config, SLEEP_DURATION},
     cs2::CS2,
+    deadlock::Deadlock,
     message::Game,
     mouse::{mouse_valid, MouseStatus},
 };
@@ -35,17 +36,17 @@ impl AimbotManager {
         let (mouse, status) = open_mouse();
 
         let config = parse_config();
-        let aimbot = Box::new(match config.current_game {
-            Game::CS2 => CS2::new(),
-            Game::Deadlock => CS2::new(),
-        });
+        let game_bot: Box<dyn Aimbot> = match config.current_game {
+            Game::CS2 => Box::new(CS2::new()),
+            Game::Deadlock => Box::new(Deadlock::new()),
+        };
         let mut aimbot = Self {
             tx: tx_gui,
             rx,
             config,
             mouse,
             mouse_status: status.clone(),
-            aimbot,
+            aimbot: game_bot,
         };
 
         aimbot.send_message(Message::MouseStatus(status));
@@ -113,6 +114,10 @@ impl AimbotManager {
             .get_mut(&self.config.current_game)
             .unwrap();
         match message {
+            Message::ChangeGame(game) => match game {
+                Game::CS2 => self.aimbot = Box::new(CS2::new()),
+                Game::Deadlock => self.aimbot = Box::new(Deadlock::new()),
+            },
             Message::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
             Message::ConfigHotkey(hotkey) => config.hotkey = hotkey,
             Message::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
