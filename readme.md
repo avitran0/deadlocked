@@ -16,6 +16,11 @@ deadlock support will happen once that gets a native linux client
 - if you got the source code from github, run with cargo: `cargo run --release`
 - if you got a standalone binary, just run that
 
+## troubleshooting
+
+- x11 often has problems with transparent framebuffers, so the overlay window might be black. you can try running wayland, if your distro supports it, and if this still does not work, you can try the `cpp` branch. this is a rewrite of the esp part in c++, which uses glfw and might work better. this currently has not aimbot support.
+- if you only want an aimbot: the aptly titled `aimbot` branch does this, and performance might be better, especially if your computer is not as powerful.
+
 ## images
 
 ### ingame demo
