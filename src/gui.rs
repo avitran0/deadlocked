@@ -1,4 +1,5 @@
 use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui};
+use log::info;
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 

@@ -105,6 +105,10 @@ impl AimbotManager {
 
     fn parse_message(&mut self, message: Message) {
         if let Message::ChangeGame(game) = message {
+            match game {
+                Game::CS2 => self.aimbot = Box::new(CS2::new()),
+                Game::Deadlock => self.aimbot = Box::new(Deadlock::new()),
+            }
             self.config.current_game = game;
             return;
         }
@@ -114,10 +118,6 @@ impl AimbotManager {
             .get_mut(&self.config.current_game)
             .unwrap();
         match message {
-            Message::ChangeGame(game) => match game {
-                Game::CS2 => self.aimbot = Box::new(CS2::new()),
-                Game::Deadlock => self.aimbot = Box::new(Deadlock::new()),
-            },
             Message::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
             Message::ConfigHotkey(hotkey) => config.hotkey = hotkey,
             Message::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
