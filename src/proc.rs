@@ -4,7 +4,6 @@ use std::{
 };
 
 use bytemuck::{Pod, Zeroable};
-use log::info;
 
 use crate::process::Process;
 

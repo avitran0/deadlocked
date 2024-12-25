@@ -68,6 +68,11 @@ impl Process {
         self.read_bytes(address, module_size)
     }
 
+    pub fn dump_module_proton(&self, address: u64) -> Vec<u8> {
+        let module_size = self.module_size_proton(address);
+        self.read_bytes(address, module_size)
+    }
+
     pub fn scan_pattern(&self, pattern: &[u8], mask: &[u8], base_address: u64) -> Option<u64> {
         if pattern.len() != mask.len() {
             println!(
@@ -212,18 +217,27 @@ impl Process {
         None
     }
 
-    pub fn module_size(&self, base_address: u64) -> u64 {
+    pub fn module_size(&self, address: u64) -> u64 {
         let section_header_offset =
-            self.read::<u64>(base_address + Constants::ELF_SECTION_HEADER_OFFSET);
+            self.read::<u64>(address + Constants::ELF_SECTION_HEADER_OFFSET);
         let section_header_entry_size =
-            self.read::<u16>(base_address + Constants::ELF_SECTION_HEADER_ENTRY_SIZE) as u64;
+            self.read::<u16>(address + Constants::ELF_SECTION_HEADER_ENTRY_SIZE) as u64;
         let section_header_num_entries =
-            self.read::<u16>(base_address + Constants::ELF_SECTION_HEADER_NUM_ENTRIES) as u64;
+            self.read::<u16>(address + Constants::ELF_SECTION_HEADER_NUM_ENTRIES) as u64;
 
         section_header_offset + section_header_entry_size * section_header_num_entries
     }
 
+    pub fn module_size_proton(&self, address: u64) -> u64 {
+        let nt_header = self.get_nt_header(address);
+        self.read(nt_header + 0x50)
+    }
+
     pub fn get_interface_function(&self, interface_address: u64, index: u64) -> u64 {
         self.read(self.read::<u64>(interface_address) + (index * 8))
+    }
+
+    fn get_nt_header(&self, address: u64) -> u64 {
+        address + self.read::<u32>(address + 0x3c) as u64
     }
 }
