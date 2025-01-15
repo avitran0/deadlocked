@@ -2,6 +2,9 @@
 
 ![downloads](https://img.shields.io/github/downloads/avitran0/deadlocked/total?color=blue)
 
+> [!WARNING]
+> i have exams right now, will work more on this when those are over.
+
 a very simple cs2 aimbot, for linux only
 
 deadlock support will happen once that gets a native linux client
