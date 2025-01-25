@@ -351,6 +351,9 @@ impl CS2 {
             }
         };
         let config = config.games.get(&config.current_game).unwrap().clone();
+        if !config.aimbot.rcs {
+            return None;
+        }
 
         let local_controller = self.get_local_controller(process);
         let local_pawn = match self.get_pawn(process, local_controller) {
