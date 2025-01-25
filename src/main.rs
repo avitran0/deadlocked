@@ -8,7 +8,6 @@ mod color;
 mod config;
 mod constants;
 mod cs2;
-mod deadlock;
 mod gui;
 mod key_codes;
 mod math;
