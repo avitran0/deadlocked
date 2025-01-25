@@ -3,7 +3,7 @@ use std::fs::File;
 use bones::Bones;
 use constants::Constants;
 use glam::{Vec2, Vec3};
-use log::{info, warn};
+use log::{debug, info, warn};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -75,9 +75,11 @@ impl Aimbot for CS2 {
 
     fn run(&mut self, config: &Config, mouse: &mut File) {
         if let Some(coords) = self.rcs(config) {
+            debug!("rcs: {:?}", coords);
             mouse_move(mouse, coords);
         }
         if let Some(coords) = self.aimbot(config) {
+            debug!("aimbot: {:?}", coords);
             mouse_move(mouse, coords);
         }
     }
@@ -228,9 +230,9 @@ impl CS2 {
 
             if pawn == local_pawn {
                 local_pawn_index = i - 1;
+            } else {
+                pawns.push(pawn);
             }
-
-            pawns.push(pawn);
         }
 
         let mut smallest_fov = 360.0;
@@ -321,6 +323,8 @@ impl CS2 {
         if shots_fired < config.start_bullet {
             return None;
         }
+
+        dbg!(self.get_weapon_name(process, self.target.pawn));
 
         let mut aim_angles = view_angles - self.target.angle;
         if aim_angles.y < -180.0 {
@@ -605,6 +609,7 @@ impl CS2 {
             }
 
             if offsets.all_found() {
+                debug!("offsets: {:?}", offsets);
                 return Some(offsets);
             }
         }
@@ -795,7 +800,7 @@ impl CS2 {
         if distance > 500.0 {
             1.0
         } else {
-            2.5 - (distance / 500.0)
+            5.0 - (distance / 125.0)
         }
     }
 }

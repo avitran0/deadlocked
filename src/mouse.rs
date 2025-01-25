@@ -6,6 +6,7 @@ use std::{
 };
 
 use glam::{IVec2, Vec2};
+use log::warn;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum MouseStatus {
@@ -83,10 +84,8 @@ pub fn open_mouse() -> (File, MouseStatus) {
         match file {
             Ok(file) => return (file, MouseStatus::Working(device_name)),
             Err(_) => {
-                println!("please add your user to the input group or execute with sudo.");
-                println!(
-                    "without this, mouse movements will be written to /dev/null and discarded."
-                );
+                warn!("please add your user to the input group or execute with sudo.");
+                warn!("without this, mouse movements will be written to /dev/null and discarded.");
                 let file = OpenOptions::new().write(true).open("/dev/null").unwrap();
                 return (file, MouseStatus::PermissionsRequired);
             }
@@ -94,6 +93,7 @@ pub fn open_mouse() -> (File, MouseStatus) {
     }
 
     let file = OpenOptions::new().write(true).open("/dev/null").unwrap();
+    warn!("no mouse found.");
     (file, MouseStatus::NoMouseFound)
 }
 

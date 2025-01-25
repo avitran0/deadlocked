@@ -22,7 +22,7 @@ compile_error!("only linux is supported.");
 fn main() {
     env_logger::builder()
         .format(|buf, record| writeln!(buf, "{} {}", record.level(), record.args()))
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Debug)
         .init();
 
     // this runs as x11 for now, because wayland decorations for winit are not good
