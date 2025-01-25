@@ -3,8 +3,7 @@
 ![downloads](https://img.shields.io/github/downloads/avitran0/deadlocked/total?color=blue)
 
 > [!WARNING]
-> i have exams right now, will work more on this when those are over.
-> aim lock will be fixed soon!
+> when running x11, the overlay might not work. there is not much i can do about this.
 
 a very simple cs2 aimbot, for linux only
 
