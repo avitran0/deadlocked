@@ -351,7 +351,7 @@ impl CS2 {
             }
         };
         let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.aimbot.rcs {
+        if !config.aimbot.enabled {
             return None;
         }
 
