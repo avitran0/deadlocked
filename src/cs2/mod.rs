@@ -181,9 +181,9 @@ impl CS2 {
 
             if pawn == local_pawn {
                 local_pawn_index = i - 1;
+            } else {
+                pawns.push(pawn);
             }
-
-            pawns.push(pawn);
         }
 
         let mut players = vec![];
