@@ -742,7 +742,7 @@ impl CS2 {
         process.read(pawn + self.offsets.pawn.fov_multiplier)
     }
 
-    fn get_spotted_mask(&self, process: &Process, pawn: u64) -> i32 {
+    fn get_spotted_mask(&self, process: &Process, pawn: u64) -> i64 {
         process.read(pawn + self.offsets.pawn.spotted_state + self.offsets.spotted_state.mask)
     }
 
