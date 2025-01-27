@@ -5,6 +5,9 @@
 > [!WARNING]
 > when running x11, the overlay might not work. there is not much i can do about this.
 
+> [!NOTE]
+> i created a general cs2/deadlock open source hacking discord, join [here](https://discord.gg/eXjG4Ar9Sx)
+
 a very simple cs2 aimbot, for linux only
 
 deadlock support will happen once that gets a native linux client
