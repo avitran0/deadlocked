@@ -158,7 +158,7 @@ impl Gui {
                 }
                 ui.end_row();
 
-                ui.label("Enable TB");
+                ui.label("Enable TB").on_hover_text("whether to automatically fire when a player is in the crosshair and the hotkey is held");
                 if ui.checkbox(&mut game_config.triggerbot, "").changed() {
                     self.send_message(Message::ConfigEnableTriggerbot(game_config.triggerbot));
                     self.write_game_config(&game_config);
@@ -188,7 +188,7 @@ impl Gui {
                     });
                 ui.end_row();
 
-                ui.label("TB Start");
+                ui.label("TB Start").on_hover_text("the minimum time to fire after an enemy is in the crosshair, in milliseconds");
                 if ui
                     .add(
                         egui::DragValue::new(&mut game_config.triggerbot_range.start)
@@ -203,7 +203,7 @@ impl Gui {
                     self.write_game_config(&game_config);
                 }
 
-                ui.label("TB End");
+                ui.label("TB End").on_hover_text("the maximum time to fire after an enemy is in the crosshair, in milliseconds");
                 if ui
                     .add(
                         egui::DragValue::new(&mut game_config.triggerbot_range.end)
