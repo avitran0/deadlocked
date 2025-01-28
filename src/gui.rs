@@ -61,91 +61,93 @@ impl Gui {
                     self.write_game_config(&game_config);
                 }
 
-                ui.label("Hotkey")
-                    .on_hover_text("which key or mouse button should activate the aimbot");
-                egui::ComboBox::new("aimbot_hotkey", "")
-                    .selected_text(format!("{:?}", game_config.hotkey))
-                    .show_ui(ui, |ui| {
-                        for key_code in KeyCode::iter() {
-                            let text = format!("{:?}", &key_code);
-                            if ui
-                                .selectable_value(&mut game_config.hotkey, key_code, text)
-                                .clicked()
-                            {
-                                self.send_message(Message::ConfigHotkey(game_config.hotkey));
-                                self.write_game_config(&game_config);
+                if game_config.enabled {
+                    ui.label("Hotkey")
+                        .on_hover_text("which key or mouse button should activate the aimbot");
+                    egui::ComboBox::new("aimbot_hotkey", "")
+                        .selected_text(format!("{:?}", game_config.hotkey))
+                        .show_ui(ui, |ui| {
+                            for key_code in KeyCode::iter() {
+                                let text = format!("{:?}", &key_code);
+                                if ui
+                                    .selectable_value(&mut game_config.hotkey, key_code, text)
+                                    .clicked()
+                                {
+                                    self.send_message(Message::ConfigHotkey(game_config.hotkey));
+                                    self.write_game_config(&game_config);
+                                }
                             }
-                        }
-                    });
-                ui.end_row();
+                        });
+                    ui.end_row();
 
-                ui.label("Aim Lock")
-                    .on_hover_text("whether the aim should lock onto the target");
-                if ui.checkbox(&mut game_config.aim_lock, "").changed() {
-                    self.send_message(Message::ConfigAimLock(game_config.aim_lock));
-                    self.write_game_config(&game_config);
-                }
+                    ui.label("Aim Lock")
+                        .on_hover_text("whether the aim should lock onto the target");
+                    if ui.checkbox(&mut game_config.aim_lock, "").changed() {
+                        self.send_message(Message::ConfigAimLock(game_config.aim_lock));
+                        self.write_game_config(&game_config);
+                    }
 
-                ui.label("Start Bullet")
-                    .on_hover_text("after how many bullets fired in a row the aimbot should start");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut game_config.start_bullet)
-                            .range(0..=10)
-                            .speed(0.05),
-                    )
-                    .changed()
-                {
-                    self.send_message(Message::ConfigStartBullet(game_config.start_bullet));
-                    self.write_game_config(&game_config);
-                }
-                ui.end_row();
+                    ui.label("Start Bullet")
+                        .on_hover_text("after how many bullets fired in a row the aimbot should start");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut game_config.start_bullet)
+                                .range(0..=10)
+                                .speed(0.05),
+                        )
+                        .changed()
+                    {
+                        self.send_message(Message::ConfigStartBullet(game_config.start_bullet));
+                        self.write_game_config(&game_config);
+                    }
+                    ui.end_row();
 
-                ui.label("Visibility Check")
-                    .on_hover_text("whether to check for player visibility");
-                if ui.checkbox(&mut game_config.visibility_check, "").changed() {
-                    self.send_message(Message::ConfigVisibilityCheck(game_config.visibility_check));
-                    self.write_game_config(&game_config);
-                }
+                    ui.label("Visibility Check")
+                        .on_hover_text("whether to check for player visibility");
+                    if ui.checkbox(&mut game_config.visibility_check, "").changed() {
+                        self.send_message(Message::ConfigVisibilityCheck(game_config.visibility_check));
+                        self.write_game_config(&game_config);
+                    }
 
-                ui.label("FOV")
-                    .on_hover_text("how much around the crosshair the aimbot should \"see\"");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut game_config.fov)
-                            .range(0.1..=360.0)
-                            .suffix("°")
-                            .speed(0.02)
-                            .max_decimals(1),
-                    )
-                    .changed()
-                {
-                    self.send_message(Message::ConfigFOV(game_config.fov));
-                    self.write_game_config(&game_config);
-                }
-                ui.end_row();
+                    ui.label("FOV")
+                        .on_hover_text("how much around the crosshair the aimbot should \"see\"");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut game_config.fov)
+                                .range(0.1..=360.0)
+                                .suffix("°")
+                                .speed(0.02)
+                                .max_decimals(1),
+                        )
+                        .changed()
+                    {
+                        self.send_message(Message::ConfigFOV(game_config.fov));
+                        self.write_game_config(&game_config);
+                    }
+                    ui.end_row();
 
-                ui.label("Multibone").on_hover_text(
-                    "whether the aimbot should aim at all of the body, or just the head",
-                );
-                if ui.checkbox(&mut game_config.multibone, "").changed() {
-                    self.send_message(Message::ConfigMultibone(game_config.multibone));
-                    self.write_game_config(&game_config);
-                }
+                    ui.label("Multibone").on_hover_text(
+                        "whether the aimbot should aim at all of the body, or just the head",
+                    );
+                    if ui.checkbox(&mut game_config.multibone, "").changed() {
+                        self.send_message(Message::ConfigMultibone(game_config.multibone));
+                        self.write_game_config(&game_config);
+                    }
 
-                ui.label("Smooth")
-                    .on_hover_text("how much the aimbot input should be smoothed, higher is more");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut game_config.smooth)
-                            .range(1.0..=10.0)
-                            .speed(0.02)
-                            .max_decimals(1),
-                    )
-                    .changed()
-                {
-                    self.send_message(Message::ConfigSmooth(game_config.smooth));
-                    self.write_game_config(&game_config);
+                    ui.label("Smooth")
+                        .on_hover_text("how much the aimbot input should be smoothed, higher is more");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut game_config.smooth)
+                                .range(1.0..=10.0)
+                                .speed(0.02)
+                                .max_decimals(1),
+                        )
+                        .changed()
+                    {
+                        self.send_message(Message::ConfigSmooth(game_config.smooth));
+                        self.write_game_config(&game_config);
+                    }
                 }
                 ui.end_row();
 
@@ -156,68 +158,73 @@ impl Gui {
                     self.send_message(Message::ConfigEnableRCS(game_config.rcs));
                     self.write_game_config(&game_config);
                 }
-                ui.end_row();
 
                 ui.label("Enable TB").on_hover_text("whether to automatically fire when a player is in the crosshair and the hotkey is held");
                 if ui.checkbox(&mut game_config.triggerbot, "").changed() {
                     self.send_message(Message::ConfigEnableTriggerbot(game_config.triggerbot));
                     self.write_game_config(&game_config);
                 }
+                ui.end_row();
 
-                ui.label("TB Hotkey")
-                    .on_hover_text("which key or mouse button should activate the triggerbot");
-                egui::ComboBox::new("triggerbot_hotkey", "")
-                    .selected_text(format!("{:?}", game_config.triggerbot_hotkey))
-                    .show_ui(ui, |ui| {
-                        for key_code in KeyCode::iter() {
-                            let text = format!("{:?}", &key_code);
-                            if ui
-                                .selectable_value(
-                                    &mut game_config.triggerbot_hotkey,
-                                    key_code,
-                                    text,
-                                )
-                                .clicked()
-                            {
-                                self.send_message(Message::ConfigTriggerbotHotkey(
-                                    game_config.triggerbot_hotkey,
-                                ));
-                                self.write_game_config(&game_config);
+                if game_config.triggerbot {
+                    // bad hack to have hotkey on right side
+                    ui.label("");
+                    ui.label("");
+                    ui.label("TB Hotkey")
+                        .on_hover_text("which key or mouse button should activate the triggerbot");
+                    egui::ComboBox::new("triggerbot_hotkey", "")
+                        .selected_text(format!("{:?}", game_config.triggerbot_hotkey))
+                        .show_ui(ui, |ui| {
+                            for key_code in KeyCode::iter() {
+                                let text = format!("{:?}", &key_code);
+                                if ui
+                                    .selectable_value(
+                                        &mut game_config.triggerbot_hotkey,
+                                        key_code,
+                                        text,
+                                    )
+                                    .clicked()
+                                {
+                                    self.send_message(Message::ConfigTriggerbotHotkey(
+                                        game_config.triggerbot_hotkey,
+                                    ));
+                                    self.write_game_config(&game_config);
+                                }
                             }
-                        }
-                    });
-                ui.end_row();
+                        });
+                    ui.end_row();
 
-                ui.label("TB Start").on_hover_text("the minimum time to fire after an enemy is in the crosshair, in milliseconds");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut game_config.triggerbot_range.start)
-                            .range(0..=game_config.triggerbot_range.end)
-                            .speed(0.2),
-                    )
-                    .changed()
-                {
-                    self.send_message(Message::ConfigTriggerbotRange(
-                        game_config.triggerbot_range.clone(),
-                    ));
-                    self.write_game_config(&game_config);
-                }
+                    ui.label("TB Start").on_hover_text("the minimum time to fire after an enemy is in the crosshair, in milliseconds");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut game_config.triggerbot_range.start)
+                                .range(0..=game_config.triggerbot_range.end)
+                                .speed(0.2),
+                        )
+                        .changed()
+                    {
+                        self.send_message(Message::ConfigTriggerbotRange(
+                            game_config.triggerbot_range.clone(),
+                        ));
+                        self.write_game_config(&game_config);
+                    }
 
-                ui.label("TB End").on_hover_text("the maximum time to fire after an enemy is in the crosshair, in milliseconds");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut game_config.triggerbot_range.end)
-                            .range(game_config.triggerbot_range.start..=1000)
-                            .speed(0.2),
-                    )
-                    .changed()
-                {
-                    self.send_message(Message::ConfigTriggerbotRange(
-                        game_config.triggerbot_range.clone(),
-                    ));
-                    self.write_game_config(&game_config);
+                    ui.label("TB End").on_hover_text("the maximum time to fire after an enemy is in the crosshair, in milliseconds");
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut game_config.triggerbot_range.end)
+                                .range(game_config.triggerbot_range.start..=1000)
+                                .speed(0.2),
+                        )
+                        .changed()
+                    {
+                        self.send_message(Message::ConfigTriggerbotRange(
+                            game_config.triggerbot_range.clone(),
+                        ));
+                        self.write_game_config(&game_config);
+                    }
+                    ui.end_row();
                 }
-                ui.end_row();
             });
 
         *self
