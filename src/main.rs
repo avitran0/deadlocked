@@ -1,4 +1,8 @@
-use std::{io::Write, sync::mpsc, thread};
+use std::{
+    io::Write,
+    sync::{mpsc, Arc},
+    thread,
+};
 
 use color::Colors;
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
@@ -63,9 +67,10 @@ fn main() {
 
             let font = include_bytes!("../resources/Nunito.ttf");
             let mut font_definitions = FontDefinitions::default();
-            font_definitions
-                .font_data
-                .insert(String::from("nunito"), FontData::from_static(font));
+            font_definitions.font_data.insert(
+                String::from("nunito"),
+                Arc::new(FontData::from_static(font)),
+            );
 
             font_definitions
                 .families
