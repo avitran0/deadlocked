@@ -1,4 +1,4 @@
-use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui};
+use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui, Vec2, ViewportCommand};
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 
@@ -42,7 +42,7 @@ impl Gui {
         self.tx_aimbot.send(message).expect("aimbot thread died");
     }
 
-    fn aimbot_grid(&mut self, ui: &mut Ui) {
+    fn aimbot_grid(&mut self, ui: &mut Ui, ctx: &egui::Context) {
         let mut game_config = self
             .config
             .games
@@ -57,6 +57,7 @@ impl Gui {
                 ui.label("Enable Aimbot")
                     .on_hover_text("general aimbot enable");
                 if ui.checkbox(&mut game_config.enabled, "").changed() {
+                    ctx.send_viewport_cmd(ViewportCommand::InnerSize(self.get_window_size(&game_config)));
                     self.send_message(Message::ConfigEnableAimbot(game_config.enabled));
                     self.write_game_config(&game_config);
                 }
@@ -135,7 +136,7 @@ impl Gui {
                     }
 
                     ui.label("Smooth")
-                        .on_hover_text("how much the aimbot input should be smoothed, higher is more");
+                        .on_hover_text("how much the aimbot input should be smoothed\nhigher is more");
                     if ui
                         .add(
                             egui::DragValue::new(&mut game_config.smooth)
@@ -152,15 +153,16 @@ impl Gui {
                 ui.end_row();
 
                 ui.label("Enable RCS").on_hover_text(
-                    "whether recoil should be compensated when the aimbot is not active",
+                    "whether recoil should be compensated when the\naimbot is not active",
                 );
                 if ui.checkbox(&mut game_config.rcs, "").changed() {
                     self.send_message(Message::ConfigEnableRCS(game_config.rcs));
                     self.write_game_config(&game_config);
                 }
 
-                ui.label("Enable TB").on_hover_text("whether to automatically fire when a player is in the crosshair and the hotkey is held");
+                ui.label("Enable TB").on_hover_text("whether to automatically fire when\na player is in the crosshair and the hotkey is held");
                 if ui.checkbox(&mut game_config.triggerbot, "").changed() {
+                    ctx.send_viewport_cmd(ViewportCommand::InnerSize(self.get_window_size(&game_config)));
                     self.send_message(Message::ConfigEnableTriggerbot(game_config.triggerbot));
                     self.write_game_config(&game_config);
                 }
@@ -194,7 +196,7 @@ impl Gui {
                         });
                     ui.end_row();
 
-                    ui.label("TB Start").on_hover_text("the minimum time to fire after an enemy is in the crosshair, in milliseconds");
+                    ui.label("TB Start").on_hover_text("the minimum time to fire after an enemy\nis in the crosshair, in milliseconds");
                     if ui
                         .add(
                             egui::DragValue::new(&mut game_config.triggerbot_range.start)
@@ -209,7 +211,7 @@ impl Gui {
                         self.write_game_config(&game_config);
                     }
 
-                    ui.label("TB End").on_hover_text("the maximum time to fire after an enemy is in the crosshair, in milliseconds");
+                    ui.label("TB End").on_hover_text("the maximum time to fire after an enemy\nis in the crosshair, in milliseconds");
                     if ui
                         .add(
                             egui::DragValue::new(&mut game_config.triggerbot_range.end)
@@ -264,6 +266,14 @@ impl Gui {
                     .color(color),
             );
         });
+    }
+
+    pub fn get_window_size(&self, game_config: &AimbotConfig) -> Vec2 {
+        if game_config.enabled && game_config.triggerbot {
+            vec2(400.0, 250.0)
+        } else {
+            vec2(400.0, 210.0)
+        }
     }
 
     fn write_game_config(&self, game_config: &AimbotConfig) {
@@ -336,7 +346,7 @@ impl eframe::App for Gui {
             self.add_game_status(ui);
             ui.separator();
 
-            self.aimbot_grid(ui);
+            self.aimbot_grid(ui, ctx);
         });
 
         let font = egui::FontId::proportional(12.0);
