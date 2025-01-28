@@ -5,9 +5,12 @@ use rand::{rng, Rng};
 pub fn jitter(aim_coords: Vec2, smooth: f32) -> Vec2 {
     let mut rng = rng();
     let smooth = aim_coords / smooth;
-    let jitter_x = rng.random_range(-0.5..=0.5) * smooth.x;
-    let jitter_y = rng.random_range(-0.5..=0.5) * smooth.y;
-    vec2(smooth.x + jitter_x, smooth.y + jitter_y)
+    let shared_noise = rng.random_range(-0.2..=0.2);
+    let jitter = vec2(
+        rng.random_range(-0.5..=0.5) * smooth.x,
+        rng.random_range(-0.5..=0.5) * smooth.y,
+    ) + shared_noise;
+    smooth + jitter
 }
 
 pub fn angles_from_vector(forward: Vec3) -> Vec2 {
