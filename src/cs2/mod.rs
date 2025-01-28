@@ -11,7 +11,7 @@ use crate::{
     config::Config,
     cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
     key_codes::KeyCode,
-    math::{angles_from_vector, angles_to_fov, vec2_clamp},
+    math::{angles_from_vector, angles_to_fov, jitter, vec2_clamp},
     mouse::mouse_move,
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
@@ -340,31 +340,11 @@ impl CS2 {
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
         );
-        let mut smooth_angles = Vec2::ZERO;
-
-        if !config.aim_lock && config.smooth >= 1.0 {
-            smooth_angles.x = if xy.x.abs() > 1.0 {
-                if smooth_angles.x < xy.x {
-                    smooth_angles.x + 1.0 + (xy.x / config.smooth)
-                } else {
-                    smooth_angles.x - 1.0 + (xy.x / config.smooth)
-                }
-            } else {
-                xy.x
-            };
-
-            smooth_angles.y = if xy.y.abs() > 1.0 {
-                if smooth_angles.y < xy.y {
-                    smooth_angles.y + 1.0 + (xy.y / config.smooth)
-                } else {
-                    smooth_angles.y - 1.0 + (xy.y / config.smooth)
-                }
-            } else {
-                xy.y
-            };
+        let smooth_angles = if !config.aim_lock && config.smooth > 1.0 {
+            jitter(xy, config.smooth)
         } else {
-            smooth_angles = xy;
-        }
+            xy
+        };
 
         Some(smooth_angles)
     }
