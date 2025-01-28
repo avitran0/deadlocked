@@ -1,8 +1,8 @@
-use glam::{vec2, Vec2, Vec3};
+use glam::{vec2, vec3, Vec2, Vec3};
 use rand::{rng, Rng};
 
 // t will be config.smooth
-pub fn jitter(aim_coords: Vec2, smooth: f32) -> Vec2 {
+pub fn jitter(aim_coords: &Vec2, smooth: f32) -> Vec2 {
     let mut rng = rng();
     let smooth = aim_coords / smooth;
     let shared_noise = rng.random_range(-0.2..=0.2);
@@ -13,7 +13,7 @@ pub fn jitter(aim_coords: Vec2, smooth: f32) -> Vec2 {
     smooth + jitter
 }
 
-pub fn angles_from_vector(forward: Vec3) -> Vec2 {
+pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     let mut yaw;
     let mut pitch;
 
@@ -38,7 +38,7 @@ pub fn angles_from_vector(forward: Vec3) -> Vec2 {
     Vec2::new(pitch, yaw)
 }
 
-pub fn angles_to_fov(view_angles: Vec2, aim_angles: Vec2) -> f32 {
+pub fn angles_to_fov(view_angles: &Vec2, aim_angles: &Vec2) -> f32 {
     let mut delta = view_angles - aim_angles;
 
     if delta.x > 180.0 {
@@ -50,6 +50,14 @@ pub fn angles_to_fov(view_angles: Vec2, aim_angles: Vec2) -> f32 {
     delta.y = ((delta.y + 180.0) % 360.0 - 180.0).abs();
 
     delta.length()
+}
+
+pub fn angles_to_direction(view_angles: &Vec2) -> Vec3 {
+    let degrees = vec2(view_angles.x.to_radians(), view_angles.y.to_radians());
+    let pitch = vec2(degrees.x.sin(), degrees.x.cos());
+    let yaw = vec2(degrees.y.sin(), degrees.y.cos());
+
+    vec3(pitch.y * yaw.y, pitch.y * yaw.x, -pitch.x).normalize()
 }
 
 pub fn vec2_clamp(vec: &mut Vec2) {

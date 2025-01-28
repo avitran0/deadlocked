@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::read_to_string, path::Path, time::Duration};
+use std::{collections::HashMap, fs::read_to_string, ops::Range, path::Path, time::Duration};
 
 use serde::{Deserialize, Serialize};
 use strum::IntoEnumIterator;
@@ -37,13 +37,16 @@ pub struct AimbotConfig {
     pub smooth: f32,
     pub multibone: bool,
     pub rcs: bool,
+    pub triggerbot: bool,
+    pub triggerbot_hotkey: KeyCode,
+    pub triggerbot_range: Range<u32>,
 }
 
 impl Default for AimbotConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            hotkey: KeyCode::MouseLeft,
+            hotkey: KeyCode::Mouse5,
             start_bullet: 2,
             aim_lock: false,
             visibility_check: true,
@@ -51,6 +54,9 @@ impl Default for AimbotConfig {
             smooth: 5.0,
             multibone: true,
             rcs: false,
+            triggerbot: false,
+            triggerbot_hotkey: KeyCode::Mouse4,
+            triggerbot_range: 100..300,
         }
     }
 }

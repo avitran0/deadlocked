@@ -51,7 +51,7 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
-    let window_size = [600.0, 350.0];
+    let window_size = [600.0, 400.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_maximize_button(false)

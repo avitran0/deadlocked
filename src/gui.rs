@@ -156,6 +156,68 @@ impl Gui {
                     self.send_message(Message::ConfigEnableRCS(game_config.rcs));
                     self.write_game_config(&game_config);
                 }
+                ui.end_row();
+
+                ui.label("Enable TB");
+                if ui.checkbox(&mut game_config.triggerbot, "").changed() {
+                    self.send_message(Message::ConfigEnableTriggerbot(game_config.triggerbot));
+                    self.write_game_config(&game_config);
+                }
+
+                ui.label("TB Hotkey")
+                    .on_hover_text("which key or mouse button should activate the triggerbot");
+                egui::ComboBox::new("triggerbot_hotkey", "")
+                    .selected_text(format!("{:?}", game_config.triggerbot_hotkey))
+                    .show_ui(ui, |ui| {
+                        for key_code in KeyCode::iter() {
+                            let text = format!("{:?}", &key_code);
+                            if ui
+                                .selectable_value(
+                                    &mut game_config.triggerbot_hotkey,
+                                    key_code,
+                                    text,
+                                )
+                                .clicked()
+                            {
+                                self.send_message(Message::ConfigTriggerbotHotkey(
+                                    game_config.triggerbot_hotkey,
+                                ));
+                                self.write_game_config(&game_config);
+                            }
+                        }
+                    });
+                ui.end_row();
+
+                ui.label("TB Start");
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut game_config.triggerbot_range.start)
+                            .range(0..=game_config.triggerbot_range.end)
+                            .speed(0.2),
+                    )
+                    .changed()
+                {
+                    self.send_message(Message::ConfigTriggerbotRange(
+                        game_config.triggerbot_range.clone(),
+                    ));
+                    self.write_game_config(&game_config);
+                }
+
+                ui.label("TB End");
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut game_config.triggerbot_range.end)
+                            .range(game_config.triggerbot_range.start..=1000)
+                            .speed(0.2),
+                    )
+                    .changed()
+                {
+                    self.send_message(Message::ConfigTriggerbotRange(
+                        game_config.triggerbot_range.clone(),
+                    ));
+                    self.write_game_config(&game_config);
+                }
+                ui.end_row();
             });
 
         *self

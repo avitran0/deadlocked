@@ -128,6 +128,9 @@ impl AimbotManager {
             Message::ConfigSmooth(smooth) => config.smooth = smooth,
             Message::ConfigMultibone(multibone) => config.multibone = multibone,
             Message::ConfigEnableRCS(rcs) => config.rcs = rcs,
+            Message::ConfigEnableTriggerbot(tb) => config.triggerbot = tb,
+            Message::ConfigTriggerbotHotkey(hotkey) => config.triggerbot_hotkey = hotkey,
+            Message::ConfigTriggerbotRange(range) => config.triggerbot_range = range,
             _ => {}
         }
     }

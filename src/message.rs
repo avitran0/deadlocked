@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
@@ -29,6 +31,9 @@ pub enum Message {
     ConfigSmooth(f32),
     ConfigMultibone(bool),
     ConfigEnableRCS(bool),
+    ConfigEnableTriggerbot(bool),
+    ConfigTriggerbotHotkey(KeyCode),
+    ConfigTriggerbotRange(Range<u32>),
     Status(AimbotStatus),
     ChangeGame(Game),
     MouseStatus(MouseStatus),

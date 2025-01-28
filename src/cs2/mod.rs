@@ -4,6 +4,7 @@ use bones::Bones;
 use constants::Constants;
 use glam::{Vec2, Vec3};
 use log::{debug, info, warn};
+use rand::{rng, Rng};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -11,8 +12,8 @@ use crate::{
     config::Config,
     cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
     key_codes::KeyCode,
-    math::{angles_from_vector, angles_to_fov, jitter, vec2_clamp},
-    mouse::mouse_move,
+    math::{angles_from_vector, angles_to_direction, angles_to_fov, jitter, vec2_clamp},
+    mouse::{mouse_left_press, mouse_left_release, mouse_move},
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
 };
@@ -32,6 +33,7 @@ pub struct CS2 {
 
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
+    last_shot_ms: u32,
 }
 
 impl Aimbot for CS2 {
@@ -74,14 +76,8 @@ impl Aimbot for CS2 {
     }
 
     fn run(&mut self, config: &Config, mouse: &mut File) {
-        if let Some(coords) = self.rcs(config) {
-            debug!("rcs: {:?}", coords);
-            mouse_move(mouse, coords);
-        }
-        if let Some(coords) = self.aimbot(config) {
-            debug!("aimbot: {:?}", coords);
-            mouse_move(mouse, coords);
-        }
+        self.rcs(config, mouse);
+        self.aimbot(config, mouse);
     }
 }
 
@@ -95,20 +91,21 @@ impl CS2 {
 
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
+            last_shot_ms: 0,
         }
     }
 
-    fn rcs(&mut self, config: &Config) -> Option<Vec2> {
+    fn rcs(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
                 self.is_valid = false;
-                return None;
+                return;
             }
         };
         let config = config.games.get(&config.current_game).unwrap().clone();
         if !config.rcs {
-            return None;
+            return;
         }
 
         let local_controller = self.get_local_controller(process);
@@ -116,7 +113,7 @@ impl CS2 {
             Some(pawn) => pawn,
             None => {
                 self.target.reset();
-                return None;
+                return;
             }
         };
 
@@ -128,7 +125,7 @@ impl CS2 {
         ]
         .contains(&weapon_class)
         {
-            return None;
+            return;
         }
 
         let shots_fired = self.get_shots_fired(process, local_pawn);
@@ -141,7 +138,7 @@ impl CS2 {
         if shots_fired <= 1 {
             self.previous_aim_punch = aim_punch;
             self.unaccounted_aim_punch = Vec2::ZERO;
-            return None;
+            return;
         }
         let sensitivity =
             self.get_sensitivity(process) * self.get_fov_multiplier(process, local_pawn);
@@ -161,20 +158,27 @@ impl CS2 {
         if (0.0..1.0).contains(&mouse_angle.y) {
             self.unaccounted_aim_punch.y = mouse_angle.y;
         }
-        Some(mouse_angle)
+        mouse_move(mouse, mouse_angle)
     }
 
-    fn aimbot(&mut self, config: &Config) -> Option<Vec2> {
+    fn aimbot(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
                 self.is_valid = false;
-                return None;
+                return;
             }
         };
+
+        let engine_ms = self.engine_ms(process);
+        if engine_ms > self.last_shot_ms + 100 {
+            mouse_left_release(mouse);
+            self.last_shot_ms = 0;
+        }
+
         let config = config.games.get(&config.current_game).unwrap().clone();
         if !config.enabled {
-            return None;
+            return;
         }
 
         let local_controller = self.get_local_controller(process);
@@ -182,14 +186,14 @@ impl CS2 {
             Some(pawn) => pawn,
             None => {
                 self.target.reset();
-                return None;
+                return;
             }
         };
 
         let team = self.get_team(process, local_pawn);
         if team != Constants::TEAM_CT && team != Constants::TEAM_T {
             self.target.reset();
-            return None;
+            return;
         }
 
         let weapon_class = self.get_weapon_class(process, local_pawn);
@@ -201,7 +205,7 @@ impl CS2 {
         .contains(&weapon_class)
         {
             self.target.reset();
-            return None;
+            return;
         }
 
         let aimbot_active = self.is_button_down(process, &config.hotkey);
@@ -252,9 +256,9 @@ impl CS2 {
                 let head_position = self.get_bone_position(process, pawn, Bones::Head.u64());
                 let distance = eye_position.distance(head_position);
                 let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
-                let fov = angles_to_fov(view_angles, angle);
+                let fov = angles_to_fov(&view_angles, &angle);
 
-                // scale should be 2 at 2.0 at 0 units, and 1.0 at 500+ units
+                // scale should be 5.0 at 0 units, and 1.0 at 500+ units
                 if fov > (config.fov * self.distance_scale(distance)) {
                     continue;
                 }
@@ -271,13 +275,13 @@ impl CS2 {
         }
 
         if self.target.pawn == 0 {
-            return None;
+            return;
         }
 
         if config.visibility_check {
             let spotted_mask = self.get_spotted_mask(process, self.target.pawn);
             if (spotted_mask & (1 << local_pawn_index)) == 0 {
-                return None;
+                return;
             }
         }
 
@@ -288,7 +292,7 @@ impl CS2 {
                 let bone_position = self.get_bone_position(process, self.target.pawn, bone.u64());
                 let distance = eye_position.distance(bone_position);
                 let angle = self.get_target_angle(process, local_pawn, bone_position, aim_punch);
-                let fov = angles_to_fov(view_angles, angle);
+                let fov = angles_to_fov(&view_angles, &angle);
 
                 if fov < smallest_fov {
                     smallest_fov = fov;
@@ -309,22 +313,44 @@ impl CS2 {
             self.target.bone_index = Bones::Head.u64();
         }
 
-        if !aimbot_active {
-            return None;
+        if config.triggerbot && self.is_button_down(process, &config.triggerbot_hotkey) {
+            const RADIUS: f32 = 8.0;
+            let bone_pos =
+                self.get_bone_position(process, self.target.pawn, self.target.bone_index);
+            let player_pos = self.get_eye_position(process, local_pawn);
+            let view_direction = angles_to_direction(&view_angles);
+            let l = bone_pos - player_pos;
+            let tca = l.dot(view_direction);
+            let d2 = l.length_squared() - tca * tca;
+            if d2 <= RADIUS * RADIUS {
+                let thc = (RADIUS * RADIUS - d2).sqrt();
+                let t0 = tca - thc;
+                let t1 = tca + thc;
+                if (t0 > 0.0 || t1 > 0.0) && self.last_shot_ms == 0 {
+                    self.last_shot_ms = engine_ms + rng().random_range(config.triggerbot_range);
+                }
+            }
+        }
+        if engine_ms > self.last_shot_ms && engine_ms < self.last_shot_ms + 10 {
+            mouse_left_press(mouse);
         }
 
-        if angles_to_fov(view_angles, self.target.angle)
+        if !aimbot_active {
+            return;
+        }
+
+        if angles_to_fov(&view_angles, &self.target.angle)
             > (config.fov * self.distance_scale(self.target.distance))
         {
-            return None;
+            return;
         }
 
         if !self.is_pawn_valid(process, self.target.pawn) {
-            return None;
+            return;
         }
 
         if shots_fired < config.start_bullet {
-            return None;
+            return;
         }
 
         let mut aim_angles = view_angles - self.target.angle;
@@ -341,12 +367,12 @@ impl CS2 {
             -aim_angles.x / sensitivity * 50.0,
         );
         let smooth_angles = if !config.aim_lock && config.smooth > 1.0 {
-            jitter(xy, config.smooth)
+            jitter(&xy, config.smooth)
         } else {
             xy
         };
 
-        Some(smooth_angles)
+        mouse_move(mouse, smooth_angles)
     }
 
     fn get_target_angle(
@@ -359,7 +385,7 @@ impl CS2 {
         let eye_position = self.get_eye_position(process, local_pawn);
         let forward = (position - eye_position).normalize();
 
-        let mut angles = angles_from_vector(forward) - aim_punch;
+        let mut angles = angles_from_vector(&forward) - aim_punch;
         vec2_clamp(&mut angles);
 
         angles
@@ -775,6 +801,12 @@ impl CS2 {
                 + (((button.u64() >> 5) * 4) + self.offsets.direct.button_state),
         );
         ((value >> (button.u64() & 31)) & 1) != 0
+    }
+
+    fn engine_ms(&self, process: &Process) -> u32 {
+        let offset = process
+            .read::<i32>(process.get_interface_function(self.offsets.interface.input, 16) + 2);
+        process.read(self.offsets.interface.input + offset as u64)
     }
 
     fn distance_scale(&self, distance: f32) -> f32 {

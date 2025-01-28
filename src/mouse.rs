@@ -134,8 +134,7 @@ pub fn mouse_move(mouse: &mut File, coords: Vec2) {
     mouse.write_all(&syn.bytes()).unwrap();
 }
 
-#[allow(unused)]
-fn mouse_left_press(mouse: &mut File) {
+pub fn mouse_left_press(mouse: &mut File) {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let time = Timeval {
         seconds: now.as_secs(),
@@ -160,8 +159,7 @@ fn mouse_left_press(mouse: &mut File) {
     mouse.write_all(&syn.bytes()).unwrap();
 }
 
-#[allow(unused)]
-fn mouse_left_release(mouse: &mut File) {
+pub fn mouse_left_release(mouse: &mut File) {
     let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
     let time = Timeval {
         seconds: now.as_secs(),
