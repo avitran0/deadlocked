@@ -327,7 +327,11 @@ impl CS2 {
                 let t0 = tca - thc;
                 let t1 = tca + thc;
                 if (t0 > 0.0 || t1 > 0.0) && self.last_shot_ms == 0 {
-                    self.last_shot_ms = engine_ms + rng().random_range(config.triggerbot_range);
+                    if config.triggerbot_range.is_empty() {
+                        self.last_shot_ms = engine_ms + config.triggerbot_range.start;
+                    } else {
+                        self.last_shot_ms = engine_ms + rng().random_range(config.triggerbot_range);
+                    }
                 }
             }
         }
@@ -795,6 +799,9 @@ impl CS2 {
 
     // misc
     fn is_button_down(&self, process: &Process, button: &KeyCode) -> bool {
+        if *button == KeyCode::None {
+            return true;
+        }
         // what the actual fuck is happening here?
         let value = process.read::<u32>(
             self.offsets.interface.input
