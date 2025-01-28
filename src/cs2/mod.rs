@@ -177,7 +177,7 @@ impl CS2 {
         }
 
         let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.enabled {
+        if !config.enabled && !config.triggerbot {
             return;
         }
 
@@ -339,7 +339,7 @@ impl CS2 {
             mouse_left_press(mouse);
         }
 
-        if !aimbot_active {
+        if !aimbot_active || !config.enabled {
             return;
         }
 
