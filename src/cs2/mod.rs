@@ -471,9 +471,22 @@ impl CS2 {
             offsets.library.client,
         );
         if planted_c4.is_none() {
-            warn!("coult not find planted c4 offset");
+            warn!("could not find planted c4 offset");
         }
         offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x07);
+
+        let glow_manager = process.scan_pattern(
+            &[
+                0x48, 0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x48, 0xC7, 0x47,
+            ],
+            "xxx????xxxxx????xxx????xxx".as_bytes(),
+            offsets.library.client,
+        );
+        if glow_manager.is_none() {
+            warn!("could not find glow manager offset");
+        }
+        offsets.direct.glow_manager = process.get_relative_address(glow_manager?, 0x03, 0x07);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
