@@ -103,6 +103,11 @@ impl CS2 {
                 return;
             }
         };
+        // todo: does not yet work
+        /*if self.is_bomb_planted(process) {
+            dbg!(self.get_bomb_site(process));
+            dbg!(self.get_bomb_blow_time(process));
+        }*/
         let config = config.games.get(&config.current_game).unwrap().clone();
         if !config.rcs {
             return;
@@ -177,7 +182,7 @@ impl CS2 {
         }
 
         let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.enabled && !config.triggerbot {
+        if !config.enabled && !config.triggerbot && !config.glow {
             return;
         }
 
@@ -235,11 +240,30 @@ impl CS2 {
                 continue;
             }
 
+            if config.glow && team != self.get_team(process, pawn) {
+                process.write(
+                    pawn + self.offsets.pawn.glow + self.offsets.glow.is_glowing,
+                    1,
+                );
+                process.write(
+                    pawn + self.offsets.pawn.glow + self.offsets.glow.glow_type,
+                    3,
+                );
+                process.write(
+                    pawn + self.offsets.pawn.glow + self.offsets.glow.color_override,
+                    0xFF0000FFu64,
+                );
+            }
+
             if pawn == local_pawn {
                 local_pawn_index = i - 1;
             } else {
                 pawns.push(pawn);
             }
+        }
+
+        if !config.enabled && !config.triggerbot {
+            return;
         }
 
         let mut smallest_fov = 360.0;
@@ -441,6 +465,16 @@ impl CS2 {
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
 
+        let planted_c4 = process.scan_pattern(
+            &[0x00, 0x00, 0x00, 0x00, 0x8B, 0x10, 0x85, 0xD2, 0x0F, 0x8F],
+            "????xxxxxx".as_bytes(),
+            offsets.library.client,
+        );
+        if planted_c4.is_none() {
+            warn!("coult not find planted c4 offset");
+        }
+        offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x07);
+
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
             warn!("could not get mp_tammates_are_enemies convar offset");
@@ -582,6 +616,12 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
+                "m_Glow" => {
+                    if !network_enable || offsets.pawn.glow != 0 {
+                        continue;
+                    }
+                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -614,6 +654,43 @@ impl CS2 {
                         continue;
                     }
                     offsets.spotted_state.mask =
+                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                }
+                "m_bBombTicking" => {
+                    if offsets.bomb.is_ticking != 0 {
+                        continue;
+                    }
+                    offsets.bomb.is_ticking = read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
+                "m_nBombSite" => {
+                    if !network_enable || offsets.bomb.bomb_site != 0 {
+                        continue;
+                    }
+                    offsets.bomb.bomb_site = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                }
+                "m_flC4Blow" => {
+                    if offsets.bomb.blow_time != 0 {
+                        continue;
+                    }
+                    offsets.bomb.blow_time = read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
+                "m_bGlowing" => {
+                    if offsets.glow.is_glowing != 0 {
+                        continue;
+                    }
+                    offsets.glow.is_glowing = read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
+                "m_iGlowType" => {
+                    if offsets.glow.glow_type != 0 {
+                        continue;
+                    }
+                    offsets.glow.glow_type = read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
+                "m_glowColorOverride" => {
+                    if !network_enable || offsets.glow.color_override != 0 {
+                        continue;
+                    }
+                    offsets.glow.color_override =
                         read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
                 }
                 _ => {}
@@ -786,6 +863,18 @@ impl CS2 {
         let data_address = process.read::<u64>(pawn + self.offsets.pawn.aim_punch_cache + 0x08);
 
         process.read(data_address + (length - 1) * 12)
+    }
+
+    fn is_bomb_planted(&self, process: &Process) -> bool {
+        process.read::<u8>(self.offsets.direct.planted_c4 + self.offsets.bomb.is_ticking) != 0
+    }
+
+    fn get_bomb_site(&self, process: &Process) -> i32 {
+        process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.bomb_site)
+    }
+
+    fn get_bomb_blow_time(&self, process: &Process) -> u32 {
+        process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.blow_time)
     }
 
     // convars

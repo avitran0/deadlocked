@@ -5,7 +5,6 @@ use std::{
 };
 
 use color::Colors;
-use config::parse_config;
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
 
 mod aimbot;
@@ -52,7 +51,7 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
-    let window_size = [600.0, 400.0];
+    let window_size = [600.0, 375.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_maximize_button(false)
@@ -82,15 +81,8 @@ fn main() {
             cc.egui_ctx.set_fonts(font_definitions);
 
             cc.egui_ctx.style_mut_of(egui::Theme::Dark, gui_style);
-            let gui = gui::Gui::new(tx_gui, rx_gui);
-            let config = parse_config();
-            let game_config = config.games.get(&config.current_game).unwrap();
-            cc.egui_ctx
-                .send_viewport_cmd(egui::ViewportCommand::InnerSize(
-                    gui.get_window_size(game_config),
-                ));
 
-            Ok(Box::new(gui))
+            Ok(Box::new(gui::Gui::new(tx_gui, rx_gui)))
         }),
     )
     .unwrap();

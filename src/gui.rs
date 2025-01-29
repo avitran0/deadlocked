@@ -1,4 +1,4 @@
-use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui, Vec2, ViewportCommand};
+use eframe::egui::{self, vec2, Align, Align2, Color32, Layout, Ui};
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 
@@ -42,7 +42,7 @@ impl Gui {
         self.tx_aimbot.send(message).expect("aimbot thread died");
     }
 
-    fn aimbot_grid(&mut self, ui: &mut Ui, ctx: &egui::Context) {
+    fn aimbot_grid(&mut self, ui: &mut Ui) {
         let mut game_config = self
             .config
             .games
@@ -57,7 +57,6 @@ impl Gui {
                 ui.label("Enable Aimbot")
                     .on_hover_text("general aimbot enable");
                 if ui.checkbox(&mut game_config.enabled, "").changed() {
-                    ctx.send_viewport_cmd(ViewportCommand::InnerSize(self.get_window_size(&game_config)));
                     self.send_message(Message::ConfigEnableAimbot(game_config.enabled));
                     self.write_game_config(&game_config);
                 }
@@ -162,16 +161,19 @@ impl Gui {
 
                 ui.label("Enable TB").on_hover_text("whether to automatically fire when\na player is in the crosshair and the hotkey is held");
                 if ui.checkbox(&mut game_config.triggerbot, "").changed() {
-                    ctx.send_viewport_cmd(ViewportCommand::InnerSize(self.get_window_size(&game_config)));
                     self.send_message(Message::ConfigEnableTriggerbot(game_config.triggerbot));
                     self.write_game_config(&game_config);
                 }
                 ui.end_row();
 
+                ui.colored_label(Colors::RED, "Glow").on_hover_text("WARNING! this writes memory, and thus may lead to bans");
+                if ui.checkbox(&mut game_config.glow, "").changed() {
+                    self.send_message(Message::ConfigGlow(game_config.glow));
+                    self.write_game_config(&game_config);
+                }
+
                 if game_config.triggerbot {
                     // bad hack to have hotkey on right side
-                    ui.label("");
-                    ui.label("");
                     ui.label("TB Hotkey")
                         .on_hover_text("which key or mouse button should activate the triggerbot");
                     egui::ComboBox::new("triggerbot_hotkey", "")
@@ -268,14 +270,6 @@ impl Gui {
         });
     }
 
-    pub fn get_window_size(&self, game_config: &AimbotConfig) -> Vec2 {
-        if game_config.enabled && game_config.triggerbot {
-            vec2(400.0, 250.0)
-        } else {
-            vec2(400.0, 210.0)
-        }
-    }
-
     fn write_game_config(&self, game_config: &AimbotConfig) {
         let mut config = self.config.clone();
         *config.games.get_mut(&self.config.current_game).unwrap() = game_config.clone();
@@ -346,7 +340,7 @@ impl eframe::App for Gui {
             self.add_game_status(ui);
             ui.separator();
 
-            self.aimbot_grid(ui, ctx);
+            self.aimbot_grid(ui);
         });
 
         let font = egui::FontId::proportional(12.0);

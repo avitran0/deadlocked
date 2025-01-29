@@ -31,6 +31,7 @@ pub enum Message {
     ConfigSmooth(f32),
     ConfigMultibone(bool),
     ConfigEnableRCS(bool),
+    ConfigGlow(bool),
     ConfigEnableTriggerbot(bool),
     ConfigTriggerbotHotkey(KeyCode),
     ConfigTriggerbotRange(Range<u32>),
