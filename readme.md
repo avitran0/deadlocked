@@ -5,9 +5,11 @@
 > [!CAUTION]
 > vacnet 3.0 seems to be better at detecting aimbot and wallhacks, so **do not** use aim lock, and play with a low fov to avoid bans. the default configuration should be a good starting point.
 
-a very simple cs2 aimbot, for linux only
+a very simple cs2 aimbot, for linux only.
 
-deadlock support will happen once that gets a native linux client
+deadlock support will happen once that gets a native linux client.
+
+if you want and esp, try either the esp branch, and if that does not work the cpp branch.
 
 > [!WARNING]
 > using the glow feature might get you banned. use with caution.
