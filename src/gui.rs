@@ -73,14 +73,12 @@ impl Gui {
             .num_columns(2)
             .min_col_width(80.0)
             .show(ui, |ui| {
-                ui.label("Enable Aimbot")
-                    .on_hover_text("general aimbot enable");
+                ui.label("Enable Aimbot");
                 if ui.checkbox(&mut self.config.aimbot.enabled, "").changed() {
                     self.send_config();
                 }
 
-                ui.label("Hotkey")
-                    .on_hover_text("which key or mouse button should activate the aimbot");
+                ui.label("Hotkey");
                 egui::ComboBox::new("aimbot_hotkey", "")
                     .selected_text(format!("{:?}", self.config.aimbot.hotkey))
                     .show_ui(ui, |ui| {
@@ -96,14 +94,12 @@ impl Gui {
                     });
                 ui.end_row();
 
-                ui.label("Aim Lock")
-                    .on_hover_text("whether the aim should lock onto the target");
+                ui.label("Aim Lock");
                 if ui.checkbox(&mut self.config.aimbot.aim_lock, "").changed() {
                     self.send_config();
                 }
 
-                ui.label("Start Bullet")
-                    .on_hover_text("after how many bullets fired in a row the aimbot should start");
+                ui.label("Start Bullet");
                 if ui
                     .add(
                         egui::DragValue::new(&mut self.config.aimbot.start_bullet)
@@ -116,8 +112,7 @@ impl Gui {
                 }
                 ui.end_row();
 
-                ui.label("Visibility Check")
-                    .on_hover_text("whether to check for player visibility");
+                ui.label("Visibility Check");
                 if ui
                     .checkbox(&mut self.config.aimbot.visibility_check, "")
                     .changed()
@@ -125,8 +120,7 @@ impl Gui {
                     self.send_config();
                 }
 
-                ui.label("FOV")
-                    .on_hover_text("how much around the crosshair the aimbot should \"see\"");
+                ui.label("FOV");
                 if ui
                     .add(
                         egui::DragValue::new(&mut self.config.aimbot.fov)
@@ -141,15 +135,12 @@ impl Gui {
                 }
                 ui.end_row();
 
-                ui.label("Multibone").on_hover_text(
-                    "whether the aimbot should aim at all of the body, or just the head",
-                );
+                ui.label("Multibone");
                 if ui.checkbox(&mut self.config.aimbot.multibone, "").changed() {
                     self.send_config();
                 }
 
-                ui.label("Smooth")
-                    .on_hover_text("how much the aimbot input should be smoothed\nhigher is more");
+                ui.label("Smooth");
                 if ui
                     .add(
                         egui::DragValue::new(&mut self.config.aimbot.smooth)
@@ -163,9 +154,7 @@ impl Gui {
                 }
                 ui.end_row();
 
-                ui.label("Enable RCS").on_hover_text(
-                    "whether recoil should be compensated when the\naimbot is not active",
-                );
+                ui.label("Enable RCS");
                 if ui.checkbox(&mut self.config.aimbot.rcs, "").changed() {
                     self.send_config();
                 }
@@ -178,57 +167,59 @@ impl Gui {
             .num_columns(2)
             .min_col_width(80.0)
             .show(ui, |ui| {
-                ui.label("Enable").on_hover_text("whether to automatically fire when\na player is in the crosshair and the hotkey is held");
-                if ui.checkbox(&mut self.config.aimbot.triggerbot, "").changed() {
+                ui.label("Enable");
+                if ui
+                    .checkbox(&mut self.config.aimbot.triggerbot, "")
+                    .changed()
+                {
                     self.send_config();
                 }
 
-                    // bad hack to have hotkey on right side
-                    ui.label("Hotkey")
-                        .on_hover_text("which key or mouse button should activate the triggerbot");
-                    egui::ComboBox::new("triggerbot_hotkey", "")
-                        .selected_text(format!("{:?}", self.config.aimbot.triggerbot_hotkey))
-                        .show_ui(ui, |ui| {
-                            for key_code in KeyCode::iter() {
-                                let text = format!("{:?}", &key_code);
-                                if ui
-                                    .selectable_value(
-                                        &mut self.config.aimbot.triggerbot_hotkey,
-                                        key_code,
-                                        text,
-                                    )
-                                    .clicked()
-                                {
-                                    self.send_config();
-                                }
+                // bad hack to have hotkey on right side
+                ui.label("Hotkey");
+                egui::ComboBox::new("triggerbot_hotkey", "")
+                    .selected_text(format!("{:?}", self.config.aimbot.triggerbot_hotkey))
+                    .show_ui(ui, |ui| {
+                        for key_code in KeyCode::iter() {
+                            let text = format!("{:?}", &key_code);
+                            if ui
+                                .selectable_value(
+                                    &mut self.config.aimbot.triggerbot_hotkey,
+                                    key_code,
+                                    text,
+                                )
+                                .clicked()
+                            {
+                                self.send_config();
                             }
-                        });
-                    ui.end_row();
+                        }
+                    });
+                ui.end_row();
 
-                    ui.label("Min Delay").on_hover_text("the minimum time to fire after an enemy\nis in the crosshair, in milliseconds");
-                    if ui
-                        .add(
-                            egui::DragValue::new(&mut self.config.aimbot.triggerbot_range.start)
-                                .range(0..=self.config.aimbot.triggerbot_range.end)
-                                .speed(0.2),
-                        )
-                        .changed()
-                    {
-                        self.send_config();
-                    }
+                ui.label("Min Delay");
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut self.config.aimbot.triggerbot_range.start)
+                            .range(0..=self.config.aimbot.triggerbot_range.end)
+                            .speed(0.2),
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
 
-                    ui.label("Max Delay").on_hover_text("the maximum time to fire after an enemy\nis in the crosshair, in milliseconds");
-                    if ui
-                        .add(
-                            egui::DragValue::new(&mut self.config.aimbot.triggerbot_range.end)
-                                .range(self.config.aimbot.triggerbot_range.start..=1000)
-                                .speed(0.2),
-                        )
-                        .changed()
-                    {
-                        self.send_config();
-                    }
-                    ui.end_row();
+                ui.label("Max Delay");
+                if ui
+                    .add(
+                        egui::DragValue::new(&mut self.config.aimbot.triggerbot_range.end)
+                            .range(self.config.aimbot.triggerbot_range.start..=1000)
+                            .speed(0.2),
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.end_row();
             });
     }
 
