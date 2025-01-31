@@ -596,39 +596,41 @@ impl eframe::App for Gui {
                 Tab::Colors => self.colors_grid(ui),
             }
 
-            ctx.show_viewport_immediate(
-                ViewportId::from_hash_of("cock"),
-                ViewportBuilder::default()
-                    .with_always_on_top()
-                    .with_decorations(false)
-                    .with_mouse_passthrough(true)
-                    .with_position((0.0, 0.0))
-                    .with_inner_size((8192.0 / 1.5, 8192.0 / 1.5))
-                    .with_transparent(true),
-                |context, _class| {
-                    context.request_repaint_after(Duration::from_millis(5));
-                    let painter = context.debug_painter();
-                    painter.rect_filled(context.screen_rect(), 0.0, Color32::TRANSPARENT);
-                    for player in &self.player_info {
-                        self.draw_box(&painter, player, &self.config.visuals);
-                        self.draw_skeleton(&painter, player, &self.config.visuals);
-                        self.draw_bars(&painter, player, &self.config.visuals);
-                    }
-                    if self.config.visuals.debug {
-                        painter.line(
-                            vec![pos2(0.0, 0.0), context.screen_rect().max],
-                            Stroke::new(1.5, Colors::TEXT),
-                        );
-                        painter.line(
-                            vec![
-                                pos2(0.0, context.screen_rect().max.y),
-                                pos2(context.screen_rect().max.x, 0.0),
-                            ],
-                            Stroke::new(1.5, Colors::TEXT),
-                        );
-                    }
-                },
-            )
+            if self.config.visuals.enabled {
+                ctx.show_viewport_immediate(
+                    ViewportId::from_hash_of("cock"),
+                    ViewportBuilder::default()
+                        .with_always_on_top()
+                        .with_decorations(false)
+                        .with_mouse_passthrough(true)
+                        .with_position((0.0, 0.0))
+                        .with_inner_size((8192.0 / 1.5, 8192.0 / 1.5))
+                        .with_transparent(true),
+                    |context, _class| {
+                        context.request_repaint_after(Duration::from_millis(5));
+                        let painter = context.debug_painter();
+                        painter.rect_filled(context.screen_rect(), 0.0, Color32::TRANSPARENT);
+                        for player in &self.player_info {
+                            self.draw_box(&painter, player, &self.config.visuals);
+                            self.draw_skeleton(&painter, player, &self.config.visuals);
+                            self.draw_bars(&painter, player, &self.config.visuals);
+                        }
+                        if self.config.visuals.debug {
+                            painter.line(
+                                vec![pos2(0.0, 0.0), context.screen_rect().max],
+                                Stroke::new(1.5, Colors::TEXT),
+                            );
+                            painter.line(
+                                vec![
+                                    pos2(0.0, context.screen_rect().max.y),
+                                    pos2(context.screen_rect().max.x, 0.0),
+                                ],
+                                Stroke::new(1.5, Colors::TEXT),
+                            );
+                        }
+                    },
+                )
+            }
         });
 
         let font = egui::FontId::proportional(12.0);
