@@ -9,6 +9,8 @@ use eframe::{
     egui::{self, FontData, FontDefinitions, Stroke, Style},
     egui_wgpu::WgpuConfiguration,
 };
+use log::error;
+use proc::get_pid;
 
 mod aimbot;
 mod color;
@@ -34,6 +36,11 @@ fn main() {
         .filter_module("deadlocked", log::LevelFilter::Warn)
         .parse_env(env)
         .init();
+
+    if get_pid(cs2::constants::Constants::PROCESS_NAME).is_none() {
+        error!("please start cs2 first.");
+        return;
+    }
 
     // this runs as x11 for now, because wayland decorations for winit are not good
     // and don't support disabling the maximize button

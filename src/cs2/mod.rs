@@ -20,7 +20,7 @@ use crate::{
 };
 
 mod bones;
-mod constants;
+pub mod constants;
 pub mod offsets;
 mod player;
 mod weapon_class;
