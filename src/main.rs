@@ -58,7 +58,6 @@ fn main() {
     let window_size = [600.0, 350.0];
     let wgpu_options = WgpuConfiguration {
         present_mode: eframe::wgpu::PresentMode::AutoNoVsync,
-        desired_maximum_frame_latency: Some(1),
         ..Default::default()
     };
     let options = eframe::NativeOptions {
