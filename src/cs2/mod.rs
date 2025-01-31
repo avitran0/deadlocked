@@ -1,18 +1,19 @@
-use std::fs::File;
+use std::{collections::HashMap, fs::File};
 
 use bones::Bones;
 use constants::Constants;
-use glam::{Vec2, Vec3};
+use glam::{IVec4, Mat4, Vec2, Vec3, Vec4};
 use log::{debug, info, warn};
 use rand::{rng, Rng};
 use strum::IntoEnumIterator;
 
 use crate::{
     aimbot::Aimbot,
-    config::Config,
+    config::AimbotConfig,
     cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_direction, angles_to_fov, jitter, vec2_clamp},
+    message::PlayerInfo,
     mouse::{mouse_left_press, mouse_left_release, mouse_move},
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
@@ -34,6 +35,7 @@ pub struct CS2 {
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
     last_shot_ms: u32,
+    player_info: Vec<PlayerInfo>,
 }
 
 impl Aimbot for CS2 {
@@ -75,9 +77,25 @@ impl Aimbot for CS2 {
         self.is_valid = true;
     }
 
-    fn run(&mut self, config: &Config, mouse: &mut File) {
+    fn run(&mut self, config: &AimbotConfig, mouse: &mut File) -> Vec<PlayerInfo> {
         self.rcs(config, mouse);
         self.aimbot(config, mouse);
+        self.player_info.clone()
+    }
+
+    fn game_info(&self) -> (Mat4, Vec4) {
+        let process = match &self.process {
+            Some(process) => process,
+            None => return (Mat4::ZERO, Vec4::ZERO),
+        };
+
+        let view_matrix = process.read::<Mat4>(self.offsets.direct.view_matrix);
+        //std::mem::swap(&mut view_matrix.x_axis, &mut view_matrix.z_axis);
+        let window = process.read::<u64>(self.offsets.direct.sdl_window);
+        if window == 0 {
+            return (Mat4::ZERO, Vec4::ZERO);
+        }
+        (view_matrix, process.read::<IVec4>(window + 0x18).as_vec4())
     }
 }
 
@@ -92,10 +110,11 @@ impl CS2 {
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
             last_shot_ms: 0,
+            player_info: Vec::with_capacity(64),
         }
     }
 
-    fn rcs(&mut self, config: &Config, mouse: &mut File) {
+    fn rcs(&mut self, config: &AimbotConfig, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
@@ -108,7 +127,6 @@ impl CS2 {
             dbg!(self.get_bomb_site(process));
             dbg!(self.get_bomb_blow_time(process));
         }*/
-        let config = config.games.get(&config.current_game).unwrap().clone();
         if !config.rcs {
             return;
         }
@@ -166,11 +184,14 @@ impl CS2 {
         mouse_move(mouse, mouse_angle)
     }
 
-    fn aimbot(&mut self, config: &Config, mouse: &mut File) {
+    fn aimbot(&mut self, config: &AimbotConfig, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
                 self.is_valid = false;
+                if !self.player_info.is_empty() {
+                    self.player_info.clear();
+                }
                 return;
             }
         };
@@ -181,43 +202,27 @@ impl CS2 {
             self.last_shot_ms = 0;
         }
 
-        let config = config.games.get(&config.current_game).unwrap().clone();
-        if !config.enabled && !config.triggerbot && !config.glow {
-            return;
-        }
-
         let local_controller = self.get_local_controller(process);
         let local_pawn = match self.get_pawn(process, local_controller) {
             Some(pawn) => pawn,
             None => {
                 self.target.reset();
+                if !self.player_info.is_empty() {
+                    self.player_info.clear();
+                }
                 return;
             }
         };
 
         let team = self.get_team(process, local_pawn);
-        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
-            self.target.reset();
-            return;
-        }
 
         let weapon_class = self.get_weapon_class(process, local_pawn);
-        if [
-            WeaponClass::Unknown,
-            WeaponClass::Knife,
-            WeaponClass::Grenade,
-        ]
-        .contains(&weapon_class)
-        {
-            self.target.reset();
-            return;
-        }
 
         let aimbot_active = self.is_button_down(process, &config.hotkey);
         let view_angles = self.get_view_angles(process, local_pawn);
         let ffa = self.is_ffa(process);
         let shots_fired = self.get_shots_fired(process, local_pawn);
-        let aim_punch = match (weapon_class, self.get_aim_punch(process, local_pawn) * 2.0) {
+        let aim_punch = match (&weapon_class, self.get_aim_punch(process, local_pawn) * 2.0) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
             (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.previous_aim_punch,
             (_, punch) => punch,
@@ -225,6 +230,7 @@ impl CS2 {
 
         let mut pawns = Vec::with_capacity(64);
         let mut local_pawn_index = 0;
+        self.player_info.clear();
         for i in 0..=64 {
             let controller = match self.get_client_entity(process, i) {
                 Some(controller) => controller,
@@ -240,29 +246,41 @@ impl CS2 {
                 continue;
             }
 
-            if config.glow && team != self.get_team(process, pawn) {
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.is_glowing,
-                    1,
-                );
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.glow_type,
-                    3,
-                );
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.color_override,
-                    0xFF0000FFu64,
-                );
-            }
-
             if pawn == local_pawn {
                 local_pawn_index = i - 1;
             } else {
                 pawns.push(pawn);
             }
+
+            if self.get_team(process, pawn) != team {
+                let info = PlayerInfo {
+                    health: self.get_health(process, pawn),
+                    armor: self.get_armor(process, pawn),
+                    position: self.get_position(process, pawn),
+                    head: self.get_bone_position(process, pawn, Bones::Head.u64()),
+                    bones: self.get_bones(process, pawn),
+                };
+                self.player_info.push(info);
+            }
         }
 
         if !config.enabled && !config.triggerbot {
+            return;
+        }
+
+        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
+            self.target.reset();
+            return;
+        }
+
+        if [
+            WeaponClass::Unknown,
+            WeaponClass::Knife,
+            WeaponClass::Grenade,
+        ]
+        .contains(&weapon_class)
+        {
+            self.target.reset();
             return;
         }
 
@@ -354,7 +372,8 @@ impl CS2 {
                     if config.triggerbot_range.is_empty() {
                         self.last_shot_ms = engine_ms + config.triggerbot_range.start;
                     } else {
-                        self.last_shot_ms = engine_ms + rng().random_range(config.triggerbot_range);
+                        self.last_shot_ms =
+                            engine_ms + rng().random_range(config.triggerbot_range.clone());
                     }
                 }
             }
@@ -426,6 +445,7 @@ impl CS2 {
         offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
         offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
         offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
+        offsets.library.sdl = process.module_base_address(Constants::SDL_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -449,7 +469,19 @@ impl CS2 {
         }
         offsets.interface.input = input_address?;
 
-        // seems to be in .text section (executable instructions)
+        let view_matrix = process.scan_pattern(
+            &[
+                0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x4C, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00,
+                0x48, 0x8D, 0x0D,
+            ],
+            "xxx????xxx????xxx".as_bytes(),
+            offsets.library.client,
+        );
+        if view_matrix.is_none() {
+            warn!("could not find view matrix offset");
+        }
+        offsets.direct.view_matrix = process.get_relative_address(view_matrix? + 0x07, 0x03, 0x07);
+
         let local_player = process.scan_pattern(
             &[
                 0x48, 0x83, 0x3D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x95, 0xC0, 0xC3,
@@ -475,18 +507,13 @@ impl CS2 {
         }
         offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x07);
 
-        let glow_manager = process.scan_pattern(
-            &[
-                0x48, 0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x48, 0xC7, 0x47,
-            ],
-            "xxx????xxxxx????xxx????xxx".as_bytes(),
-            offsets.library.client,
-        );
-        if glow_manager.is_none() {
-            warn!("could not find glow manager offset");
+        let sdl_window = process.get_module_export(offsets.library.sdl, "SDL_GetKeyboardFocus");
+        if sdl_window.is_none() {
+            warn!("could not find sdl window offset");
         }
-        offsets.direct.glow_manager = process.get_relative_address(glow_manager?, 0x03, 0x07);
+        let sdl_window = process.get_relative_address(sdl_window?, 0x02, 0x06);
+        let sdl_window = process.read::<u64>(sdl_window);
+        offsets.direct.sdl_window = process.get_relative_address(sdl_window, 0x03, 0x07);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
@@ -629,12 +656,6 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
-                "m_Glow" => {
-                    if !network_enable || offsets.pawn.glow != 0 {
-                        continue;
-                    }
-                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
-                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -686,25 +707,6 @@ impl CS2 {
                         continue;
                     }
                     offsets.bomb.blow_time = read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_bGlowing" => {
-                    if offsets.glow.is_glowing != 0 {
-                        continue;
-                    }
-                    offsets.glow.is_glowing = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_iGlowType" => {
-                    if offsets.glow.glow_type != 0 {
-                        continue;
-                    }
-                    offsets.glow.glow_type = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_glowColorOverride" => {
-                    if !network_enable || offsets.glow.color_override != 0 {
-                        continue;
-                    }
-                    offsets.glow.color_override =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
                 }
                 _ => {}
             }
@@ -835,6 +837,26 @@ impl CS2 {
         process.read(bone_data + (bone_index * 32))
     }
 
+    fn get_bones(&self, process: &Process, pawn: u64) -> Vec<(Vec3, Vec3)> {
+        let mut bones = HashMap::new();
+
+        for bone in Bones::iter() {
+            let position = self.get_bone_position(process, pawn, bone.u64());
+            bones.insert(bone.u64(), position);
+        }
+
+        let mut connections = Vec::with_capacity(Bones::CONNECTIONS.len());
+
+        for connection in Bones::CONNECTIONS {
+            connections.push((
+                *bones.get(&connection.0.u64()).unwrap(),
+                *bones.get(&connection.1.u64()).unwrap(),
+            ));
+        }
+
+        connections
+    }
+
     fn get_shots_fired(&self, process: &Process, pawn: u64) -> i32 {
         process.read(pawn + self.offsets.pawn.shots_fired)
     }
@@ -878,14 +900,17 @@ impl CS2 {
         process.read(data_address + (length - 1) * 12)
     }
 
+    #[allow(unused)]
     fn is_bomb_planted(&self, process: &Process) -> bool {
         process.read::<u8>(self.offsets.direct.planted_c4 + self.offsets.bomb.is_ticking) != 0
     }
 
+    #[allow(unused)]
     fn get_bomb_site(&self, process: &Process) -> i32 {
         process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.bomb_site)
     }
 
+    #[allow(unused)]
     fn get_bomb_blow_time(&self, process: &Process) -> u32 {
         process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.blow_time)
     }

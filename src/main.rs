@@ -5,7 +5,10 @@ use std::{
 };
 
 use color::Colors;
-use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
+use eframe::{
+    egui::{self, FontData, FontDefinitions, Stroke, Style},
+    egui_wgpu::WgpuConfiguration,
+};
 
 mod aimbot;
 mod color;
@@ -27,7 +30,8 @@ fn main() {
     let env = env_logger::Env::new();
     env_logger::builder()
         .format(|buf, record| writeln!(buf, "[{}] {}", record.level(), record.args()))
-        .filter_level(log::LevelFilter::Info)
+        .filter_level(log::LevelFilter::Off)
+        .filter_module("deadlocked", log::LevelFilter::Warn)
         .parse_env(env)
         .init();
 
@@ -51,12 +55,21 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
-    let window_size = [600.0, 375.0];
+    let window_size = [600.0, 350.0];
+    let wgpu_options = WgpuConfiguration {
+        present_mode: eframe::wgpu::PresentMode::AutoNoVsync,
+        desired_maximum_frame_latency: Some(1),
+        ..Default::default()
+    };
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_maximize_button(false)
             .with_inner_size(window_size)
-            .with_resizable(false),
+            .with_resizable(false)
+            .with_transparent(true)
+            .with_window_level(egui::WindowLevel::AlwaysOnTop),
+        vsync: false,
+        wgpu_options,
         ..Default::default()
     };
     eframe::run_native(

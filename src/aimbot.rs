@@ -1,11 +1,12 @@
 use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
 
+use glam::{Mat4, Vec4};
 use log::{info, warn};
 
 use crate::{
-    config::{Config, SLEEP_DURATION},
+    config::{AimbotConfig, SLEEP_DURATION},
     cs2::CS2,
-    message::Game,
+    message::PlayerInfo,
     mouse::{mouse_valid, MouseStatus},
 };
 
@@ -18,34 +19,31 @@ use crate::{
 pub trait Aimbot: std::fmt::Debug {
     fn is_valid(&self) -> bool;
     fn setup(&mut self);
-    fn run(&mut self, config: &Config, mouse: &mut File);
+    fn run(&mut self, config: &AimbotConfig, mouse: &mut File) -> Vec<PlayerInfo>;
+    fn game_info(&self) -> (Mat4, Vec4);
 }
 
 pub struct AimbotManager {
     tx: mpsc::Sender<Message>,
     rx: mpsc::Receiver<Message>,
-    config: Config,
+    config: AimbotConfig,
     mouse: File,
     mouse_status: MouseStatus,
-    aimbot: Box<dyn Aimbot>,
+    aimbot: CS2,
 }
 
 impl AimbotManager {
     pub fn new(tx_gui: mpsc::Sender<Message>, rx: mpsc::Receiver<Message>) -> Self {
         let (mouse, status) = open_mouse();
 
-        let config = parse_config();
-        let game_bot: Box<dyn Aimbot> = match config.current_game {
-            Game::CS2 => Box::new(CS2::new()),
-            Game::Deadlock => Box::new(CS2::new()),
-        };
+        let config = parse_config().aimbot;
         let mut aimbot = Self {
             tx: tx_gui,
             rx,
             config,
             mouse,
             mouse_status: status.clone(),
-            aimbot: game_bot,
+            aimbot: CS2::new(),
         };
 
         aimbot.send_message(Message::MouseStatus(status));
@@ -84,7 +82,11 @@ impl AimbotManager {
                     self.send_message(Message::Status(AimbotStatus::Working));
                     previous_status = AimbotStatus::Working;
                 }
-                self.aimbot.run(&self.config, &mut self.mouse);
+
+                let players = self.aimbot.run(&self.config, &mut self.mouse);
+                self.send_message(Message::PlayerInfo(players));
+                let game_info = self.aimbot.game_info();
+                self.send_message(Message::GameInfo(game_info));
             }
 
             if self.aimbot.is_valid() && mouse_valid {
@@ -103,36 +105,8 @@ impl AimbotManager {
     }
 
     fn parse_message(&mut self, message: Message) {
-        if let Message::ChangeGame(game) = message {
-            match game {
-                Game::CS2 => self.aimbot = Box::new(CS2::new()),
-                Game::Deadlock => self.aimbot = Box::new(CS2::new()),
-            }
-            self.config.current_game = game;
-            return;
-        }
-        let config = self
-            .config
-            .games
-            .get_mut(&self.config.current_game)
-            .unwrap();
-        match message {
-            Message::ConfigEnableAimbot(aimbot) => config.enabled = aimbot,
-            Message::ConfigHotkey(hotkey) => config.hotkey = hotkey,
-            Message::ConfigStartBullet(start_bullet) => config.start_bullet = start_bullet,
-            Message::ConfigAimLock(aim_lock) => config.aim_lock = aim_lock,
-            Message::ConfigVisibilityCheck(visibility_check) => {
-                config.visibility_check = visibility_check
-            }
-            Message::ConfigFOV(fov) => config.fov = fov,
-            Message::ConfigSmooth(smooth) => config.smooth = smooth,
-            Message::ConfigMultibone(multibone) => config.multibone = multibone,
-            Message::ConfigEnableRCS(rcs) => config.rcs = rcs,
-            Message::ConfigGlow(glow) => config.glow = glow,
-            Message::ConfigEnableTriggerbot(tb) => config.triggerbot = tb,
-            Message::ConfigTriggerbotHotkey(hotkey) => config.triggerbot_hotkey = hotkey,
-            Message::ConfigTriggerbotRange(range) => config.triggerbot_range = range,
-            _ => {}
+        if let Message::AimbotConfig(config) = message {
+            self.config = config
         }
     }
 

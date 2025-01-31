@@ -1,9 +1,12 @@
-use std::{collections::HashMap, fs::read_to_string, ops::Range, path::Path, time::Duration};
+use std::{fs::read_to_string, ops::Range, path::Path, time::Duration};
 
 use serde::{Deserialize, Serialize};
-use strum::IntoEnumIterator;
+use strum::EnumIter;
 
-use crate::{key_codes::KeyCode, message::Game};
+use crate::{
+    color::{Color, Colors},
+    key_codes::KeyCode,
+};
 
 const REFRESH_RATE: u64 = 100;
 pub const LOOP_DURATION: Duration = Duration::from_millis(1000 / REFRESH_RATE);
@@ -37,7 +40,6 @@ pub struct AimbotConfig {
     pub smooth: f32,
     pub multibone: bool,
     pub rcs: bool,
-    pub glow: bool,
     pub triggerbot: bool,
     pub triggerbot_hotkey: KeyCode,
     pub triggerbot_range: Range<u32>,
@@ -55,7 +57,6 @@ impl Default for AimbotConfig {
             smooth: 5.0,
             multibone: true,
             rcs: false,
-            glow: false,
             triggerbot: false,
             triggerbot_hotkey: KeyCode::Mouse4,
             triggerbot_range: 100..300,
@@ -63,23 +64,45 @@ impl Default for AimbotConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub games: HashMap<Game, AimbotConfig>,
-    pub current_game: Game,
+#[derive(Debug, Clone, Default, Serialize, Deserialize, EnumIter, PartialEq)]
+pub enum DrawMode {
+    #[default]
+    None,
+    Color,
+    Health,
 }
 
-impl Default for Config {
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VisualsConfig {
+    pub enabled: bool,
+    pub draw_box: DrawMode,
+    pub box_color: Color,
+    pub draw_skeleton: DrawMode,
+    pub skeleton_color: Color,
+    pub draw_health: bool,
+    pub draw_armor: bool,
+    pub debug: bool,
+}
+
+impl Default for VisualsConfig {
     fn default() -> Self {
-        let mut games = HashMap::new();
-        for game in Game::iter() {
-            games.insert(game, AimbotConfig::default());
-        }
         Self {
-            games,
-            current_game: Game::CS2,
+            enabled: true,
+            draw_box: DrawMode::Color,
+            box_color: Color::from_egui_color(Colors::TEXT),
+            draw_skeleton: DrawMode::Health,
+            skeleton_color: Color::from_egui_color(Colors::TEXT),
+            draw_health: true,
+            draw_armor: true,
+            debug: false,
         }
     }
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct Config {
+    pub aimbot: AimbotConfig,
+    pub visuals: VisualsConfig,
 }
 
 fn get_config_path() -> String {

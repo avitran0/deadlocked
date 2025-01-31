@@ -1,5 +1,5 @@
 use std::{
-    fs::{read_dir, read_link, OpenOptions},
+    fs::{read_dir, read_link, File},
     path::Path,
 };
 
@@ -43,10 +43,7 @@ pub fn open_process(pid: u64) -> Option<Process> {
         return None;
     }
 
-    let memory = OpenOptions::new()
-        .read(true)
-        .write(true)
-        .open(format!("/proc/{pid}/mem"));
+    let memory = File::open(format!("/proc/{pid}/mem"));
     match memory {
         Ok(mem) => Some(Process::new(pid, mem)),
         _ => None,
