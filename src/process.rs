@@ -27,6 +27,11 @@ impl Process {
             .unwrap_or_default()
     }
 
+    pub fn write<T: Pod>(&self, address: u64, value: T) {
+        let buffer = bytemuck::bytes_of(&value);
+        self.memory.write_at(buffer, address).unwrap();
+    }
+
     pub fn read_string(&self, address: u64) -> String {
         let mut string = String::new();
         let mut i = address;

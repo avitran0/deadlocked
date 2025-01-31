@@ -1,4 +1,4 @@
-use glam::{vec2, vec3, Mat4, Vec2, Vec3, Vec4};
+use glam::{vec2, vec3, Vec2, Vec3};
 use rand::{rng, Rng};
 
 // t will be config.smooth
@@ -71,49 +71,4 @@ pub fn vec2_clamp(vec: &mut Vec2) {
         vec.x = -89.0;
     }
     vec.y = (vec.y + 180.0) % 360.0 - 180.0;
-}
-
-pub fn world_to_screen(window_info: &Vec4, view_matrix: &Mat4, position: &Vec3) -> Option<Vec2> {
-    let mut screen_position = Vec2::new(
-        view_matrix.x_axis.x * position.x
-            + view_matrix.x_axis.y * position.y
-            + view_matrix.x_axis.z * position.z
-            + view_matrix.x_axis.w,
-        view_matrix.y_axis.x * position.x
-            + view_matrix.y_axis.y * position.y
-            + view_matrix.y_axis.z * position.z
-            + view_matrix.y_axis.w,
-    );
-
-    let w = view_matrix.w_axis.x * position.x
-        + view_matrix.w_axis.y * position.y
-        + view_matrix.w_axis.z * position.z
-        + view_matrix.w_axis.w;
-
-    if w < 0.01 {
-        return None;
-    }
-
-    screen_position.x /= w;
-    screen_position.y /= w;
-
-    let x = window_info.z / 2.0;
-    let y = window_info.w / 2.0;
-
-    screen_position.x = x + 0.5 * screen_position.x * window_info.z + 0.5;
-    screen_position.y = y - 0.5 * screen_position.y * window_info.w + 0.5;
-
-    // todo: fix
-    if screen_position.x < 0.0
-        || screen_position.y < 0.0
-        || screen_position.x > window_info.z
-        || screen_position.y > window_info.w
-    {
-        return None;
-    }
-
-    screen_position += vec2(window_info.x, window_info.y);
-    screen_position /= 1.5;
-
-    Some(screen_position)
 }

@@ -1,22 +1,31 @@
-use glam::{Vec4, Mat4, Vec3};
+use serde::{Deserialize, Serialize};
+use strum::EnumIter;
 
-use crate::{config::{AimbotConfig, AimbotStatus}, mouse::MouseStatus};
+use crate::{
+    config::{AimbotConfig, AimbotStatus},
+    mouse::MouseStatus,
+};
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Hash, EnumIter)]
+pub enum Game {
+    CS2,
+    Deadlock,
+}
+
+impl Game {
+    pub fn string(&self) -> &str {
+        match self {
+            Game::CS2 => "CS2",
+            Game::Deadlock => "Deadlock",
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub enum Message {
-    AimbotConfig(AimbotConfig),
+    Config(AimbotConfig),
     Status(AimbotStatus),
+    ChangeGame(Game),
     MouseStatus(MouseStatus),
     FrameTime(f64),
-    PlayerInfo(Vec<PlayerInfo>),
-    GameInfo((Mat4, Vec4)),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PlayerInfo {
-    pub health: i32,
-    pub armor: i32,
-    pub position: Vec3,
-    pub head: Vec3,
-    pub bones: Vec<(Vec3, Vec3)>,
 }

@@ -1,31 +1,5 @@
 #![allow(unused)]
 use eframe::egui::Color32;
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Copy, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Color {
-    pub r: u8,
-    pub b: u8,
-    pub g: u8,
-}
-
-impl Color {
-    pub const fn from_egui_color(color: Color32) -> Self {
-        Self {
-            r: color.r(),
-            g: color.g(),
-            b: color.b(),
-        }
-    }
-
-    pub const fn egui_color(&self) -> Color32 {
-        Color32::from_rgb(self.r, self.g, self.b)
-    }
-
-    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
-        Self { r, g, b }
-    }
-}
 
 pub struct Colors;
 
