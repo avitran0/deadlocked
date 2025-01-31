@@ -453,7 +453,7 @@ checksum = "96a6ac251f4a2aca6b3f91340350eab87ae57c3f127ffeb585e92bd336717991"
 
 [[package]]
 name = "deadlocked"
-version = "4.0.1"
+version = "4.0.2"
 dependencies = [
  "bytemuck",
  "eframe",
