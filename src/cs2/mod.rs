@@ -1,31 +1,28 @@
-use std::{
-    fs::File,
-    time::{Duration, Instant},
-};
+use std::{fs::File, time::Instant};
 
-use bones::Bones;
 use constants::Constants;
-use glam::{vec3, Vec2, Vec3};
+use glam::{Vec2, Vec3};
 use log::{debug, info, warn};
-use rand::{rng, Rng};
-use strum::IntoEnumIterator;
+use player::Player;
 
 use crate::{
     aimbot::Aimbot,
     config::AimbotConfig,
-    cs2::{offsets::Offsets, target::Target, weapon_class::WeaponClass},
+    cs2::{offsets::Offsets, target::Target},
     key_codes::KeyCode,
-    math::{angles_from_vector, angles_to_direction, angles_to_fov, jitter, vec2_clamp},
-    mouse::{mouse_left_press, mouse_left_release, mouse_move},
+    math::{angles_from_vector, vec2_clamp},
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
 };
 
+mod aimbot;
 mod bones;
 mod constants;
 pub mod offsets;
-mod target;
 mod player;
+mod rcs;
+mod target;
+mod triggerbot;
 mod weapon_class;
 
 #[derive(Debug)]
@@ -80,8 +77,17 @@ impl Aimbot for CS2 {
     }
 
     fn run(&mut self, config: &AimbotConfig, mouse: &mut File) {
-        self.rcs(config, mouse);
+        if self.process.is_none() {
+            self.is_valid = false;
+            return;
+        }
+
+        self.rcs(mouse);
+
+        self.find_target();
+
         self.aimbot(config, mouse);
+        self.triggerbot(config, mouse);
     }
 }
 
@@ -99,319 +105,14 @@ impl CS2 {
         }
     }
 
-    fn rcs(&mut self, config: &AimbotConfig, mouse: &mut File) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
-        };
-        if !config.rcs {
-            return;
-        }
-
-        let local_controller = self.get_local_controller(process);
-        let local_pawn = match self.get_pawn(process, local_controller) {
-            Some(pawn) => pawn,
-            None => {
-                self.target.reset();
-                return;
-            }
-        };
-
-        let weapon_class = self.get_weapon_class(process, local_pawn);
-        if [
-            WeaponClass::Unknown,
-            WeaponClass::Knife,
-            WeaponClass::Grenade,
-        ]
-        .contains(&weapon_class)
-        {
-            return;
-        }
-
-        let shots_fired = self.get_shots_fired(process, local_pawn);
-        let aim_punch = match (weapon_class, self.get_aim_punch(process, local_pawn)) {
-            (WeaponClass::Sniper, _) => Vec2::ZERO,
-            (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.previous_aim_punch,
-            (_, punch) => punch,
-        };
-
-        if shots_fired <= 1 {
-            self.previous_aim_punch = aim_punch;
-            self.unaccounted_aim_punch = Vec2::ZERO;
-            return;
-        }
-        let sensitivity =
-            self.get_sensitivity(process) * self.get_fov_multiplier(process, local_pawn);
-        let xy = (aim_punch - self.previous_aim_punch) * -1.0;
-
-        let mouse_angle = Vec2::new(
-            ((xy.y * 2.0) / sensitivity) / -0.022,
-            ((xy.x * 2.0) / sensitivity) / 0.022,
-        ) + self.unaccounted_aim_punch;
-        self.unaccounted_aim_punch = Vec2::ZERO;
-
-        // only if the aimbot is not active
-        self.previous_aim_punch = aim_punch;
-        if (0.0..1.0).contains(&mouse_angle.x) {
-            self.unaccounted_aim_punch.x = mouse_angle.x;
-        }
-        if (0.0..1.0).contains(&mouse_angle.y) {
-            self.unaccounted_aim_punch.y = mouse_angle.y;
-        }
-        mouse_move(mouse, mouse_angle)
-    }
-
-    fn aimbot(&mut self, config: &AimbotConfig, mouse: &mut File) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
-        };
-
-        if let Some(last_shot) = self.last_shot {
-            if Instant::now() > last_shot {
-                mouse_left_press(mouse);
-                mouse_left_release(mouse);
-                self.last_shot = None;
-            }
-        }
-
-        if !config.enabled && !config.triggerbot && !config.glow {
-            return;
-        }
-
-        let local_controller = self.get_local_controller(process);
-        let local_pawn = match self.get_pawn(process, local_controller) {
-            Some(pawn) => pawn,
-            None => {
-                self.target.reset();
-                return;
-            }
-        };
-
-        let team = self.get_team(process, local_pawn);
-        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
-            self.target.reset();
-            return;
-        }
-
-        let weapon_class = self.get_weapon_class(process, local_pawn);
-        if [
-            WeaponClass::Unknown,
-            WeaponClass::Knife,
-            WeaponClass::Grenade,
-        ]
-        .contains(&weapon_class)
-        {
-            self.target.reset();
-            return;
-        }
-
-        let aimbot_active = self.is_button_down(process, &config.hotkey);
-        let view_angles = self.get_view_angles(process, local_pawn);
-        let ffa = self.is_ffa(process);
-        let shots_fired = self.get_shots_fired(process, local_pawn);
-        let aim_punch = match (weapon_class, self.get_aim_punch(process, local_pawn) * 2.0) {
-            (WeaponClass::Sniper, _) => Vec2::ZERO,
-            (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.previous_aim_punch,
-            (_, punch) => punch,
-        };
-
-        let mut pawns = Vec::with_capacity(64);
-        let mut local_pawn_index = 0;
-        for i in 0..=64 {
-            let controller = match self.get_client_entity(process, i) {
-                Some(controller) => controller,
-                None => continue,
-            };
-
-            let pawn = match self.get_pawn(process, controller) {
-                Some(pawn) => pawn,
-                None => continue,
-            };
-
-            if !self.is_pawn_valid(process, pawn) {
-                continue;
-            }
-
-            if config.glow && team != self.get_team(process, pawn) {
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.is_glowing,
-                    1,
-                );
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.glow_type,
-                    3,
-                );
-                process.write(
-                    pawn + self.offsets.pawn.glow + self.offsets.glow.color_override,
-                    0xFF0000FFu64,
-                );
-            }
-
-            if pawn == local_pawn {
-                local_pawn_index = i - 1;
-            } else {
-                pawns.push(pawn);
-            }
-        }
-
-        if !config.enabled && !config.triggerbot {
-            return;
-        }
-
-        let mut smallest_fov = 360.0;
-        let eye_position = self.get_eye_position(process, local_pawn);
-        if !self.is_pawn_valid(process, self.target.pawn) {
-            self.target.reset();
-        }
-        if !aimbot_active || self.target.pawn == 0 {
-            for pawn in pawns {
-                if !ffa && team == self.get_team(process, pawn) {
-                    continue;
-                }
-
-                let head_position = self.get_bone_position(process, pawn, Bones::Head.u64());
-                let distance = eye_position.distance(head_position);
-                let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
-                let fov = angles_to_fov(&view_angles, &angle);
-
-                // scale should be 5.0 at 0 units, and 1.0 at 500+ units
-                if fov > (config.fov * self.distance_scale(distance)) {
-                    continue;
-                }
-
-                if fov < smallest_fov {
-                    smallest_fov = fov;
-
-                    self.target.pawn = pawn;
-                    self.target.angle = angle;
-                    self.target.distance = distance;
-                    self.target.bone_index = Bones::Head.u64();
-                }
-            }
-        }
-
-        if self.target.pawn == 0 {
-            return;
-        }
-
-        // update target angle
-        if self.target.pawn != 0 && config.multibone {
-            let mut smallest_fov = 360.0;
-            for bone in Bones::iter() {
-                let bone_position = self.get_bone_position(process, self.target.pawn, bone.u64());
-                let distance = eye_position.distance(bone_position);
-                let angle = self.get_target_angle(process, local_pawn, bone_position, aim_punch);
-                let fov = angles_to_fov(&view_angles, &angle);
-
-                if fov < smallest_fov {
-                    smallest_fov = fov;
-
-                    self.target.angle = angle;
-                    self.target.distance = distance;
-                    self.target.bone_index = bone.u64();
-                }
-            }
-        } else if self.target.pawn != 0 {
-            let head_position =
-                self.get_bone_position(process, self.target.pawn, Bones::Head.u64());
-            let distance = eye_position.distance(head_position);
-            let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
-
-            self.target.angle = angle;
-            self.target.distance = distance;
-            self.target.bone_index = Bones::Head.u64();
-        }
-
-        if config.triggerbot && self.is_button_down(process, &config.triggerbot_hotkey) {
-            const RADIUS: f32 = 4.0;
-            let bone_pos = if self.target.bone_index == Bones::Head.u64() {
-                self.get_bone_position(process, self.target.pawn, self.target.bone_index)
-                    + vec3(0.0, 0.0, 4.0)
-            } else {
-                self.get_bone_position(process, self.target.pawn, self.target.bone_index)
-            };
-            let player_pos = self.get_eye_position(process, local_pawn);
-            let view_direction = angles_to_direction(&view_angles);
-            let to_target = bone_pos - player_pos;
-
-            let max_angle = RADIUS / to_target.length();
-            let actual_angle = to_target.normalize().dot(view_direction).acos();
-            if actual_angle <= max_angle && self.last_shot.is_none() {
-                if config.triggerbot_range.is_empty() {
-                    self.last_shot = Some(Instant::now());
-                } else {
-                    self.last_shot = Some(
-                        Instant::now()
-                            + Duration::from_millis(
-                                rng().random_range(config.triggerbot_range.clone()),
-                            ),
-                    );
-                }
-            }
-        }
-
-        if config.visibility_check {
-            let spotted_mask = self.get_spotted_mask(process, self.target.pawn);
-            if (spotted_mask & (1 << local_pawn_index)) == 0 {
-                return;
-            }
-        }
-
-        if !aimbot_active || !config.enabled {
-            return;
-        }
-
-        if angles_to_fov(&view_angles, &self.target.angle)
-            > (config.fov * self.distance_scale(self.target.distance))
-        {
-            return;
-        }
-
-        if !self.is_pawn_valid(process, self.target.pawn) {
-            return;
-        }
-
-        if shots_fired < config.start_bullet {
-            return;
-        }
-
-        let mut aim_angles = view_angles - self.target.angle;
-        if aim_angles.y < -180.0 {
-            aim_angles.y += 360.0
-        }
-        vec2_clamp(&mut aim_angles);
-
-        let sensitivity =
-            self.get_sensitivity(process) * self.get_fov_multiplier(process, local_pawn);
-
-        let xy = Vec2::new(
-            aim_angles.y / sensitivity * 50.0,
-            -aim_angles.x / sensitivity * 50.0,
-        );
-        let smooth_angles = if !config.aim_lock && config.smooth > 1.0 {
-            jitter(&xy, config.smooth)
-        } else {
-            xy
-        };
-
-        mouse_move(mouse, smooth_angles)
-    }
-
     fn get_target_angle(
         &self,
         process: &Process,
-        local_pawn: u64,
-        position: Vec3,
-        aim_punch: Vec2,
+        local_player: &Player,
+        position: &Vec3,
+        aim_punch: &Vec2,
     ) -> Vec2 {
-        let eye_position = self.get_eye_position(process, local_pawn);
+        let eye_position = local_player.eye_position(process, &self.offsets);
         let forward = (position - eye_position).normalize();
 
         let mut angles = angles_from_vector(&forward) - aim_punch;
@@ -630,12 +331,6 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
-                "m_Glow" => {
-                    if !network_enable || offsets.pawn.glow != 0 {
-                        continue;
-                    }
-                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
-                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -688,25 +383,6 @@ impl CS2 {
                     }
                     offsets.bomb.blow_time = read_vec::<u32>(&client_dump, i + 0x10) as u64;
                 }
-                "m_bGlowing" => {
-                    if offsets.glow.is_glowing != 0 {
-                        continue;
-                    }
-                    offsets.glow.is_glowing = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_iGlowType" => {
-                    if offsets.glow.glow_type != 0 {
-                        continue;
-                    }
-                    offsets.glow.glow_type = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_glowColorOverride" => {
-                    if !network_enable || offsets.glow.color_override != 0 {
-                        continue;
-                    }
-                    offsets.glow.color_override =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
-                }
                 _ => {}
             }
 
@@ -720,165 +396,7 @@ impl CS2 {
         None
     }
 
-    fn get_local_controller(&self, process: &Process) -> u64 {
-        process.read(self.offsets.direct.local_player)
-    }
-
-    fn get_client_entity(&self, process: &Process, index: u64) -> Option<u64> {
-        // wtf is this doing, and how?
-        let v1 = process.read::<u64>(self.offsets.interface.entity + 0x08 * (index >> 9) + 0x10);
-        if v1 == 0 {
-            return None;
-        }
-        // what?
-        let entity = process.read(v1 + 120 * (index & 0x1ff));
-        if entity == 0 {
-            return None;
-        }
-        Some(entity)
-    }
-
-    fn get_pawn(&self, process: &Process, controller: u64) -> Option<u64> {
-        let v1 = process.read::<i32>(controller + self.offsets.controller.pawn);
-        if v1 == -1 {
-            return None;
-        }
-
-        // what the fuck is this doing?
-        let v2 =
-            process.read::<u64>(self.offsets.interface.player + 8 * ((v1 as u64 & 0x7fff) >> 9));
-        if v2 == 0 {
-            return None;
-        }
-
-        // bit-fuckery, why is this needed exactly?
-        let entity = process.read(v2 + 120 * (v1 as u64 & 0x1ff));
-        if entity == 0 {
-            return None;
-        }
-        Some(entity)
-    }
-
-    fn get_health(&self, process: &Process, pawn: u64) -> i32 {
-        let health = process.read(pawn + self.offsets.pawn.health);
-        if !(0..=100).contains(&health) {
-            return 0;
-        }
-        health
-    }
-
-    #[allow(unused)]
-    fn get_armor(&self, process: &Process, pawn: u64) -> i32 {
-        process.read(pawn + self.offsets.pawn.armor)
-    }
-
-    fn get_team(&self, process: &Process, pawn: u64) -> u8 {
-        process.read(pawn + self.offsets.pawn.team)
-    }
-
-    fn get_life_state(&self, process: &Process, pawn: u64) -> u8 {
-        process.read(pawn + self.offsets.pawn.life_state)
-    }
-
-    fn get_weapon_name(&self, process: &Process, pawn: u64) -> String {
-        // CEntityInstance
-        let weapon_entity_instance = process.read::<u64>(pawn + self.offsets.pawn.weapon);
-        if weapon_entity_instance == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
-        }
-        // CEntityIdentity, 0x10 = m_pEntity
-        let weapon_entity_identity = process.read::<u64>(weapon_entity_instance + 0x10);
-        if weapon_entity_identity == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
-        }
-        // 0x20 = m_designerName (pointer -> string)
-        let weapon_name_pointer = process.read(weapon_entity_identity + 0x20);
-        if weapon_name_pointer == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
-        }
-        process.read_string(weapon_name_pointer)
-    }
-
-    fn get_weapon_class(&self, process: &Process, pawn: u64) -> WeaponClass {
-        WeaponClass::from_string(&self.get_weapon_name(process, pawn))
-    }
-
-    fn get_gs_node(&self, process: &Process, pawn: u64) -> u64 {
-        process.read(pawn + self.offsets.pawn.game_scene_node)
-    }
-
-    fn is_dormant(&self, process: &Process, pawn: u64) -> bool {
-        let gs_node = self.get_gs_node(process, pawn);
-        process.read::<u8>(gs_node + self.offsets.game_scene_node.dormant) != 0
-    }
-
-    fn get_position(&self, process: &Process, pawn: u64) -> Vec3 {
-        let gs_node = self.get_gs_node(process, pawn);
-        process.read(gs_node + self.offsets.game_scene_node.origin)
-    }
-
-    fn get_eye_position(&self, process: &Process, pawn: u64) -> Vec3 {
-        let position = self.get_position(process, pawn);
-        let eye_offset = process.read::<Vec3>(pawn + self.offsets.pawn.eye_offset);
-
-        position + eye_offset
-    }
-
-    fn get_bone_position(&self, process: &Process, pawn: u64, bone_index: u64) -> Vec3 {
-        let gs_node = self.get_gs_node(process, pawn);
-        let bone_data =
-            process.read::<u64>(gs_node + self.offsets.game_scene_node.model_state + 0x80);
-
-        if bone_data == 0 {
-            return Vec3::ZERO;
-        }
-
-        process.read(bone_data + (bone_index * 32))
-    }
-
-    fn get_shots_fired(&self, process: &Process, pawn: u64) -> i32 {
-        process.read(pawn + self.offsets.pawn.shots_fired)
-    }
-
-    fn get_fov_multiplier(&self, process: &Process, pawn: u64) -> f32 {
-        process.read(pawn + self.offsets.pawn.fov_multiplier)
-    }
-
-    fn get_spotted_mask(&self, process: &Process, pawn: u64) -> i64 {
-        process.read(pawn + self.offsets.pawn.spotted_state + self.offsets.spotted_state.mask)
-    }
-
-    fn is_pawn_valid(&self, process: &Process, pawn: u64) -> bool {
-        if self.is_dormant(process, pawn) {
-            return false;
-        }
-
-        if self.get_health(process, pawn) <= 0 {
-            return false;
-        }
-
-        if self.get_life_state(process, pawn) != 0 {
-            return false;
-        }
-
-        true
-    }
-
-    fn get_view_angles(&self, process: &Process, pawn: u64) -> Vec2 {
-        process.read(pawn + self.offsets.pawn.view_angles)
-    }
-
-    fn get_aim_punch(&self, process: &Process, pawn: u64) -> Vec2 {
-        let length = process.read::<u64>(pawn + self.offsets.pawn.aim_punch_cache);
-        if length < 1 {
-            return Vec2::ZERO;
-        }
-
-        let data_address = process.read::<u64>(pawn + self.offsets.pawn.aim_punch_cache + 0x08);
-
-        process.read(data_address + (length - 1) * 12)
-    }
-
+    // bomb
     #[allow(unused)]
     fn is_bomb_planted(&self, process: &Process) -> bool {
         process.read::<u8>(self.offsets.direct.planted_c4 + self.offsets.bomb.is_ticking) != 0

@@ -1,5 +1,6 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Default)]
 pub enum WeaponClass {
+    #[default]
     Unknown,
     Knife,
     Pistol,

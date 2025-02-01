@@ -56,7 +56,6 @@ pub struct PawnOffsets {
     pub shots_fired: u64,     // i32 (m_iShotsFired)
     pub view_angles: u64,     // Vec2 (v_angle)
     pub spotted_state: u64,   // SpottedState (m_entitySpottedState)
-    pub glow: u64,            // Glow (m_Glow)
 }
 
 impl PawnOffsets {
@@ -73,7 +72,6 @@ impl PawnOffsets {
             && self.shots_fired != 0
             && self.view_angles != 0
             && self.spotted_state != 0
-            && self.glow != 0
     }
 }
 
@@ -116,19 +114,6 @@ impl BombOffsets {
 }
 
 #[derive(Debug, Default)]
-pub struct GlowOffsets {
-    pub is_glowing: u64,     // bool (m_bGlowing)
-    pub glow_type: u64,      // i32 (m_iGlowType)
-    pub color_override: u64, // Color (m_glowColorOverride)
-}
-
-impl GlowOffsets {
-    pub fn all_found(&self) -> bool {
-        self.is_glowing != 0 && self.glow_type != 0 && self.color_override != 0
-    }
-}
-
-#[derive(Debug, Default)]
 pub struct Offsets {
     pub library: LibraryOffsets,
     pub interface: InterfaceOffsets,
@@ -139,7 +124,6 @@ pub struct Offsets {
     pub game_scene_node: GameSceneNodeOffsets,
     pub spotted_state: SpottedStateOffsets,
     pub bomb: BombOffsets,
-    pub glow: GlowOffsets,
 }
 
 impl Offsets {
@@ -149,6 +133,5 @@ impl Offsets {
             && self.game_scene_node.all_found()
             && self.spotted_state.all_found()
             && self.bomb.all_found()
-            && self.glow.all_found()
     }
 }

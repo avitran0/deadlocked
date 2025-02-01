@@ -5,31 +5,36 @@ use std::{
 };
 
 use bytemuck::{Pod, Zeroable};
+use libc::{iovec, process_vm_readv};
 
-use crate::{constants::Constants, cs2::offsets::InterfaceOffsets, proc::read_vec};
+use crate::{constants::Constants, cs2::offsets::InterfaceOffsets};
 
 #[derive(Debug)]
 pub struct Process {
     pub pid: u64,
-    pub memory: File,
 }
 
 impl Process {
-    pub fn new(pid: u64, memory: File) -> Self {
-        Self { pid, memory }
+    pub fn new(pid: u64) -> Self {
+        Self { pid }
     }
 
     pub fn read<T: Pod + Zeroable + Default>(&self, address: u64) -> T {
         let mut buffer = vec![0u8; std::mem::size_of::<T>()];
-        self.memory.read_at(&mut buffer, address).unwrap_or(0);
+        let local_iov = iovec {
+            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+
+        unsafe { process_vm_readv(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0) };
+
         bytemuck::try_from_bytes(&buffer)
             .copied()
             .unwrap_or_default()
-    }
-
-    pub fn write<T: Pod>(&self, address: u64, value: T) {
-        let buffer = bytemuck::bytes_of(&value);
-        self.memory.write_at(buffer, address).unwrap();
     }
 
     pub fn read_string(&self, address: u64) -> String {
@@ -47,8 +52,9 @@ impl Process {
     }
 
     pub fn read_bytes(&self, address: u64, count: u64) -> Vec<u8> {
+        let file = File::open(format!("/proc/{}/mem", self.pid)).unwrap();
         let mut buffer = vec![0u8; count as usize];
-        self.memory.read_at(&mut buffer, address).unwrap_or(0);
+        file.read_at(&mut buffer, address).unwrap_or(0);
         buffer
     }
 
@@ -138,7 +144,6 @@ impl Process {
 
     pub fn get_module_export(&self, base_address: u64, export_name: &str) -> Option<u64> {
         let add = 0x18;
-        let length = 0x08;
 
         let string_table = self.get_address_from_dynamic_section(base_address, 0x05)?;
         let mut symbol_table = self.get_address_from_dynamic_section(base_address, 0x06)?;
@@ -149,8 +154,7 @@ impl Process {
             let st_name = self.read::<u32>(symbol_table);
             let name = self.read_string(string_table + st_name as u64);
             if name == export_name {
-                let address_vec = self.read_bytes(symbol_table + length, length);
-                return Some(read_vec::<u64>(&address_vec, 0) + base_address);
+                return Some(self.read::<u64>(symbol_table + 0x08) + base_address);
             }
             symbol_table += add;
         }
