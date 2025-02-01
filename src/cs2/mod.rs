@@ -12,8 +12,8 @@ use strum::IntoEnumIterator;
 
 use crate::{
     aimbot::Aimbot,
-    config::Config,
-    cs2::{offsets::Offsets, player::Target, weapon_class::WeaponClass},
+    config::AimbotConfig,
+    cs2::{offsets::Offsets, target::Target, weapon_class::WeaponClass},
     key_codes::KeyCode,
     math::{angles_from_vector, angles_to_direction, angles_to_fov, jitter, vec2_clamp},
     mouse::{mouse_left_press, mouse_left_release, mouse_move},
@@ -24,6 +24,7 @@ use crate::{
 mod bones;
 mod constants;
 pub mod offsets;
+mod target;
 mod player;
 mod weapon_class;
 
@@ -78,7 +79,7 @@ impl Aimbot for CS2 {
         self.is_valid = true;
     }
 
-    fn run(&mut self, config: &Config, mouse: &mut File) {
+    fn run(&mut self, config: &AimbotConfig, mouse: &mut File) {
         self.rcs(config, mouse);
         self.aimbot(config, mouse);
     }
@@ -98,7 +99,7 @@ impl CS2 {
         }
     }
 
-    fn rcs(&mut self, config: &Config, mouse: &mut File) {
+    fn rcs(&mut self, config: &AimbotConfig, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
@@ -106,12 +107,6 @@ impl CS2 {
                 return;
             }
         };
-        // todo: does not yet work
-        /*if self.is_bomb_planted(process) {
-            dbg!(self.get_bomb_site(process));
-            dbg!(self.get_bomb_blow_time(process));
-        }*/
-        let config = config.get();
         if !config.rcs {
             return;
         }
@@ -169,7 +164,7 @@ impl CS2 {
         mouse_move(mouse, mouse_angle)
     }
 
-    fn aimbot(&mut self, config: &Config, mouse: &mut File) {
+    fn aimbot(&mut self, config: &AimbotConfig, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
@@ -186,7 +181,6 @@ impl CS2 {
             }
         }
 
-        let config = config.get();
         if !config.enabled && !config.triggerbot && !config.glow {
             return;
         }

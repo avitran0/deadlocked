@@ -32,6 +32,12 @@ fn main() {
         .parse_env(env)
         .init();
 
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() > 1 && args[1] == "--headless" {
+        // todo: implement headless mode
+        dbg!("headless mode");
+    }
+
     // this runs as x11 for now, because wayland decorations for winit are not good
     // and don't support disabling the maximize button
     std::env::remove_var("WAYLAND_DISPLAY");

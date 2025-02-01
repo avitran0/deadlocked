@@ -3,7 +3,7 @@ use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
 use log::{info, warn};
 
 use crate::{
-    config::{Config, SLEEP_DURATION},
+    config::{AimbotConfig, Config, SLEEP_DURATION},
     cs2::CS2,
     message::Game,
     mouse::{mouse_valid, MouseStatus},
@@ -18,7 +18,7 @@ use crate::{
 pub trait Aimbot: std::fmt::Debug {
     fn is_valid(&self) -> bool;
     fn setup(&mut self);
-    fn run(&mut self, config: &Config, mouse: &mut File);
+    fn run(&mut self, config: &AimbotConfig, mouse: &mut File);
 }
 
 pub struct AimbotManager {
@@ -84,7 +84,7 @@ impl AimbotManager {
                     self.send_message(Message::Status(AimbotStatus::Working));
                     previous_status = AimbotStatus::Working;
                 }
-                self.aimbot.run(&self.config, &mut self.mouse);
+                self.aimbot.run(self.config.get(), &mut self.mouse);
             }
 
             if self.aimbot.is_valid() && mouse_valid {
