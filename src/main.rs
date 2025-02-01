@@ -1,11 +1,18 @@
 use std::{
     io::Write,
+    path::Path,
     sync::{mpsc, Arc},
     thread,
 };
 
 use color::Colors;
+use config::{get_config_path, parse_config};
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
+use message::{Game, Message};
+use notify::{
+    event::{DataChange, ModifyKind},
+    EventKind, Watcher,
+};
 
 mod aimbot;
 mod color;
@@ -33,10 +40,7 @@ fn main() {
         .init();
 
     let args: Vec<String> = std::env::args().collect();
-    if args.len() > 1 && args[1] == "--headless" {
-        // todo: implement headless mode
-        dbg!("headless mode");
-    }
+    let headless = args.len() > 1 && args[1] == "--headless";
 
     // this runs as x11 for now, because wayland decorations for winit are not good
     // and don't support disabling the maximize button
@@ -45,7 +49,7 @@ fn main() {
     let username = std::env::var("USER").unwrap_or_default();
     if username == "root" {
         println!("start without sudo, and add your user to the input group.");
-        std::process::exit(0);
+        return;
     }
 
     let (tx_aimbot, rx_gui) = mpsc::channel();
@@ -58,6 +62,34 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
+    if headless {
+        let mut watcher =
+            notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
+                if let Ok(event) = event {
+                    if event.kind != EventKind::Modify(ModifyKind::Data(DataChange::Any)) {
+                        return;
+                    }
+                    let config = parse_config();
+                    tx_gui
+                        .send(Message::Config(match config.current_game {
+                            Game::CS2 => config.cs2,
+                            Game::Deadlock => config.deadlock,
+                        }))
+                        .unwrap();
+                }
+            })
+            .unwrap();
+        watcher
+            .watch(
+                Path::new(&get_config_path()),
+                notify::RecursiveMode::NonRecursive,
+            )
+            .unwrap();
+
+        loop {
+            let _ = rx_gui.recv().expect("aimbot thread died");
+        }
+    }
     let window_size = [600.0, 350.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()

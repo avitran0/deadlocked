@@ -95,7 +95,7 @@ impl Default for Config {
     }
 }
 
-fn get_config_path() -> String {
+pub fn get_config_path() -> String {
     String::from(
         std::env::current_exe()
             .unwrap()
