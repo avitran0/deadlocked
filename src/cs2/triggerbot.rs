@@ -47,6 +47,13 @@ impl CS2 {
             return;
         }
 
+        if config.triggerbot_visibility_check {
+            let spotted_mask = target.spotted_mask(process, &self.offsets);
+            if (spotted_mask & (1 << self.target.local_pawn_index)) == 0 {
+                return;
+            }
+        }
+
         const RADIUS: f32 = 4.0;
         let bone_pos = if self.target.bone_index == Bones::Head.u64() {
             target.bone_position(process, &self.offsets, self.target.bone_index)

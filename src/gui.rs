@@ -218,6 +218,14 @@ impl Gui {
                     self.send_config();
                 }
                 ui.end_row();
+
+                ui.label("Visibility Check");
+                if ui
+                    .checkbox(&mut self.config.get_mut().triggerbot_visibility_check, "")
+                    .changed()
+                {
+                    self.send_config();
+                }
             });
     }
 

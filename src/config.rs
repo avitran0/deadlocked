@@ -36,10 +36,10 @@ pub struct AimbotConfig {
     pub smooth: f32,
     pub multibone: bool,
     pub rcs: bool,
-    pub glow: bool,
     pub triggerbot: bool,
     pub triggerbot_hotkey: KeyCode,
     pub triggerbot_range: Range<u64>,
+    pub triggerbot_visibility_check: bool,
 }
 
 impl Default for AimbotConfig {
@@ -54,10 +54,10 @@ impl Default for AimbotConfig {
             smooth: 5.0,
             multibone: true,
             rcs: false,
-            glow: false,
             triggerbot: false,
             triggerbot_hotkey: KeyCode::Mouse4,
             triggerbot_range: 100..300,
+            triggerbot_visibility_check: false,
         }
     }
 }
