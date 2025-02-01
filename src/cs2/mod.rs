@@ -82,7 +82,9 @@ impl Aimbot for CS2 {
             return;
         }
 
-        self.rcs(mouse);
+        if config.rcs {
+            self.rcs(mouse);
+        }
 
         self.find_target();
 
