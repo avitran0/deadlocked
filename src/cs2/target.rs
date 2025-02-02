@@ -12,6 +12,7 @@ pub struct Target {
     pub distance: f32,
     pub bone_index: u64,
     pub local_pawn_index: u64,
+    pub previous_aim_punch: Vec2,
 }
 
 impl Target {
@@ -61,29 +62,14 @@ impl CS2 {
             local_player.aim_punch(process, &self.offsets) * 2.0,
         ) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
-            (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.previous_aim_punch,
+            (_, punch) if punch.length() == 0.0 && shots_fired > 1 => {
+                self.target.previous_aim_punch
+            }
             (_, punch) => punch,
         };
+        self.target.previous_aim_punch = aim_punch;
 
-        let mut players = Vec::with_capacity(64);
-        for i in 0..=64 {
-            let player = match Player::index(process, &self.offsets, i) {
-                Some(player) => player,
-                None => continue,
-            };
-
-            if !player.is_valid(process, &self.offsets) {
-                continue;
-            }
-
-            if player == local_player {
-                self.target.local_pawn_index = i - 1;
-            } else {
-                players.push(player);
-            }
-        }
-
-        if players.is_empty() {
+        if self.players.is_empty() {
             self.target.reset();
             return;
         }
@@ -98,7 +84,7 @@ impl CS2 {
                 self.target.reset();
             }
         }
-        for player in players {
+        for player in &self.players {
             if !ffa && team == player.team(process, &self.offsets) {
                 continue;
             }
@@ -111,7 +97,7 @@ impl CS2 {
             if fov < smallest_fov {
                 smallest_fov = fov;
 
-                self.target.player = Some(player);
+                self.target.player = Some(*player);
                 self.target.angle = angle;
                 self.target.distance = distance;
                 self.target.bone_index = Bones::Head.u64();

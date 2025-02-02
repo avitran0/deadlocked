@@ -1,12 +1,12 @@
-use eframe::egui::{self, vec2, Align, Align2, Color32, Ui};
+use eframe::egui::{self, vec2, Align, Align2, Color32, Sense, Ui};
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 
 use crate::{
-    color::Colors,
+    color::{Color, Colors},
     config::{parse_config, write_config, AimbotStatus, Config, VERSION},
     key_codes::KeyCode,
-    message::{Game, Message},
+    message::Message,
     mouse::MouseStatus,
 };
 
@@ -14,6 +14,7 @@ use crate::{
 pub enum Tab {
     Aimbot,
     Triggerbot,
+    Unsafe,
 }
 
 pub struct Gui {
@@ -47,7 +48,7 @@ impl Gui {
     }
 
     fn send_config(&self) {
-        self.send_message(Message::Config(self.config.get().clone()));
+        self.send_message(Message::Config(self.config.clone()));
         write_config(&self.config);
     }
 
@@ -56,177 +57,194 @@ impl Gui {
     }
 
     fn aimbot_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("aimbot")
-            .num_columns(4)
-            .min_col_width(80.0)
-            .show(ui, |ui| {
-                ui.label("Enable Aimbot");
-                if ui
-                    .checkbox(&mut self.config.get_mut().enabled, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
+        egui::Grid::new("aimbot").num_columns(4).show(ui, |ui| {
+            ui.label("Enable Aimbot");
+            if ui.checkbox(&mut self.config.enabled, "").changed() {
+                self.send_config();
+            }
 
-                ui.label("Hotkey");
-                egui::ComboBox::new("aimbot_hotkey", "")
-                    .selected_text(format!("{:?}", self.config.get().hotkey))
-                    .show_ui(ui, |ui| {
-                        for key_code in KeyCode::iter() {
-                            let text = format!("{:?}", &key_code);
-                            if ui
-                                .selectable_value(&mut self.config.get_mut().hotkey, key_code, text)
-                                .clicked()
-                            {
-                                self.send_config();
-                            }
+            ui.label("Hotkey");
+            egui::ComboBox::new("aimbot_hotkey", "")
+                .selected_text(format!("{:?}", self.config.hotkey))
+                .show_ui(ui, |ui| {
+                    for key_code in KeyCode::iter() {
+                        let text = format!("{:?}", &key_code);
+                        if ui
+                            .selectable_value(&mut self.config.hotkey, key_code, text)
+                            .clicked()
+                        {
+                            self.send_config();
                         }
-                    });
-                ui.end_row();
+                    }
+                });
+            ui.end_row();
 
-                ui.label("Aim Lock");
-                if ui
-                    .checkbox(&mut self.config.get_mut().aim_lock, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
+            ui.label("Aim Lock");
+            if ui.checkbox(&mut self.config.aim_lock, "").changed() {
+                self.send_config();
+            }
 
-                ui.label("Start Bullet");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.config.get_mut().start_bullet)
-                            .range(0..=10)
-                            .speed(0.05),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
-                ui.end_row();
+            ui.label("Start Bullet");
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.start_bullet)
+                        .range(0..=10)
+                        .speed(0.05),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+            ui.end_row();
 
-                ui.label("Visibility Check");
-                if ui
-                    .checkbox(&mut self.config.get_mut().visibility_check, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
+            ui.label("Visibility Check");
+            if ui.checkbox(&mut self.config.visibility_check, "").changed() {
+                self.send_config();
+            }
 
-                ui.label("FOV");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.config.get_mut().fov)
-                            .range(0.1..=360.0)
-                            .suffix("°")
-                            .speed(0.02)
-                            .max_decimals(1),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
-                ui.end_row();
+            ui.label("FOV");
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.fov)
+                        .range(0.1..=360.0)
+                        .suffix("°")
+                        .speed(0.02)
+                        .max_decimals(1),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+            ui.end_row();
 
-                ui.label("Multibone");
-                if ui
-                    .checkbox(&mut self.config.get_mut().multibone, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
+            ui.label("Multibone");
+            if ui.checkbox(&mut self.config.multibone, "").changed() {
+                self.send_config();
+            }
 
-                ui.label("Smooth");
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.config.get_mut().smooth)
-                            .range(1.0..=10.0)
-                            .speed(0.02)
-                            .max_decimals(1),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
-                ui.end_row();
+            ui.label("Smooth");
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.smooth)
+                        .range(1.0..=10.0)
+                        .speed(0.02)
+                        .max_decimals(1),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+            ui.end_row();
 
-                ui.label("Enable RCS");
-                if ui.checkbox(&mut self.config.get_mut().rcs, "").changed() {
-                    self.send_config();
-                }
-            });
+            ui.label("Enable RCS");
+            if ui.checkbox(&mut self.config.rcs, "").changed() {
+                self.send_config();
+            }
+        });
     }
 
     fn triggerbot_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("triggerbot")
-            .num_columns(4)
-            .min_col_width(80.0)
-            .show(ui, |ui| {
-                ui.label("Enable");
-                if ui
-                    .checkbox(&mut self.config.get_mut().triggerbot, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
+        egui::Grid::new("triggerbot").num_columns(4).show(ui, |ui| {
+            ui.label("Enable");
+            if ui.checkbox(&mut self.config.triggerbot, "").changed() {
+                self.send_config();
+            }
 
-                ui.label("Hotkey");
-                egui::ComboBox::new("triggerbot_hotkey", "")
-                    .selected_text(format!("{:?}", self.config.get().triggerbot_hotkey))
-                    .show_ui(ui, |ui| {
-                        for key_code in KeyCode::iter() {
-                            let text = format!("{:?}", &key_code);
-                            if ui
-                                .selectable_value(
-                                    &mut self.config.get_mut().triggerbot_hotkey,
-                                    key_code,
-                                    text,
-                                )
-                                .clicked()
-                            {
-                                self.send_config();
-                            }
+            ui.label("Hotkey");
+            egui::ComboBox::new("triggerbot_hotkey", "")
+                .selected_text(format!("{:?}", self.config.triggerbot_hotkey))
+                .show_ui(ui, |ui| {
+                    for key_code in KeyCode::iter() {
+                        let text = format!("{:?}", &key_code);
+                        if ui
+                            .selectable_value(&mut self.config.triggerbot_hotkey, key_code, text)
+                            .clicked()
+                        {
+                            self.send_config();
                         }
-                    });
-                ui.end_row();
+                    }
+                });
+            ui.end_row();
 
-                ui.label("Min Delay").on_hover_text(
-                    "the minimum time to fire after an enemy\nis in the crosshair, in milliseconds",
-                );
-                let end = self.config.get().triggerbot_range.end;
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.config.get_mut().triggerbot_range.start)
-                            .range(0..=end)
-                            .speed(0.2),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
+            ui.label("Min Delay");
+            let end = self.config.triggerbot_range.end;
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.triggerbot_range.start)
+                        .range(0..=end)
+                        .speed(0.2),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
 
-                ui.label("Max Delay");
-                let start = self.config.get().triggerbot_range.start;
-                if ui
-                    .add(
-                        egui::DragValue::new(&mut self.config.get_mut().triggerbot_range.end)
-                            .range(start..=1000)
-                            .speed(0.2),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
-                ui.end_row();
+            ui.label("Max Delay");
+            let start = self.config.triggerbot_range.start;
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.triggerbot_range.end)
+                        .range(start..=1000)
+                        .speed(0.2),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+            ui.end_row();
 
-                ui.label("Visibility Check");
-                if ui
-                    .checkbox(&mut self.config.get_mut().triggerbot_visibility_check, "")
-                    .changed()
-                {
-                    self.send_config();
-                }
-            });
+            ui.label("Visibility Check");
+            if ui
+                .checkbox(&mut self.config.triggerbot_visibility_check, "")
+                .changed()
+            {
+                self.send_config();
+            }
+        });
+    }
+
+    fn unsafe_grid(&mut self, ui: &mut Ui) {
+        egui::Grid::new("unsafe").num_columns(4).show(ui, |ui| {
+            ui.label("Glow");
+            if ui.checkbox(&mut self.config.glow, "").changed() {
+                self.send_config();
+            }
+            ui.end_row();
+
+            ui.label("Enemy Color");
+            if let Some(color) = self.color_picker(ui, &self.config.glow_enemy_color) {
+                self.config.glow_enemy_color = color;
+                self.send_config();
+            }
+            ui.end_row();
+
+            ui.label("Friendly Color");
+            if let Some(color) = self.color_picker(ui, &self.config.glow_friendly_color) {
+                self.config.glow_friendly_color = color;
+                self.send_config();
+            }
+            ui.end_row();
+
+            ui.label("No Flash");
+            if ui.checkbox(&mut self.config.no_flash, "").changed() {
+                self.send_config();
+            }
+            ui.end_row();
+
+            ui.label("Max Flash Alpha");
+            if ui
+                .add(
+                    egui::DragValue::new(&mut self.config.max_flash_alpha)
+                        .range(0.0..=1.0)
+                        .speed(0.002)
+                        .max_decimals(2),
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+            ui.end_row();
+        });
     }
 
     fn add_game_status(&mut self, ui: &mut Ui) {
@@ -260,6 +278,33 @@ impl Gui {
             );
         });
     }
+
+    fn color_picker(&self, ui: &mut Ui, color: &Color) -> Option<Color> {
+        let [mut r, mut g, mut b, mut a] = color.egui_color().to_array();
+        let mut changed = false;
+        if ui.add(egui::DragValue::new(&mut r).prefix("r: ")).changed() {
+            changed = true;
+        }
+        if ui.add(egui::DragValue::new(&mut g).prefix("g: ")).changed() {
+            changed = true;
+        }
+        if ui.add(egui::DragValue::new(&mut b).prefix("b: ")).changed() {
+            changed = true;
+        };
+        if ui.add(egui::DragValue::new(&mut a).prefix("a: ")).changed() {
+            changed = true;
+        };
+        let (response, painter) = ui.allocate_painter(ui.spacing().interact_size, Sense::hover());
+        painter.rect_filled(
+            response.rect,
+            ui.style().visuals.widgets.inactive.rounding,
+            color.egui_color(),
+        );
+        if changed {
+            return Some(Color::rgba(r, g, b, a));
+        }
+        None
+    }
 }
 
 impl eframe::App for Gui {
@@ -287,25 +332,9 @@ impl eframe::App for Gui {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.spacing_mut().item_spacing = egui::vec2(6.0, 4.0);
             ui.horizontal(|ui| {
-                egui::ComboBox::new("game", "Game")
-                    .selected_text(self.config.current_game.string())
-                    .show_ui(ui, |ui| {
-                        for game in Game::iter() {
-                            let text = game.string();
-                            if ui
-                                .selectable_value(&mut self.config.current_game, game.clone(), text)
-                                .clicked()
-                            {
-                                self.send_message(Message::ChangeGame(
-                                    self.config.current_game.clone(),
-                                ));
-                                write_config(&self.config);
-                            }
-                        }
-                    });
-
                 ui.selectable_value(&mut self.current_tab, Tab::Aimbot, "Aimbot");
                 ui.selectable_value(&mut self.current_tab, Tab::Triggerbot, "Triggerbot");
+                ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "Unsafe");
 
                 ui.with_layout(egui::Layout::right_to_left(Align::Min), |ui| {
                     if ui.button("Report Issues").clicked() {
@@ -324,6 +353,7 @@ impl eframe::App for Gui {
             match self.current_tab {
                 Tab::Aimbot => self.aimbot_grid(ui),
                 Tab::Triggerbot => self.triggerbot_grid(ui),
+                Tab::Unsafe => self.unsafe_grid(ui),
             }
         });
 

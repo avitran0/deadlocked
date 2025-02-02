@@ -8,7 +8,7 @@ use std::{
 use color::Colors;
 use config::{get_config_path, parse_config};
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
-use message::{Game, Message};
+use message::Message;
 use notify::{
     event::{DataChange, ModifyKind},
     EventKind, Watcher,
@@ -69,13 +69,7 @@ fn main() {
                     if event.kind != EventKind::Modify(ModifyKind::Data(DataChange::Any)) {
                         return;
                     }
-                    let config = parse_config();
-                    tx_gui
-                        .send(Message::Config(match config.current_game {
-                            Game::CS2 => config.cs2,
-                            Game::Deadlock => config.deadlock,
-                        }))
-                        .unwrap();
+                    tx_gui.send(Message::Config(parse_config())).unwrap();
                 }
             })
             .unwrap();

@@ -5,7 +5,7 @@ use std::{
 };
 
 use bytemuck::{Pod, Zeroable};
-use libc::{iovec, process_vm_readv};
+use libc::{iovec, process_vm_readv, process_vm_writev};
 
 use crate::{constants::Constants, cs2::offsets::InterfaceOffsets};
 
@@ -30,11 +30,29 @@ impl Process {
             iov_len: buffer.len(),
         };
 
-        unsafe { process_vm_readv(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0) };
+        unsafe {
+            process_vm_readv(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0);
+        }
 
         bytemuck::try_from_bytes(&buffer)
             .copied()
             .unwrap_or_default()
+    }
+
+    pub fn write<T: Pod>(&self, address: u64, value: T) {
+        let mut buffer = bytemuck::bytes_of(&value).to_vec();
+        let local_iov = iovec {
+            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+
+        unsafe {
+            process_vm_writev(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0);
+        }
     }
 
     pub fn read_string(&self, address: u64) -> String {

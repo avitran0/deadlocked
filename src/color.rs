@@ -1,5 +1,37 @@
 #![allow(unused)]
 use eframe::egui::Color32;
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Default, Clone, Serialize, Deserialize)]
+pub struct Color {
+    r: u8,
+    b: u8,
+    g: u8,
+    a: u8,
+}
+
+impl Color {
+    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
+    }
+
+    pub const fn from_egui(color: &Color32) -> Self {
+        Self {
+            r: color.r(),
+            g: color.g(),
+            b: color.b(),
+            a: color.a(),
+        }
+    }
+
+    pub const fn egui_color(&self) -> Color32 {
+        Color32::from_rgba_premultiplied(self.r, self.g, self.b, self.a)
+    }
+
+    pub const fn to_hex(&self) -> u32 {
+        ((self.a as u32) << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | (self.r as u32)
+    }
+}
 
 pub struct Colors;
 

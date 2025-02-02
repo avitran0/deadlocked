@@ -3,15 +3,15 @@ use std::fs::File;
 use glam::vec2;
 
 use crate::{
-    config::AimbotConfig,
+    config::Config,
     math::{angles_to_fov, jitter, vec2_clamp},
     mouse::mouse_move,
 };
 
-use super::{player::Player, CS2};
+use super::{bones::Bones, player::Player, CS2};
 
 impl CS2 {
-    pub fn aimbot(&mut self, config: &AimbotConfig, mouse: &mut File) {
+    pub fn aimbot(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {
@@ -40,8 +40,20 @@ impl CS2 {
             }
         }
 
+        let target_angle = if config.multibone {
+            self.target.angle
+        } else {
+            let head_position = target.bone_position(process, &self.offsets, Bones::Head.u64());
+            self.get_target_angle(
+                process,
+                &local_player,
+                &head_position,
+                &self.target.previous_aim_punch,
+            )
+        };
+
         let view_angles = local_player.view_angles(process, &self.offsets);
-        if angles_to_fov(&view_angles, &self.target.angle)
+        if angles_to_fov(&view_angles, &target_angle)
             > (config.fov * self.distance_scale(self.target.distance))
         {
             return;
@@ -55,7 +67,7 @@ impl CS2 {
             return;
         }
 
-        let mut aim_angles = view_angles - self.target.angle;
+        let mut aim_angles = view_angles - target_angle;
         if aim_angles.y < -180.0 {
             aim_angles.y += 360.0
         }

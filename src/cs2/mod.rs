@@ -7,7 +7,7 @@ use player::Player;
 
 use crate::{
     aimbot::Aimbot,
-    config::AimbotConfig,
+    config::Config,
     cs2::{offsets::Offsets, target::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, vec2_clamp},
@@ -18,6 +18,8 @@ use crate::{
 mod aimbot;
 mod bones;
 mod constants;
+mod glow;
+mod noflash;
 pub mod offsets;
 mod player;
 mod rcs;
@@ -31,6 +33,7 @@ pub struct CS2 {
     process: Option<Process>,
     offsets: Offsets,
     target: Target,
+    players: Vec<Player>,
 
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
@@ -76,11 +79,16 @@ impl Aimbot for CS2 {
         self.is_valid = true;
     }
 
-    fn run(&mut self, config: &AimbotConfig, mouse: &mut File) {
+    fn run(&mut self, config: &Config, mouse: &mut File) {
         if self.process.is_none() {
             self.is_valid = false;
             return;
         }
+
+        self.cache_players();
+
+        self.glow(config);
+        self.no_flash(config);
 
         if config.rcs {
             self.rcs(mouse);
@@ -100,6 +108,7 @@ impl CS2 {
             process: None,
             offsets: Offsets::default(),
             target: Target::default(),
+            players: Vec::with_capacity(64),
 
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
@@ -153,7 +162,6 @@ impl CS2 {
         }
         offsets.interface.input = input_address?;
 
-        // seems to be in .text section (executable instructions)
         let local_player = process.scan_pattern(
             &[
                 0x48, 0x83, 0x3D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x95, 0xC0, 0xC3,
@@ -177,20 +185,7 @@ impl CS2 {
         if planted_c4.is_none() {
             warn!("could not find planted c4 offset");
         }
-        offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x07);
-
-        let glow_manager = process.scan_pattern(
-            &[
-                0x48, 0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00,
-                0x00, 0x00, 0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0x48, 0xC7, 0x47,
-            ],
-            "xxx????xxxxx????xxx????xxx".as_bytes(),
-            offsets.library.client,
-        );
-        if glow_manager.is_none() {
-            warn!("could not find glow manager offset");
-        }
-        offsets.direct.glow_manager = process.get_relative_address(glow_manager?, 0x03, 0x07);
+        offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x0C);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
@@ -333,6 +328,19 @@ impl CS2 {
                     }
                     offsets.pawn.spotted_state = offset;
                 }
+                "m_Glow" => {
+                    if !network_enable || offsets.pawn.glow != 0 {
+                        continue;
+                    }
+                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                }
+                "m_flFlashMaxAlpha" => {
+                    if offsets.pawn.flash_alpha != 0 {
+                        continue;
+                    }
+                    offsets.pawn.flash_alpha =
+                        read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
                         continue;
@@ -384,6 +392,25 @@ impl CS2 {
                         continue;
                     }
                     offsets.bomb.blow_time = read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
+                "m_bGlowing" => {
+                    if offsets.glow.is_glowing != 0 {
+                        continue;
+                    }
+                    offsets.glow.is_glowing = read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
+                "m_iGlowType" => {
+                    if offsets.glow.glow_type != 0 {
+                        continue;
+                    }
+                    offsets.glow.glow_type = read_vec::<u32>(&client_dump, i + 0x08) as u64;
+                }
+                "m_glowColorOverride" => {
+                    if !network_enable || offsets.glow.color_override != 0 {
+                        continue;
+                    }
+                    offsets.glow.color_override =
+                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
                 }
                 _ => {}
             }

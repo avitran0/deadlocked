@@ -7,7 +7,7 @@ use glam::vec3;
 use rand::{rng, Rng};
 
 use crate::{
-    config::AimbotConfig,
+    config::Config,
     cs2::bones::Bones,
     math::angles_to_direction,
     mouse::{mouse_left_press, mouse_left_release},
@@ -16,7 +16,7 @@ use crate::{
 use super::{player::Player, CS2};
 
 impl CS2 {
-    pub fn triggerbot(&mut self, config: &AimbotConfig, mouse: &mut File) {
+    pub fn triggerbot(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
             None => {

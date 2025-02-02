@@ -3,7 +3,7 @@ use strum::EnumIter;
 
 #[derive(Debug, Clone, Copy, EnumIter)]
 pub enum Bones {
-    Pelvis = 0,
+    Hip = 0,
     Spine1 = 1,
     Spine2 = 2,
     Spine3 = 3,
@@ -30,7 +30,7 @@ impl Bones {
     }
 
     pub const CONNECTIONS: [(Bones, Bones); 18] = [
-        (Bones::Pelvis, Bones::Spine1),
+        (Bones::Hip, Bones::Spine1),
         (Bones::Spine1, Bones::Spine2),
         (Bones::Spine2, Bones::Spine3),
         (Bones::Spine3, Bones::Spine4),
@@ -42,10 +42,10 @@ impl Bones {
         (Bones::Neck, Bones::RightShoulder),
         (Bones::RightShoulder, Bones::RightElbow),
         (Bones::RightElbow, Bones::RightHand),
-        (Bones::Pelvis, Bones::LeftHip),
+        (Bones::Hip, Bones::LeftHip),
         (Bones::LeftHip, Bones::LeftKnee),
         (Bones::LeftKnee, Bones::LeftFoot),
-        (Bones::Pelvis, Bones::RightHip),
+        (Bones::Hip, Bones::RightHip),
         (Bones::RightHip, Bones::RightKnee),
         (Bones::RightKnee, Bones::RightFoot),
     ];

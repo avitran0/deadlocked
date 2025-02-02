@@ -1,8 +1,14 @@
-use std::{fs::read_to_string, ops::Range, path::Path, time::Duration};
+use std::{
+    fs::read_to_string,
+    ops::Range,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
+use eframe::egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use crate::{key_codes::KeyCode, message::Game};
+use crate::{color::Color, key_codes::KeyCode};
 
 const REFRESH_RATE: u64 = 100;
 pub const LOOP_DURATION: Duration = Duration::from_millis(1000 / REFRESH_RATE);
@@ -26,7 +32,7 @@ impl AimbotStatus {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AimbotConfig {
+pub struct Config {
     pub enabled: bool,
     pub hotkey: KeyCode,
     pub start_bullet: i32,
@@ -40,9 +46,14 @@ pub struct AimbotConfig {
     pub triggerbot_hotkey: KeyCode,
     pub triggerbot_range: Range<u64>,
     pub triggerbot_visibility_check: bool,
+    pub glow: bool,
+    pub glow_enemy_color: Color,
+    pub glow_friendly_color: Color,
+    pub no_flash: bool,
+    pub max_flash_alpha: f32,
 }
 
-impl Default for AimbotConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -58,39 +69,11 @@ impl Default for AimbotConfig {
             triggerbot_hotkey: KeyCode::Mouse4,
             triggerbot_range: 100..300,
             triggerbot_visibility_check: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Config {
-    pub cs2: AimbotConfig,
-    pub deadlock: AimbotConfig,
-    pub current_game: Game,
-}
-
-impl Config {
-    pub fn get(&self) -> &AimbotConfig {
-        match &self.current_game {
-            Game::CS2 => &self.cs2,
-            Game::Deadlock => &self.deadlock,
-        }
-    }
-
-    pub fn get_mut(&mut self) -> &mut AimbotConfig {
-        match &self.current_game {
-            Game::CS2 => &mut self.cs2,
-            Game::Deadlock => &mut self.deadlock,
-        }
-    }
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            cs2: AimbotConfig::default(),
-            deadlock: AimbotConfig::default(),
-            current_game: Game::CS2,
+            glow: false,
+            glow_enemy_color: Color::from_egui(&Color32::RED),
+            glow_friendly_color: Color::from_egui(&Color32::GREEN),
+            no_flash: false,
+            max_flash_alpha: 0.5,
         }
     }
 }
@@ -114,12 +97,27 @@ pub fn parse_config() -> Config {
         return Config::default();
     }
 
-    let config_string = read_to_string(get_config_path()).expect("could not read config file");
+    let config_string = read_to_string(get_config_path()).unwrap();
+    toml::from_str(&config_string).unwrap_or_default()
+}
 
+#[allow(unused)]
+pub fn parse_config_from(path: PathBuf) -> Config {
+    if !path.exists() {
+        return Config::default();
+    }
+
+    let config_string = read_to_string(path).unwrap();
     toml::from_str(&config_string).unwrap_or_default()
 }
 
 pub fn write_config(config: &Config) {
-    let out = toml::to_string(&config).expect("could not write config file");
-    std::fs::write(get_config_path(), out).expect("could not write config file");
+    let out = toml::to_string(&config).unwrap();
+    std::fs::write(get_config_path(), out).unwrap();
+}
+
+#[allow(unused)]
+pub fn write_config_to(config: &Config, path: PathBuf) {
+    let out = toml::to_string(config).unwrap();
+    std::fs::write(path, out).unwrap();
 }

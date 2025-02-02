@@ -21,6 +21,11 @@ impl CS2 {
             None => return,
         };
 
+        if self.is_bomb_planted(process) {
+            dbg!(self.get_bomb_site(process));
+            dbg!(self.get_bomb_blow_time(process));
+        }
+
         let weapon_class = local_player.weapon_class(process, &self.offsets);
         if [
             WeaponClass::Unknown,

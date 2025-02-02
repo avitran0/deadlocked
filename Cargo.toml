@@ -1,6 +1,6 @@
 [package]
 name = "deadlocked"
-version = "3.3.3"
+version = "4.0.0"
 edition = "2021"
 
 [dependencies]
@@ -8,7 +8,7 @@ bytemuck = "1.21"
 eframe = { version = "0.30", default-features = false, features = [
     "wayland",
     "x11",
-    "wgpu"
+    "wgpu",
 ] }
 env_logger = "0.11"
 glam = { version = "0.29", features = ["bytemuck"] }

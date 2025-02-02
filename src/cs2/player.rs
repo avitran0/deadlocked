@@ -2,9 +2,9 @@ use glam::{Vec2, Vec3};
 
 use crate::process::Process;
 
-use super::{constants::Constants, offsets::Offsets, weapon_class::WeaponClass};
+use super::{constants::Constants, offsets::Offsets, weapon_class::WeaponClass, CS2};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Player {
     controller: u64,
     pawn: u64,
@@ -175,5 +175,50 @@ impl Player {
         let data_address = process.read::<u64>(self.pawn + offsets.pawn.aim_punch_cache + 0x08);
 
         process.read(data_address + (length - 1) * 12)
+    }
+
+    #[allow(unused)]
+    pub fn controller(&self) -> u64 {
+        self.controller
+    }
+
+    pub fn pawn(&self) -> u64 {
+        self.pawn
+    }
+}
+
+impl CS2 {
+    pub fn cache_players(&mut self) {
+        let process = match &self.process {
+            Some(process) => process,
+            None => {
+                self.is_valid = false;
+                self.players.clear();
+                return;
+            }
+        };
+
+        let local_player = match Player::local_player(process, &self.offsets) {
+            Some(player) => player,
+            None => return,
+        };
+
+        self.players.clear();
+        for i in 0..=64 {
+            let player = match Player::index(process, &self.offsets, i) {
+                Some(player) => player,
+                None => continue,
+            };
+
+            if !player.is_valid(process, &self.offsets) {
+                continue;
+            }
+
+            if player == local_player {
+                self.target.local_pawn_index = i - 1;
+            } else {
+                self.players.push(player);
+            }
+        }
     }
 }
