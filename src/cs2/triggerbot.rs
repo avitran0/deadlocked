@@ -27,7 +27,7 @@ impl CS2 {
 
         if !config.triggerbot.enabled
             || self.target.player.is_none()
-            || self.is_button_down(process, &config.triggerbot.hotkey)
+            || !self.is_button_down(process, &config.triggerbot.hotkey)
         {
             return;
         }

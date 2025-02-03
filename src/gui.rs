@@ -273,7 +273,11 @@ impl Gui {
 
             ui.label("Desired FOV");
             if ui
-                .add(DragValue::new(&mut self.config.misc.desired_fov).speed(0.1))
+                .add(
+                    DragValue::new(&mut self.config.misc.desired_fov)
+                        .speed(0.1)
+                        .range(1..=179),
+                )
                 .changed()
             {
                 self.send_config();

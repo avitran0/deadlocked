@@ -19,6 +19,10 @@ impl CS2 {
             return;
         }
 
-        local_player.set_fov(process, &self.offsets, config.misc.desired_fov);
+        local_player.set_fov(
+            process,
+            &self.offsets,
+            config.misc.desired_fov.clamp(1, 179),
+        );
     }
 }
