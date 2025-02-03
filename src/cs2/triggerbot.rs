@@ -25,7 +25,10 @@ impl CS2 {
             }
         };
 
-        if !config.triggerbot || self.target.player.is_none() {
+        if !config.triggerbot.enabled
+            || self.target.player.is_none()
+            || self.is_button_down(process, &config.triggerbot.hotkey)
+        {
             return;
         }
         let target = self.target.player.as_ref().unwrap();
@@ -43,11 +46,11 @@ impl CS2 {
             }
         }
 
-        if !self.is_button_down(process, &config.triggerbot_hotkey) {
+        if config.triggerbot.flash_check && local_player.is_flashed(process, &self.offsets) {
             return;
         }
 
-        if config.triggerbot_visibility_check {
+        if config.triggerbot.visibility_check {
             let spotted_mask = target.spotted_mask(process, &self.offsets);
             if (spotted_mask & (1 << self.target.local_pawn_index)) == 0 {
                 return;
@@ -68,13 +71,13 @@ impl CS2 {
         let max_angle = RADIUS / to_target.length();
         let actual_angle = to_target.normalize().dot(view_direction).acos();
         if actual_angle <= max_angle && self.last_shot.is_none() {
-            if config.triggerbot_range.is_empty() {
+            if config.triggerbot.delay_range.is_empty() {
                 self.last_shot = Some(Instant::now());
             } else {
                 self.last_shot = Some(
                     Instant::now()
                         + Duration::from_millis(
-                            rng().random_range(config.triggerbot_range.clone()),
+                            rng().random_range(config.triggerbot.delay_range.clone()),
                         ),
                 );
             }

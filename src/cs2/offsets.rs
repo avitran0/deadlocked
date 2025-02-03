@@ -30,13 +30,14 @@ pub struct ConvarOffsets {
 
 #[derive(Debug, Default)]
 pub struct PlayerControllerOffsets {
-    pub name: u64, // Pointer -> String (m_sSanitizedPlayerName)
-    pub pawn: u64, // Pointer -> Pawn (m_hPawn)
+    pub name: u64,        // Pointer -> String (m_sSanitizedPlayerName)
+    pub pawn: u64,        // Pointer -> Pawn (m_hPawn)
+    pub desired_fov: u64, // u32 (m_iDesiredFOV)
 }
 
 impl PlayerControllerOffsets {
     pub fn all_found(&self) -> bool {
-        self.name != 0 && self.pawn != 0
+        self.name != 0 && self.pawn != 0 && self.desired_fov != 0
     }
 }
 
@@ -57,6 +58,8 @@ pub struct PawnOffsets {
     pub spotted_state: u64,   // SpottedState (m_entitySpottedState)
     pub glow: u64,            // Glow (m_Glow)
     pub flash_alpha: u64,     // f32 (m_flFlashMaxAlpha)
+    pub flash_duration: u64,  // f32 (m_flFlashDuration)
+    pub camera_services: u64, // Pointer -> CameraServices (m_pCameraServices)
 }
 
 impl PawnOffsets {
@@ -75,6 +78,8 @@ impl PawnOffsets {
             && self.spotted_state != 0
             && self.glow != 0
             && self.flash_alpha != 0
+            && self.flash_duration != 0
+            && self.camera_services != 0
     }
 }
 
@@ -130,6 +135,17 @@ impl GlowOffsets {
 }
 
 #[derive(Debug, Default)]
+pub struct CameraServicesOffsets {
+    pub fov: u64, // u32 (m_iFOV)
+}
+
+impl CameraServicesOffsets {
+    pub fn all_found(&self) -> bool {
+        self.fov != 0
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct Offsets {
     pub library: LibraryOffsets,
     pub interface: InterfaceOffsets,
@@ -141,6 +157,7 @@ pub struct Offsets {
     pub spotted_state: SpottedStateOffsets,
     pub bomb: BombOffsets,
     pub glow: GlowOffsets,
+    pub camera_services: CameraServicesOffsets,
 }
 
 impl Offsets {
@@ -151,5 +168,6 @@ impl Offsets {
             && self.spotted_state.all_found()
             && self.bomb.all_found()
             && self.glow.all_found()
+            && self.camera_services.all_found()
     }
 }

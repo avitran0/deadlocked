@@ -1,6 +1,6 @@
 use std::{fs::File, time::Instant};
 
-use constants::Constants;
+use crate::constants::Constants;
 use glam::{Vec2, Vec3};
 use log::{debug, info, warn};
 use player::Player;
@@ -17,7 +17,7 @@ use crate::{
 
 mod aimbot;
 mod bones;
-mod constants;
+mod fov_changer;
 mod glow;
 mod noflash;
 pub mod offsets;
@@ -89,8 +89,9 @@ impl Aimbot for CS2 {
 
         self.glow(config);
         self.no_flash(config);
+        self.fov_changer(config);
 
-        if config.rcs {
+        if config.aimbot.rcs {
             self.rcs(mouse);
         }
 
@@ -232,37 +233,43 @@ impl CS2 {
                     if !network_enable || offsets.controller.name != 0 {
                         continue;
                     }
-                    offsets.controller.name = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.controller.name = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_hPawn" => {
                     if !network_enable || offsets.controller.pawn != 0 {
                         continue;
                     }
-                    offsets.controller.pawn = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.controller.pawn = read_vec::<u32>(&client_dump, i + 0x18) as u64;
+                }
+                "m_iDesiredFOV" => {
+                    if offsets.controller.desired_fov != 0 {
+                        continue;
+                    }
+                    offsets.controller.desired_fov = read_vec::<u32>(&client_dump, i + 0x8) as u64;
                 }
                 "m_iHealth" => {
                     if !network_enable || offsets.pawn.health != 0 {
                         continue;
                     }
-                    offsets.pawn.health = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.health = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_ArmorValue" => {
                     if !network_enable || offsets.pawn.armor != 0 {
                         continue;
                     }
-                    offsets.pawn.armor = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.armor = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_iTeamNum" => {
                     if !network_enable || offsets.pawn.team != 0 {
                         continue;
                     }
-                    offsets.pawn.team = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.team = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_lifeState" => {
                     if !network_enable || offsets.pawn.life_state != 0 {
                         continue;
                     }
-                    offsets.pawn.life_state = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.life_state = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_pClippingWeapon" => {
                     if offsets.pawn.weapon != 0 {
@@ -286,7 +293,7 @@ impl CS2 {
                     if !network_enable || offsets.pawn.eye_offset != 0 {
                         continue;
                     }
-                    offsets.pawn.eye_offset = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.eye_offset = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_vecVelocity" => {
                     if offsets.pawn.velocity != 0 {
@@ -302,15 +309,13 @@ impl CS2 {
                     if !network_enable || offsets.pawn.aim_punch_cache != 0 {
                         continue;
                     }
-                    offsets.pawn.aim_punch_cache =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.aim_punch_cache = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_iShotsFired" => {
                     if !network_enable || offsets.pawn.shots_fired != 0 {
                         continue;
                     }
-                    offsets.pawn.shots_fired =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.shots_fired = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "v_angle" => {
                     if offsets.pawn.view_angles != 0 {
@@ -322,7 +327,7 @@ impl CS2 {
                     if !network_enable || offsets.pawn.spotted_state != 0 {
                         continue;
                     }
-                    let offset = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    let offset = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                     if !(10000..=14000).contains(&offset) {
                         continue;
                     }
@@ -332,14 +337,25 @@ impl CS2 {
                     if !network_enable || offsets.pawn.glow != 0 {
                         continue;
                     }
-                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.pawn.glow = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_flFlashMaxAlpha" => {
                     if offsets.pawn.flash_alpha != 0 {
                         continue;
                     }
-                    offsets.pawn.flash_alpha =
-                        read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                    offsets.pawn.flash_alpha = read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
+                "m_flFlashDuration" => {
+                    if offsets.pawn.flash_duration != 0 {
+                        continue;
+                    }
+                    offsets.pawn.flash_duration = read_vec::<u32>(&client_dump, i + 0x10) as u64;
+                }
+                "m_pCameraServices" => {
+                    if !network_enable || offsets.pawn.camera_services != 0 {
+                        continue;
+                    }
+                    offsets.pawn.camera_services = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_bDormant" => {
                     if offsets.game_scene_node.dormant != 0 {
@@ -352,8 +368,7 @@ impl CS2 {
                     if !network_enable || offsets.game_scene_node.origin != 0 {
                         continue;
                     }
-                    offsets.game_scene_node.origin =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.game_scene_node.origin = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_modelState" => {
                     if offsets.game_scene_node.model_state != 0 {
@@ -372,8 +387,7 @@ impl CS2 {
                     if !network_enable || offsets.spotted_state.mask != 0 {
                         continue;
                     }
-                    offsets.spotted_state.mask =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.spotted_state.mask = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_bBombTicking" => {
                     if offsets.bomb.is_ticking != 0 {
@@ -385,7 +399,7 @@ impl CS2 {
                     if !network_enable || offsets.bomb.bomb_site != 0 {
                         continue;
                     }
-                    offsets.bomb.bomb_site = read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.bomb.bomb_site = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
                 "m_flC4Blow" => {
                     if offsets.bomb.blow_time != 0 {
@@ -409,8 +423,13 @@ impl CS2 {
                     if !network_enable || offsets.glow.color_override != 0 {
                         continue;
                     }
-                    offsets.glow.color_override =
-                        read_vec::<u32>(&client_dump, i + 0x08 + 0x10) as u64;
+                    offsets.glow.color_override = read_vec::<u32>(&client_dump, i + 0x18) as u64;
+                }
+                "m_iFOV" => {
+                    if offsets.camera_services.fov != 0 {
+                        continue;
+                    }
+                    offsets.camera_services.fov = read_vec::<u32>(&client_dump, i + 0x08) as u64;
                 }
                 _ => {}
             }

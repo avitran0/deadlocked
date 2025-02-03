@@ -20,9 +20,9 @@ impl CS2 {
             }
         };
 
-        if !config.enabled
+        if !config.aimbot.enabled
             || self.target.player.is_none()
-            || !self.is_button_down(process, &config.hotkey)
+            || !self.is_button_down(process, &config.aimbot.hotkey)
         {
             return;
         }
@@ -33,14 +33,18 @@ impl CS2 {
             None => return,
         };
 
-        if config.visibility_check {
+        if config.aimbot.flash_check && local_player.is_flashed(process, &self.offsets) {
+            return;
+        }
+
+        if config.aimbot.visibility_check {
             let spotted_mask = target.spotted_mask(process, &self.offsets);
             if (spotted_mask & (1 << self.target.local_pawn_index)) == 0 {
                 return;
             }
         }
 
-        let target_angle = if config.multibone {
+        let target_angle = if config.aimbot.multibone {
             self.target.angle
         } else {
             let head_position = target.bone_position(process, &self.offsets, Bones::Head.u64());
@@ -54,7 +58,7 @@ impl CS2 {
 
         let view_angles = local_player.view_angles(process, &self.offsets);
         if angles_to_fov(&view_angles, &target_angle)
-            > (config.fov * self.distance_scale(self.target.distance))
+            > (config.aimbot.fov * self.distance_scale(self.target.distance))
         {
             return;
         }
@@ -63,7 +67,7 @@ impl CS2 {
             return;
         }
 
-        if local_player.shots_fired(process, &self.offsets) < config.start_bullet {
+        if local_player.shots_fired(process, &self.offsets) < config.aimbot.start_bullet {
             return;
         }
 
@@ -80,8 +84,8 @@ impl CS2 {
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
         );
-        let smooth_angles = if !config.aim_lock && config.smooth > 1.0 {
-            jitter(&xy, config.smooth)
+        let smooth_angles = if !config.aimbot.aim_lock && config.aimbot.smooth > 1.0 {
+            jitter(&xy, config.aimbot.smooth)
         } else {
             xy
         };

@@ -6,7 +6,7 @@ use std::{
 };
 
 use color::Colors;
-use config::{get_config_path, parse_config};
+use config::{get_config_path, parse_config, write_config};
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
 use message::Message;
 use notify::{
@@ -63,6 +63,9 @@ fn main() {
         .expect("could not create aimbot thread");
 
     if headless {
+        let config = parse_config();
+        // override config if invalid
+        write_config(&config);
         let mut watcher =
             notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
                 if let Ok(event) = event {
@@ -98,11 +101,16 @@ fn main() {
         Box::new(|cc| {
             cc.egui_ctx.set_pixels_per_point(1.5);
 
-            let font = include_bytes!("../resources/Nunito.ttf");
+            let nunito = include_bytes!("../resources/Nunito.ttf");
+            let jbm = include_bytes!("../resources/JetBrainsMono.ttf");
             let mut font_definitions = FontDefinitions::default();
             font_definitions.font_data.insert(
                 String::from("nunito"),
-                Arc::new(FontData::from_static(font)),
+                Arc::new(FontData::from_static(nunito)),
+            );
+            font_definitions.font_data.insert(
+                String::from("jet_brains_mono"),
+                Arc::new(FontData::from_static(jbm)),
             );
 
             font_definitions
@@ -110,6 +118,11 @@ fn main() {
                 .get_mut(&egui::FontFamily::Proportional)
                 .unwrap()
                 .insert(0, String::from("nunito"));
+            font_definitions
+                .families
+                .get_mut(&egui::FontFamily::Monospace)
+                .unwrap()
+                .insert(0, String::from("jet_brains_mono"));
 
             cc.egui_ctx.set_fonts(font_definitions);
 

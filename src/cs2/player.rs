@@ -1,8 +1,8 @@
 use glam::{Vec2, Vec3};
 
-use crate::process::Process;
+use crate::{constants::Constants, process::Process};
 
-use super::{constants::Constants, offsets::Offsets, weapon_class::WeaponClass, CS2};
+use super::{offsets::Offsets, weapon_class::WeaponClass, CS2};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Player {
@@ -162,6 +162,10 @@ impl Player {
         true
     }
 
+    pub fn is_flashed(&self, process: &Process, offsets: &Offsets) -> bool {
+        process.read::<f32>(self.pawn + offsets.pawn.flash_duration) > 0.2
+    }
+
     pub fn view_angles(&self, process: &Process, offsets: &Offsets) -> Vec2 {
         process.read(self.pawn + offsets.pawn.view_angles)
     }
@@ -177,13 +181,30 @@ impl Player {
         process.read(data_address + (length - 1) * 12)
     }
 
-    #[allow(unused)]
-    pub fn controller(&self) -> u64 {
-        self.controller
+    pub fn glow(&self, process: &Process, offsets: &Offsets, color: u32) {
+        process.write(self.pawn + offsets.pawn.glow + offsets.glow.is_glowing, 1u8);
+        process.write(self.pawn + offsets.pawn.glow + offsets.glow.glow_type, 3);
+        process.write(
+            self.pawn + offsets.pawn.glow + offsets.glow.color_override,
+            color,
+        );
     }
 
-    pub fn pawn(&self) -> u64 {
-        self.pawn
+    pub fn no_flash(&self, process: &Process, offsets: &Offsets, flash_alpha: f32) {
+        let flash_alpha = flash_alpha.clamp(0.0, 1.0);
+        if process.read::<f32>(self.pawn + offsets.pawn.flash_alpha) != flash_alpha {
+            process.write(self.pawn + offsets.pawn.flash_alpha, flash_alpha);
+        }
+    }
+
+    pub fn set_fov(&self, process: &Process, offsets: &Offsets, value: u32) {
+        let camera_service = process.read::<u64>(self.pawn + offsets.pawn.camera_services);
+        if camera_service == 0 {
+            return;
+        }
+        if process.read::<u32>(camera_service + offsets.camera_services.fov) != value {
+            process.write(self.controller + offsets.controller.desired_fov, value);
+        }
     }
 }
 

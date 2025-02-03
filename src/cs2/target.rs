@@ -1,9 +1,9 @@
 use glam::Vec2;
 use strum::IntoEnumIterator;
 
-use crate::math::angles_to_fov;
+use crate::{constants::Constants, math::angles_to_fov};
 
-use super::{bones::Bones, constants::Constants, player::Player, weapon_class::WeaponClass, CS2};
+use super::{bones::Bones, player::Player, weapon_class::WeaponClass, CS2};
 
 #[derive(Debug, Default)]
 pub struct Target {

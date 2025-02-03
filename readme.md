@@ -7,9 +7,23 @@
 
 simple cs2 aimbot, for linux only.
 
-deadlock support will happen once that gets a native linux client.
-
 if you want esp, try either the esp branch, and if that does not work the cpp branch.
+
+## features
+
+- aimbot
+  - fov
+  - smoothing (with jitter)
+  - aim lock
+  - visibility check
+  - head only/whole body
+- rcs
+- triggerbot
+  - min and max delay in milliseconds
+- unsafe
+  - glow
+  - noflash
+    - max flash alpha
 
 ## setup
 
@@ -20,3 +34,7 @@ if you want esp, try either the esp branch, and if that does not work the cpp br
 
 - if you got the source code from github, run with cargo: `cargo run --release`
 - if you got a standalone binary, just run that
+
+## headless mode
+
+if the gui has problems, you can run this in headless mode. it will watch the config file for changes and update on the fly. to run like this, use the flag `--headless`

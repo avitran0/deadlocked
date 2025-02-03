@@ -9,7 +9,7 @@ impl CS2 {
             None => return,
         };
 
-        if !config.glow {
+        if !config.misc.glow {
             return;
         }
 
@@ -20,24 +20,17 @@ impl CS2 {
 
         let team = local_player.team(process, &self.offsets);
         for player in &self.players {
-            let color = if player.team(process, &self.offsets) == team {
-                config.glow_friendly_color.to_hex()
+            let player_team = player.team(process, &self.offsets);
+            if !config.misc.friendly_glow && player_team == team {
+                continue;
+            }
+            let color = if player_team == team {
+                config.misc.friendly_color.to_hex()
             } else {
-                config.glow_enemy_color.to_hex()
+                config.misc.enemy_color.to_hex()
             };
 
-            process.write(
-                player.pawn() + self.offsets.pawn.glow + self.offsets.glow.is_glowing,
-                1u8,
-            );
-            process.write(
-                player.pawn() + self.offsets.pawn.glow + self.offsets.glow.glow_type,
-                3,
-            );
-            process.write(
-                player.pawn() + self.offsets.pawn.glow + self.offsets.glow.color_override,
-                color,
-            );
+            player.glow(process, &self.offsets, color);
         }
     }
 }

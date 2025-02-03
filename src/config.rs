@@ -31,8 +31,15 @@ impl AimbotStatus {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
+    pub aimbot: AimbotConfig,
+    pub triggerbot: TriggerbotConfig,
+    pub misc: MiscConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AimbotConfig {
     pub enabled: bool,
     pub hotkey: KeyCode,
     pub start_bullet: i32,
@@ -41,19 +48,11 @@ pub struct Config {
     pub fov: f32,
     pub smooth: f32,
     pub multibone: bool,
+    pub flash_check: bool,
     pub rcs: bool,
-    pub triggerbot: bool,
-    pub triggerbot_hotkey: KeyCode,
-    pub triggerbot_range: Range<u64>,
-    pub triggerbot_visibility_check: bool,
-    pub glow: bool,
-    pub glow_enemy_color: Color,
-    pub glow_friendly_color: Color,
-    pub no_flash: bool,
-    pub max_flash_alpha: f32,
 }
 
-impl Default for Config {
+impl Default for AimbotConfig {
     fn default() -> Self {
         Self {
             enabled: true,
@@ -64,16 +63,56 @@ impl Default for Config {
             fov: 2.5,
             smooth: 5.0,
             multibone: true,
+            flash_check: true,
             rcs: false,
-            triggerbot: false,
-            triggerbot_hotkey: KeyCode::Mouse4,
-            triggerbot_range: 100..300,
-            triggerbot_visibility_check: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TriggerbotConfig {
+    pub enabled: bool,
+    pub hotkey: KeyCode,
+    pub delay_range: Range<u64>,
+    pub visibility_check: bool,
+    pub flash_check: bool,
+}
+
+impl Default for TriggerbotConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            hotkey: KeyCode::Mouse4,
+            delay_range: 100..300,
+            visibility_check: false,
+            flash_check: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MiscConfig {
+    pub glow: bool,
+    pub friendly_glow: bool,
+    pub enemy_color: Color,
+    pub friendly_color: Color,
+    pub no_flash: bool,
+    pub max_flash_alpha: f32,
+    pub fov_changer: bool,
+    pub desired_fov: u32,
+}
+
+impl Default for MiscConfig {
+    fn default() -> Self {
+        Self {
             glow: false,
-            glow_enemy_color: Color::from_egui(&Color32::RED),
-            glow_friendly_color: Color::from_egui(&Color32::GREEN),
+            friendly_glow: true,
+            enemy_color: Color::from_egui(&Color32::RED),
+            friendly_color: Color::from_egui(&Color32::GREEN),
             no_flash: false,
             max_flash_alpha: 0.5,
+            fov_changer: false,
+            desired_fov: 90,
         }
     }
 }
