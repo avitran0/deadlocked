@@ -3,7 +3,8 @@
 ![downloads](https://img.shields.io/github/downloads/avitran0/deadlocked/total?color=blue) [![foss cs2/deadlock hacking](https://badgen.net/discord/members/eXjG4Ar9Sx)](https://discord.gg/eXjG4Ar9Sx)
 
 > [!CAUTION]
-> vacnet 3.0 seems to be better at detecting aimbot and wallhacks, so **do not** use aim lock, and play with a low fov to avoid bans. the default configuration should be a good starting point.
+> vacnet 3.0 seems to be better at detecting aimbot and wallhacks, so **do not** use aim lock,
+> and play with a low fov to avoid bans. the default configuration should be a good starting point.
 
 simple cs2 aimbot, for linux only.
 
@@ -24,6 +25,11 @@ if you want esp, try either the esp branch, and if that does not work the cpp br
   - glow
   - noflash
     - max flash alpha
+
+> [!WARNING]
+> the features in the unsafe tab are there for a reason.
+> do not use them unless you are fine with risking a ban.
+> they write to game memory.
 
 ## setup
 
