@@ -31,6 +31,7 @@ impl CS2 {
             WeaponClass::Unknown,
             WeaponClass::Knife,
             WeaponClass::Grenade,
+            WeaponClass::Pistol,
         ]
         .contains(&weapon_class)
         {
