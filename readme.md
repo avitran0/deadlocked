@@ -18,13 +18,17 @@ if you want esp, try either the esp branch, and if that does not work the cpp br
   - aim lock
   - visibility check
   - head only/whole body
+  - flash check
 - rcs
 - triggerbot
   - min and max delay in milliseconds
+  - flash check
 - unsafe
   - glow
   - noflash
     - max flash alpha
+  - fov changer
+- config saving/loading
 
 > [!WARNING]
 > the features in the unsafe tab are there for a reason.
