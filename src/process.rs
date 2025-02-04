@@ -6,6 +6,7 @@ use std::{
 
 use bytemuck::{Pod, Zeroable};
 use libc::{iovec, process_vm_readv, process_vm_writev};
+use log::warn;
 
 use crate::{constants::Constants, cs2::offsets::InterfaceOffsets};
 
@@ -176,6 +177,7 @@ impl Process {
             }
             symbol_table += add;
         }
+        warn!("export {} could not be found", export_name);
         None
     }
 
@@ -200,6 +202,7 @@ impl Process {
 
             address += register_size * 2;
         }
+        warn!("did not find tag {} in dynamic section", tag);
         None
     }
 
