@@ -188,6 +188,20 @@ impl CS2 {
         }
         offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x0C);
 
+        // todo: does this work?
+        let global_vars = process.scan_pattern(
+            &[
+                0x8D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x89, 0x35, 0x00, 0x00, 0x00, 0x00, 0x48,
+                0x89, 0x00, 0x00, 0xC3,
+            ],
+            "x?????xxx????xx??x".as_bytes(),
+            offsets.library.client,
+        );
+        if global_vars.is_none() {
+            warn!("could not find global vars offset");
+        }
+        offsets.direct.global_vars = process.get_relative_address(global_vars?, 0x09, 0x07);
+
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
             warn!("could not get mp_tammates_are_enemies convar offset");

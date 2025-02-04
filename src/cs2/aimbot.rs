@@ -4,7 +4,7 @@ use glam::vec2;
 
 use crate::{
     config::Config,
-    math::{angles_to_fov, jitter, vec2_clamp},
+    math::{aim_smooth, angles_to_fov, vec2_clamp},
     mouse::mouse_move,
 };
 
@@ -85,7 +85,7 @@ impl CS2 {
             -aim_angles.x / sensitivity * 50.0,
         );
         let smooth_angles = if !config.aimbot.aim_lock && config.aimbot.smooth > 1.0 {
-            jitter(&xy, config.aimbot.smooth)
+            aim_smooth(&xy, config.aimbot.smooth)
         } else {
             xy
         };

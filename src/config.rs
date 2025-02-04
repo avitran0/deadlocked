@@ -6,6 +6,7 @@ use std::{
 };
 
 use eframe::egui::Color32;
+use log::warn;
 use serde::{Deserialize, Serialize};
 
 use crate::{color::Color, key_codes::KeyCode};
@@ -137,17 +138,24 @@ pub fn parse_config() -> Config {
     }
 
     let config_string = read_to_string(get_config_path()).unwrap();
-    toml::from_str(&config_string).unwrap_or_default()
+    let config = toml::from_str(&config_string);
+    if config.is_err() {
+        warn!("config file invalid");
+    }
+    config.unwrap_or_default()
 }
 
-#[allow(unused)]
 pub fn parse_config_from(path: PathBuf) -> Config {
     if !path.exists() {
         return Config::default();
     }
 
     let config_string = read_to_string(path).unwrap();
-    toml::from_str(&config_string).unwrap_or_default()
+    let config = toml::from_str(&config_string);
+    if config.is_err() {
+        warn!("config file invalid");
+    }
+    config.unwrap_or_default()
 }
 
 pub fn write_config(config: &Config) {
@@ -155,7 +163,6 @@ pub fn write_config(config: &Config) {
     std::fs::write(get_config_path(), out).unwrap();
 }
 
-#[allow(unused)]
 pub fn write_config_to(config: &Config, path: PathBuf) {
     let out = toml::to_string(config).unwrap();
     std::fs::write(path, out).unwrap();

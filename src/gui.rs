@@ -4,7 +4,10 @@ use strum::IntoEnumIterator;
 
 use crate::{
     color::{Color, Colors},
-    config::{parse_config, write_config, AimbotStatus, Config, VERSION},
+    config::{
+        parse_config, parse_config_from, write_config, write_config_to, AimbotStatus, Config,
+        VERSION,
+    },
     constants::Constants,
     key_codes::KeyCode,
     message::Message,
@@ -17,6 +20,7 @@ pub enum Tab {
     Triggerbot,
     Unsafe,
     Colors,
+    Config,
 }
 
 pub struct Gui {
@@ -294,7 +298,7 @@ impl Gui {
     }
 
     fn colors_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("unsafe").num_columns(4).show(ui, |ui| {
+        egui::Grid::new("colors").num_columns(4).show(ui, |ui| {
             ui.label("Glow Enemy Color");
             if let Some(color) = self.color_picker(ui, &self.config.misc.enemy_color) {
                 self.config.misc.enemy_color = color;
@@ -308,6 +312,29 @@ impl Gui {
                 self.send_config();
             }
             ui.end_row();
+        });
+    }
+
+    fn config_grid(&mut self, ui: &mut Ui) {
+        egui::Grid::new("config").num_columns(4).show(ui, |ui| {
+            if ui.button("Save").clicked() {
+                if let Some(file) = rfd::FileDialog::new()
+                    .set_file_name("config.toml")
+                    .save_file()
+                {
+                    write_config_to(&self.config, file);
+                }
+            }
+
+            if ui.button("Load").clicked() {
+                if let Some(file) = rfd::FileDialog::new()
+                    .add_filter("toml", &["toml"])
+                    .pick_file()
+                {
+                    self.config = parse_config_from(file);
+                    self.send_config();
+                }
+            }
         });
     }
 
@@ -400,6 +427,7 @@ impl eframe::App for Gui {
                 ui.selectable_value(&mut self.current_tab, Tab::Triggerbot, "Triggerbot");
                 ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "Unsafe");
                 ui.selectable_value(&mut self.current_tab, Tab::Colors, "Colors");
+                ui.selectable_value(&mut self.current_tab, Tab::Config, "Config");
 
                 ui.with_layout(egui::Layout::right_to_left(Align::Min), |ui| {
                     if ui.button("Report Issues").clicked() {
@@ -420,6 +448,7 @@ impl eframe::App for Gui {
                 Tab::Triggerbot => self.triggerbot_grid(ui),
                 Tab::Unsafe => self.unsafe_grid(ui),
                 Tab::Colors => self.colors_grid(ui),
+                Tab::Config => self.config_grid(ui),
             }
         });
 

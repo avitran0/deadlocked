@@ -20,6 +20,7 @@ pub struct DirectOffsets {
     pub local_player: u64,
     pub button_state: u64,
     pub planted_c4: u64,
+    pub global_vars: u64,
 }
 
 #[derive(Debug, Default)]
