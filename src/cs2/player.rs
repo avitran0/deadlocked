@@ -181,6 +181,11 @@ impl Player {
         process.read(data_address + (length - 1) * 12)
     }
 
+    #[allow(unused)]
+    pub fn velocity(&self, process: &Process, offsets: &Offsets) -> Vec3 {
+        process.read(self.pawn + offsets.pawn.velocity)
+    }
+
     pub fn glow(&self, process: &Process, offsets: &Offsets, color: u32) {
         process.write(self.pawn + offsets.pawn.glow + offsets.glow.is_glowing, 1u8);
         process.write(self.pawn + offsets.pawn.glow + offsets.glow.glow_type, 3);
@@ -213,7 +218,6 @@ impl CS2 {
         let process = match &self.process {
             Some(process) => process,
             None => {
-                self.is_valid = false;
                 self.players.clear();
                 return;
             }

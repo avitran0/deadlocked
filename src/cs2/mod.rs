@@ -140,6 +140,8 @@ impl CS2 {
         offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
         offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
         offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
+        offsets.library.sdl = process.module_base_address(Constants::SDL_LIB)?;
+        offsets.library.matchmaking = process.module_base_address(Constants::MATCH_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -188,19 +190,35 @@ impl CS2 {
         }
         offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x00, 0x0C);
 
-        // todo: does this work?
-        let global_vars = process.scan_pattern(
+        // for map name
+        let game_types = process.scan_pattern(
             &[
-                0x8D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x89, 0x35, 0x00, 0x00, 0x00, 0x00, 0x48,
-                0x89, 0x00, 0x00, 0xC3,
+                0x48, 0x8D, 0x05, 0x00, 0x00, 0x00, 0x00, 0xC3, 0x0F, 0x1F, 0x84, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x48, 0x8B, 0x07,
             ],
-            "x?????xxx????xx??x".as_bytes(),
-            offsets.library.client,
+            "xxx????xxxxx????xxx".as_bytes(),
+            offsets.library.matchmaking,
         );
-        if global_vars.is_none() {
-            warn!("could not find global vars offset");
+        if game_types.is_none() {
+            warn!("could not find current map offset");
         }
-        offsets.direct.global_vars = process.get_relative_address(global_vars?, 0x09, 0x07);
+        offsets.direct.game_types = process.get_relative_address(game_types?, 0x03, 0x07);
+
+        /*for i in 0..512 {
+            let pointer = process.read::<u64>(offsets.direct.game_types + i);
+            let name = process.read_string(pointer);
+            if !name.is_empty() && name.is_ascii() {
+                println!("map name offset at {}", i - 8);
+            }
+        }*/
+
+        let sdl_window = process.get_module_export(offsets.library.sdl, "SDL_GetKeyboardFocus");
+        if sdl_window.is_none() {
+            warn!("could not find sdl window offset");
+        }
+        let sdl_window = process.get_relative_address(sdl_window?, 0x02, 0x06);
+        let sdl_window = process.read::<u64>(sdl_window);
+        offsets.direct.sdl_window = process.get_relative_address(sdl_window, 0x03, 0x07);
 
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
@@ -309,15 +327,11 @@ impl CS2 {
                     }
                     offsets.pawn.eye_offset = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
-                "m_vecVelocity" => {
+                "m_vecAbsVelocity" => {
                     if offsets.pawn.velocity != 0 {
                         continue;
                     }
-                    let value = read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                    if !(800..=1600).contains(&value) {
-                        continue;
-                    }
-                    offsets.pawn.velocity = value;
+                    offsets.pawn.velocity = read_vec::<u32>(&client_dump, i + 0x08) as u64;
                 }
                 "m_aimPunchCache" => {
                     if !network_enable || offsets.pawn.aim_punch_cache != 0 {
@@ -481,6 +495,16 @@ impl CS2 {
 
     fn is_ffa(&self, process: &Process) -> bool {
         process.read::<u32>(self.offsets.convar.ffa + 0x40) == 1
+    }
+
+    #[allow(unused)]
+    fn map_name(&self, process: &Process) -> String {
+        let name_pointer = process.read(self.offsets.direct.game_types + 288);
+        process
+            .read_string(name_pointer)
+            .chars()
+            .filter(|c| c.is_ascii())
+            .collect()
     }
 
     // misc

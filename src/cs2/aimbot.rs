@@ -4,8 +4,8 @@ use glam::vec2;
 
 use crate::{
     config::Config,
+    input_device::mouse_move,
     math::{aim_smooth, angles_to_fov, vec2_clamp},
-    mouse::mouse_move,
 };
 
 use super::{bones::Bones, player::Player, CS2};
@@ -14,10 +14,7 @@ impl CS2 {
     pub fn aimbot(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+            None => return,
         };
 
         if !config.aimbot.enabled

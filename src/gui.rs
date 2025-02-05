@@ -9,9 +9,9 @@ use crate::{
         VERSION,
     },
     constants::Constants,
+    input_device::DeviceStatus,
     key_codes::KeyCode,
     message::Message,
-    mouse::MouseStatus,
 };
 
 #[derive(PartialEq)]
@@ -29,7 +29,7 @@ pub struct Gui {
     current_tab: Tab,
     config: Config,
     status: AimbotStatus,
-    mouse_status: MouseStatus,
+    mouse_status: DeviceStatus,
     frame_times: Vec<f64>,
     average_frame_time: f64,
 }
@@ -47,7 +47,7 @@ impl Gui {
             current_tab: Tab::Aimbot,
             config,
             status,
-            mouse_status: MouseStatus::NoMouseFound,
+            mouse_status: DeviceStatus::NotFound,
             frame_times: Vec::with_capacity(50),
             average_frame_time: 0.0,
         };
@@ -350,14 +350,14 @@ impl Gui {
             );
 
             let mouse_text = match &self.mouse_status {
-                MouseStatus::Working(name) => name,
-                MouseStatus::PermissionsRequired => {
+                DeviceStatus::Working(name) => name,
+                DeviceStatus::PermissionsRequired => {
                     "mouse input only works when user is in input group"
                 }
-                MouseStatus::Disconnected => "mouse was disconnected",
-                MouseStatus::NoMouseFound => "no mouse was found",
+                DeviceStatus::Disconnected => "mouse was disconnected",
+                DeviceStatus::NotFound => "no mouse was found",
             };
-            let color = if let MouseStatus::Working(_) = &self.mouse_status {
+            let color = if let DeviceStatus::Working(_) = &self.mouse_status {
                 Colors::SUBTEXT
             } else {
                 Colors::YELLOW

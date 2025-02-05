@@ -25,10 +25,7 @@ impl CS2 {
     pub fn find_target(&mut self) {
         let process = match &self.process {
             Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+            None => return,
         };
 
         let local_player = match Player::local_player(process, &self.offsets) {

@@ -2,7 +2,7 @@ use std::fs::File;
 
 use glam::Vec2;
 
-use crate::mouse::mouse_move;
+use crate::input_device::mouse_move;
 
 use super::{player::Player, weapon_class::WeaponClass, CS2};
 
@@ -10,10 +10,7 @@ impl CS2 {
     pub fn rcs(&mut self, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+            None => return,
         };
 
         let local_player = match Player::local_player(process, &self.offsets) {

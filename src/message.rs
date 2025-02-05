@@ -1,12 +1,13 @@
 use crate::{
     config::{AimbotStatus, Config},
-    mouse::MouseStatus,
+    input_device::DeviceStatus,
 };
 
 #[derive(Clone, Debug)]
 pub enum Message {
     Config(Config),
     Status(AimbotStatus),
-    MouseStatus(MouseStatus),
+    MouseStatus(DeviceStatus),
+    // KeyboardStatus(DeviceStatus),
     FrameTime(f64),
 }

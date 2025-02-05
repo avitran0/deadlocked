@@ -23,7 +23,7 @@ mod gui;
 mod key_codes;
 mod math;
 mod message;
-mod mouse;
+mod input_device;
 mod proc;
 mod process;
 

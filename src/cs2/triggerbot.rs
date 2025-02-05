@@ -9,8 +9,8 @@ use rand::{rng, Rng};
 use crate::{
     config::Config,
     cs2::bones::Bones,
+    input_device::{mouse_left_press, mouse_left_release},
     math::angles_to_direction,
-    mouse::{mouse_left_press, mouse_left_release},
 };
 
 use super::{player::Player, CS2};
@@ -19,10 +19,7 @@ impl CS2 {
     pub fn triggerbot(&mut self, config: &Config, mouse: &mut File) {
         let process = match &self.process {
             Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+            None => return,
         };
 
         if !config.triggerbot.enabled

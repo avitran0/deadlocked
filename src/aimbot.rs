@@ -5,13 +5,13 @@ use log::{info, warn};
 use crate::{
     config::{Config, SLEEP_DURATION},
     cs2::CS2,
-    mouse::{mouse_valid, MouseStatus},
+    input_device::{device_valid, DeviceStatus},
 };
 
 use crate::{
     config::{parse_config, AimbotStatus, LOOP_DURATION},
+    input_device::open_mouse,
     message::Message,
-    mouse::open_mouse,
 };
 
 pub trait Aimbot: std::fmt::Debug {
@@ -25,7 +25,7 @@ pub struct AimbotManager {
     rx: mpsc::Receiver<Message>,
     config: Config,
     mouse: File,
-    mouse_status: MouseStatus,
+    mouse_status: DeviceStatus,
     aimbot: CS2,
 }
 
@@ -61,8 +61,8 @@ impl AimbotManager {
                 self.parse_message(message);
             }
 
-            let mut mouse_valid = mouse_valid(&mut self.mouse);
-            if !mouse_valid || self.mouse_status == MouseStatus::NoMouseFound {
+            let mut mouse_valid = device_valid(&mut self.mouse);
+            if !mouse_valid || self.mouse_status == DeviceStatus::NotFound {
                 mouse_valid = self.find_mouse();
             }
 
@@ -79,7 +79,8 @@ impl AimbotManager {
                     self.send_message(Message::Status(AimbotStatus::Working));
                     previous_status = AimbotStatus::Working;
                 }
-                self.aimbot.run(&self.config, &mut self.mouse);
+                self.aimbot
+                    .run(&self.config, &mut self.mouse);
             }
 
             if self.aimbot.is_valid() && mouse_valid {
@@ -105,11 +106,11 @@ impl AimbotManager {
 
     fn find_mouse(&mut self) -> bool {
         let mut mouse_valid = false;
-        self.send_message(Message::MouseStatus(MouseStatus::Disconnected));
+        self.send_message(Message::MouseStatus(DeviceStatus::Disconnected));
         info!("mouse disconnected");
-        self.mouse_status = MouseStatus::Disconnected;
+        self.mouse_status = DeviceStatus::Disconnected;
         let (mouse, status) = open_mouse();
-        if let MouseStatus::Working(_) = status {
+        if let DeviceStatus::Working(_) = status {
             info!("mouse reconnected");
             mouse_valid = true;
         }
