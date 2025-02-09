@@ -11,5 +11,5 @@ aimbot will be re-made later, this rewrite should fix esp/overlay problems
 
 ## running
 
-- clone the repository: `git clone --recursive https://github.com/avitran0/deadlocked`
+- clone the repository: `git clone --branch cpp --recursive https://github.com/avitran0/deadlocked`
 - run with script: `./run.sh` (need to have a c++ compiler and cmake installed)
