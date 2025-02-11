@@ -1,5 +1,3 @@
-#include <thread>
-
 #include "gui.hpp"
 #include "mouse.hpp"
 
