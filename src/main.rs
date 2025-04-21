@@ -52,7 +52,7 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
-    let window_size = [600.0, 350.0];
+    let window_size = [420.0, 250.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_maximize_button(false)
@@ -64,7 +64,7 @@ fn main() {
         "deadlocked",
         options,
         Box::new(|cc| {
-            cc.egui_ctx.set_pixels_per_point(1.5);
+            cc.egui_ctx.set_pixels_per_point(1.2);
 
             let fira_sans = include_bytes!("../resources/FiraSans.ttf");
             let mut font_definitions = FontDefinitions::default();

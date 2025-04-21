@@ -7,12 +7,11 @@ pub struct Color {
     r: u8,
     b: u8,
     g: u8,
-    a: u8,
 }
 
 impl Color {
-    pub const fn rgba(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Self { r, g, b, a }
+    pub const fn rgb(r: u8, g: u8, b: u8) -> Self {
+        Self { r, g, b }
     }
 
     pub const fn from_egui(color: &Color32) -> Self {
@@ -20,16 +19,19 @@ impl Color {
             r: color.r(),
             g: color.g(),
             b: color.b(),
-            a: color.a(),
         }
     }
 
     pub const fn egui_color(&self) -> Color32 {
-        Color32::from_rgba_premultiplied(self.r, self.g, self.b, self.a)
+        Color32::from_rgba_premultiplied(self.r, self.g, self.b, 255)
     }
 
     pub const fn to_hex(&self) -> u32 {
-        ((self.a as u32) << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | (self.r as u32)
+        (255 << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | (self.r as u32)
+    }
+
+    pub const fn to_array(&self) -> [u8; 3] {
+        [self.r, self.g, self.b]
     }
 }
 

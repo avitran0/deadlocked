@@ -6,9 +6,9 @@ use crate::{
     color::{Color, Colors},
     config::{parse_config, write_config, AimbotStatus, Config, VERSION},
     constants::Constants,
-    mouse::DeviceStatus,
     key_codes::KeyCode,
     message::Message,
+    mouse::DeviceStatus,
 };
 
 #[derive(PartialEq)]
@@ -268,7 +268,7 @@ impl Gui {
     }
 
     fn color_picker(&self, ui: &mut Ui, color: &Color) -> Option<Color> {
-        let [mut r, mut g, mut b, mut a] = color.egui_color().to_array();
+        let [mut r, mut g, mut b] = color.to_array();
         let mut changed = false;
         if ui.add(DragValue::new(&mut r).prefix("r: ")).changed() {
             changed = true;
@@ -279,9 +279,6 @@ impl Gui {
         if ui.add(DragValue::new(&mut b).prefix("b: ")).changed() {
             changed = true;
         };
-        if ui.add(DragValue::new(&mut a).prefix("a: ")).changed() {
-            changed = true;
-        };
         let (response, painter) = ui.allocate_painter(ui.spacing().interact_size, Sense::hover());
         painter.rect_filled(
             response.rect,
@@ -289,7 +286,7 @@ impl Gui {
             color.egui_color(),
         );
         if changed {
-            return Some(Color::rgba(r, g, b, a));
+            return Some(Color::rgb(r, g, b));
         }
         None
     }
