@@ -1,6 +1,7 @@
 use glam::{Vec2, Vec3};
 use log::{debug, info, warn};
 use player::Player;
+use rcs::Recoil;
 
 use crate::{
     aimbot::Aimbot,
@@ -32,9 +33,7 @@ pub struct CS2 {
     offsets: Offsets,
     target: Target,
     players: Vec<Player>,
-
-    previous_aim_punch: Vec2,
-    unaccounted_aim_punch: Vec2,
+    recoil: Recoil,
 }
 
 impl Aimbot for CS2 {
@@ -106,9 +105,7 @@ impl CS2 {
             offsets: Offsets::default(),
             target: Target::default(),
             players: Vec::with_capacity(64),
-
-            previous_aim_punch: Vec2::ZERO,
-            unaccounted_aim_punch: Vec2::ZERO,
+            recoil: Recoil::default(),
         }
     }
 
