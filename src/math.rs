@@ -1,4 +1,4 @@
-use glam::{vec2, vec3, Vec2, Vec3};
+use glam::{vec2, Vec2, Vec3};
 use rand::{rng, Rng};
 
 // t will be config.smooth
@@ -49,14 +49,6 @@ pub fn angles_to_fov(view_angles: &Vec2, aim_angles: &Vec2) -> f32 {
     delta.y = ((delta.y + 180.0) % 360.0 - 180.0).abs();
 
     delta.length()
-}
-
-pub fn angles_to_direction(view_angles: &Vec2) -> Vec3 {
-    let degrees = vec2(view_angles.x.to_radians(), view_angles.y.to_radians());
-    let pitch = vec2(degrees.x.sin(), degrees.x.cos());
-    let yaw = vec2(degrees.y.sin(), degrees.y.cos());
-
-    vec3(pitch.y * yaw.y, pitch.y * yaw.x, -pitch.x).normalize()
 }
 
 pub fn vec2_clamp(vec: &mut Vec2) {

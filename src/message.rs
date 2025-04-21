@@ -1,6 +1,6 @@
 use crate::{
     config::{AimbotStatus, Config},
-    input_device::DeviceStatus,
+    mouse::DeviceStatus,
 };
 
 #[derive(Clone, Debug)]

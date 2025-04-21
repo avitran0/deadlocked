@@ -1,17 +1,15 @@
-use std::fs::File;
-
 use glam::vec2;
 
 use crate::{
     config::Config,
-    input_device::mouse_move,
     math::{aim_smooth, angles_to_fov, vec2_clamp},
+    mouse::Mouse,
 };
 
 use super::{bones::Bones, player::Player, CS2};
 
 impl CS2 {
-    pub fn aimbot(&mut self, config: &Config, mouse: &mut File) {
+    pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
         let process = match &self.process {
             Some(process) => process,
             None => return,
@@ -87,6 +85,6 @@ impl CS2 {
             xy
         };
 
-        mouse_move(mouse, smooth_angles)
+        mouse.move_rel(&smooth_angles);
     }
 }

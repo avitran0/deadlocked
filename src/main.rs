@@ -1,18 +1,11 @@
 use std::{
     io::Write,
-    path::Path,
     sync::{mpsc, Arc},
     thread,
 };
 
 use color::Colors;
-use config::{get_config_path, parse_config, write_config};
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
-use message::Message;
-use notify::{
-    event::{DataChange, ModifyKind},
-    EventKind, Watcher,
-};
 
 mod aimbot;
 mod color;
@@ -20,10 +13,10 @@ mod config;
 mod constants;
 mod cs2;
 mod gui;
+mod mouse;
 mod key_codes;
 mod math;
 mod message;
-mod input_device;
 mod proc;
 mod process;
 
@@ -38,9 +31,6 @@ fn main() {
         .filter_module("deadlocked", log::LevelFilter::Info)
         .parse_env(env)
         .init();
-
-    let args: Vec<String> = std::env::args().collect();
-    let headless = args.len() > 1 && args[1] == "--headless";
 
     // this runs as x11 for now, because wayland decorations for winit are not good
     // and don't support disabling the maximize button
@@ -62,31 +52,6 @@ fn main() {
         })
         .expect("could not create aimbot thread");
 
-    if headless {
-        let config = parse_config();
-        // override config if invalid
-        write_config(&config);
-        let mut watcher =
-            notify::recommended_watcher(move |event: Result<notify::Event, notify::Error>| {
-                if let Ok(event) = event {
-                    if event.kind != EventKind::Modify(ModifyKind::Data(DataChange::Any)) {
-                        return;
-                    }
-                    tx_gui.send(Message::Config(parse_config())).unwrap();
-                }
-            })
-            .unwrap();
-        watcher
-            .watch(
-                Path::new(&get_config_path()),
-                notify::RecursiveMode::NonRecursive,
-            )
-            .unwrap();
-
-        loop {
-            let _ = rx_gui.recv().expect("aimbot thread died");
-        }
-    }
     let window_size = [600.0, 350.0];
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -101,28 +66,18 @@ fn main() {
         Box::new(|cc| {
             cc.egui_ctx.set_pixels_per_point(1.5);
 
-            let nunito = include_bytes!("../resources/Nunito.ttf");
-            let jbm = include_bytes!("../resources/JetBrainsMono.ttf");
+            let fira_sans = include_bytes!("../resources/FiraSans.ttf");
             let mut font_definitions = FontDefinitions::default();
             font_definitions.font_data.insert(
-                String::from("nunito"),
-                Arc::new(FontData::from_static(nunito)),
-            );
-            font_definitions.font_data.insert(
-                String::from("jet_brains_mono"),
-                Arc::new(FontData::from_static(jbm)),
+                String::from("fira_sans"),
+                Arc::new(FontData::from_static(fira_sans)),
             );
 
             font_definitions
                 .families
                 .get_mut(&egui::FontFamily::Proportional)
                 .unwrap()
-                .insert(0, String::from("nunito"));
-            font_definitions
-                .families
-                .get_mut(&egui::FontFamily::Monospace)
-                .unwrap()
-                .insert(0, String::from("jet_brains_mono"));
+                .insert(0, String::from("fira_sans"));
 
             cc.egui_ctx.set_fonts(font_definitions);
 

@@ -1,24 +1,22 @@
 [package]
 name = "deadlocked"
-version = "4.1.2"
+version = "4.1.3"
 edition = "2021"
 
 [dependencies]
-bytemuck = "1.21"
-eframe = { version = "0.30", default-features = false, features = [
+bytemuck = "1.22"
+eframe = { version = "0.31", default-features = false, features = [
     "wayland",
     "x11",
     "wgpu",
 ] }
-env_logger = "0.11"
-glam = { version = "0.29", features = ["bytemuck"] }
+env_logger = { version = "0.11", default-features = false }
+glam = { version = "0.30", features = ["bytemuck"] }
 libc = "0.2"
 log = "0.4"
-notify = "8.0"
 rand = "0.9"
-rfd = "0.15"
 serde = { version = "1.0", features = ["derive"] }
-strum = { version = "0.26", features = ["derive"] }
+strum = { version = "0.27", features = ["derive"] }
 toml = "0.8"
 
 [profile.release]

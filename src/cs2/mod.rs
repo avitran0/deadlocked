@@ -1,6 +1,3 @@
-use std::{fs::File, time::Instant};
-
-use crate::constants::Constants;
 use glam::{Vec2, Vec3};
 use log::{debug, info, warn};
 use player::Player;
@@ -8,9 +5,11 @@ use player::Player;
 use crate::{
     aimbot::Aimbot,
     config::Config,
+    constants::Constants,
     cs2::{offsets::Offsets, target::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, vec2_clamp},
+    mouse::Mouse,
     proc::{get_pid, open_process, read_string_vec, read_vec, validate_pid},
     process::Process,
 };
@@ -24,7 +23,6 @@ pub mod offsets;
 mod player;
 mod rcs;
 mod target;
-mod triggerbot;
 mod weapon_class;
 
 #[derive(Debug)]
@@ -37,7 +35,6 @@ pub struct CS2 {
 
     previous_aim_punch: Vec2,
     unaccounted_aim_punch: Vec2,
-    last_shot: Option<Instant>,
 }
 
 impl Aimbot for CS2 {
@@ -79,7 +76,7 @@ impl Aimbot for CS2 {
         self.is_valid = true;
     }
 
-    fn run(&mut self, config: &Config, mouse: &mut File) {
+    fn run(&mut self, config: &Config, mouse: &mut Mouse) {
         if self.process.is_none() {
             self.is_valid = false;
             return;
@@ -98,7 +95,6 @@ impl Aimbot for CS2 {
         self.find_target();
 
         self.aimbot(config, mouse);
-        self.triggerbot(config, mouse);
     }
 }
 
@@ -113,7 +109,6 @@ impl CS2 {
 
             previous_aim_punch: Vec2::ZERO,
             unaccounted_aim_punch: Vec2::ZERO,
-            last_shot: None,
         }
     }
 

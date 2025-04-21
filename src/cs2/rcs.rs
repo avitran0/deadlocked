@@ -1,13 +1,11 @@
-use std::fs::File;
-
 use glam::Vec2;
 
-use crate::input_device::mouse_move;
+use crate::mouse::Mouse;
 
 use super::{player::Player, weapon_class::WeaponClass, CS2};
 
 impl CS2 {
-    pub fn rcs(&mut self, mouse: &mut File) {
+    pub fn rcs(&mut self, mouse: &mut Mouse) {
         let process = match &self.process {
             Some(process) => process,
             None => return,
@@ -65,6 +63,6 @@ impl CS2 {
         if (0.0..1.0).contains(&mouse_angle.y) {
             self.unaccounted_aim_punch.y = mouse_angle.y;
         }
-        mouse_move(mouse, mouse_angle)
+        mouse.move_rel(&mouse_angle)
     }
 }

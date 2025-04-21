@@ -1,9 +1,4 @@
-use std::{
-    fs::read_to_string,
-    ops::Range,
-    path::{Path, PathBuf},
-    time::Duration,
-};
+use std::{fs::read_to_string, path::Path, time::Duration};
 
 use eframe::egui::Color32;
 use log::warn;
@@ -35,7 +30,6 @@ impl AimbotStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Config {
     pub aimbot: AimbotConfig,
-    pub triggerbot: TriggerbotConfig,
     pub misc: MiscConfig,
 }
 
@@ -66,27 +60,6 @@ impl Default for AimbotConfig {
             multibone: true,
             flash_check: true,
             rcs: false,
-        }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct TriggerbotConfig {
-    pub enabled: bool,
-    pub hotkey: KeyCode,
-    pub delay_range: Range<u64>,
-    pub visibility_check: bool,
-    pub flash_check: bool,
-}
-
-impl Default for TriggerbotConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            hotkey: KeyCode::Mouse4,
-            delay_range: 100..300,
-            visibility_check: false,
-            flash_check: true,
         }
     }
 }
@@ -145,25 +118,7 @@ pub fn parse_config() -> Config {
     config.unwrap_or_default()
 }
 
-pub fn parse_config_from(path: PathBuf) -> Config {
-    if !path.exists() {
-        return Config::default();
-    }
-
-    let config_string = read_to_string(path).unwrap();
-    let config = toml::from_str(&config_string);
-    if config.is_err() {
-        warn!("config file invalid");
-    }
-    config.unwrap_or_default()
-}
-
 pub fn write_config(config: &Config) {
     let out = toml::to_string(&config).unwrap();
     std::fs::write(get_config_path(), out).unwrap();
-}
-
-pub fn write_config_to(config: &Config, path: PathBuf) {
-    let out = toml::to_string(config).unwrap();
-    std::fs::write(path, out).unwrap();
 }

@@ -1,37 +1,33 @@
-use std::{fs::File, sync::mpsc, thread::sleep, time::Instant};
+use std::{sync::mpsc, thread::sleep, time::Instant};
 
 use log::{info, warn};
 
 use crate::{
+    config::{parse_config, AimbotStatus, LOOP_DURATION},
     config::{Config, SLEEP_DURATION},
     cs2::CS2,
-    input_device::{device_valid, DeviceStatus},
-};
-
-use crate::{
-    config::{parse_config, AimbotStatus, LOOP_DURATION},
-    input_device::open_mouse,
     message::Message,
+    mouse::DeviceStatus,
+    mouse::Mouse,
 };
 
 pub trait Aimbot: std::fmt::Debug {
     fn is_valid(&self) -> bool;
     fn setup(&mut self);
-    fn run(&mut self, config: &Config, mouse: &mut File);
+    fn run(&mut self, config: &Config, mouse: &mut Mouse);
 }
 
 pub struct AimbotManager {
     tx: mpsc::Sender<Message>,
     rx: mpsc::Receiver<Message>,
     config: Config,
-    mouse: File,
-    mouse_status: DeviceStatus,
+    mouse: Mouse,
     aimbot: CS2,
 }
 
 impl AimbotManager {
     pub fn new(tx: mpsc::Sender<Message>, rx: mpsc::Receiver<Message>) -> Self {
-        let (mouse, status) = open_mouse();
+        let mouse = Mouse::open();
 
         let config = parse_config();
         let mut aimbot = Self {
@@ -39,11 +35,10 @@ impl AimbotManager {
             rx,
             config,
             mouse,
-            mouse_status: status.clone(),
             aimbot: CS2::new(),
         };
 
-        aimbot.send_message(Message::MouseStatus(status));
+        aimbot.send_message(Message::MouseStatus(aimbot.mouse.status.clone()));
 
         aimbot
     }
@@ -61,8 +56,8 @@ impl AimbotManager {
                 self.parse_message(message);
             }
 
-            let mut mouse_valid = device_valid(&mut self.mouse);
-            if !mouse_valid || self.mouse_status == DeviceStatus::NotFound {
+            let mut mouse_valid = self.mouse.is_valid();
+            if !mouse_valid || self.mouse.status == DeviceStatus::NotFound {
                 mouse_valid = self.find_mouse();
             }
 
@@ -79,8 +74,7 @@ impl AimbotManager {
                     self.send_message(Message::Status(AimbotStatus::Working));
                     previous_status = AimbotStatus::Working;
                 }
-                self.aimbot
-                    .run(&self.config, &mut self.mouse);
+                self.aimbot.run(&self.config, &mut self.mouse);
             }
 
             if self.aimbot.is_valid() && mouse_valid {
@@ -108,14 +102,13 @@ impl AimbotManager {
         let mut mouse_valid = false;
         self.send_message(Message::MouseStatus(DeviceStatus::Disconnected));
         info!("mouse disconnected");
-        self.mouse_status = DeviceStatus::Disconnected;
-        let (mouse, status) = open_mouse();
-        if let DeviceStatus::Working(_) = status {
+        self.mouse.status = DeviceStatus::Disconnected;
+        let mouse = Mouse::open();
+        if let DeviceStatus::Working(_) = mouse.status {
             info!("mouse reconnected");
             mouse_valid = true;
         }
-        self.send_message(Message::MouseStatus(status.clone()));
-        self.mouse_status = status;
+        self.send_message(Message::MouseStatus(mouse.status.clone()));
         self.mouse = mouse;
         mouse_valid
     }

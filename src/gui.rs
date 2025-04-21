@@ -1,15 +1,12 @@
-use eframe::egui::{self, vec2, Align, Align2, Color32, DragValue, FontId, RichText, Sense, Ui};
+use eframe::egui::{self, vec2, Align, Align2, Color32, DragValue, Sense, Ui};
 use std::sync::mpsc;
 use strum::IntoEnumIterator;
 
 use crate::{
     color::{Color, Colors},
-    config::{
-        parse_config, parse_config_from, write_config, write_config_to, AimbotStatus, Config,
-        VERSION,
-    },
+    config::{parse_config, write_config, AimbotStatus, Config, VERSION},
     constants::Constants,
-    input_device::DeviceStatus,
+    mouse::DeviceStatus,
     key_codes::KeyCode,
     message::Message,
 };
@@ -17,10 +14,8 @@ use crate::{
 #[derive(PartialEq)]
 pub enum Tab {
     Aimbot,
-    Triggerbot,
     Unsafe,
     Colors,
-    Config,
 }
 
 pub struct Gui {
@@ -163,78 +158,6 @@ impl Gui {
         });
     }
 
-    fn triggerbot_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("triggerbot").num_columns(4).show(ui, |ui| {
-            ui.label("Enable");
-            if ui
-                .checkbox(&mut self.config.triggerbot.enabled, "")
-                .changed()
-            {
-                self.send_config();
-            }
-
-            ui.label("Hotkey");
-            egui::ComboBox::new("triggerbot_hotkey", "")
-                .selected_text(format!("{:?}", self.config.triggerbot.hotkey))
-                .show_ui(ui, |ui| {
-                    for key_code in KeyCode::iter() {
-                        let text = format!("{:?}", &key_code);
-                        if ui
-                            .selectable_value(&mut self.config.triggerbot.hotkey, key_code, text)
-                            .clicked()
-                        {
-                            self.send_config();
-                        }
-                    }
-                });
-            ui.end_row();
-
-            ui.label("Min Delay");
-            let end = self.config.triggerbot.delay_range.end;
-            if ui
-                .add(
-                    DragValue::new(&mut self.config.triggerbot.delay_range.start)
-                        .range(0..=end)
-                        .speed(0.2),
-                )
-                .changed()
-            {
-                self.send_config();
-            }
-
-            ui.label("Max Delay");
-            let start = self.config.triggerbot.delay_range.start;
-            if ui
-                .add(
-                    DragValue::new(&mut self.config.triggerbot.delay_range.end)
-                        .range(start..=1000)
-                        .speed(0.2),
-                )
-                .changed()
-            {
-                self.send_config();
-            }
-            ui.end_row();
-
-            ui.label("Visibility Check");
-            if ui
-                .checkbox(&mut self.config.triggerbot.visibility_check, "")
-                .changed()
-            {
-                self.send_config();
-            }
-
-            ui.label("Flash Check");
-            if ui
-                .checkbox(&mut self.config.triggerbot.flash_check, "")
-                .changed()
-            {
-                self.send_config();
-            }
-            ui.end_row();
-        });
-    }
-
     fn unsafe_grid(&mut self, ui: &mut Ui) {
         egui::Grid::new("unsafe").num_columns(4).show(ui, |ui| {
             ui.label("Glow");
@@ -287,10 +210,7 @@ impl Gui {
                 self.send_config();
             }
 
-            if ui
-                .button(RichText::new("").font(FontId::monospace(12.0)))
-                .clicked()
-            {
+            if ui.button("Reset").clicked() {
                 self.config.misc.desired_fov = Constants::DEFAULT_FOV;
                 self.send_config();
             }
@@ -312,29 +232,6 @@ impl Gui {
                 self.send_config();
             }
             ui.end_row();
-        });
-    }
-
-    fn config_grid(&mut self, ui: &mut Ui) {
-        egui::Grid::new("config").num_columns(4).show(ui, |ui| {
-            if ui.button("Save").clicked() {
-                if let Some(file) = rfd::FileDialog::new()
-                    .set_file_name("config.toml")
-                    .save_file()
-                {
-                    write_config_to(&self.config, file);
-                }
-            }
-
-            if ui.button("Load").clicked() {
-                if let Some(file) = rfd::FileDialog::new()
-                    .add_filter("toml", &["toml"])
-                    .pick_file()
-                {
-                    self.config = parse_config_from(file);
-                    self.send_config();
-                }
-            }
         });
     }
 
@@ -388,7 +285,7 @@ impl Gui {
         let (response, painter) = ui.allocate_painter(ui.spacing().interact_size, Sense::hover());
         painter.rect_filled(
             response.rect,
-            ui.style().visuals.widgets.inactive.rounding,
+            ui.style().visuals.widgets.inactive.corner_radius,
             color.egui_color(),
         );
         if changed {
@@ -424,10 +321,8 @@ impl eframe::App for Gui {
             ui.spacing_mut().item_spacing = egui::vec2(6.0, 4.0);
             ui.horizontal(|ui| {
                 ui.selectable_value(&mut self.current_tab, Tab::Aimbot, "Aimbot");
-                ui.selectable_value(&mut self.current_tab, Tab::Triggerbot, "Triggerbot");
                 ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "Unsafe");
                 ui.selectable_value(&mut self.current_tab, Tab::Colors, "Colors");
-                ui.selectable_value(&mut self.current_tab, Tab::Config, "Config");
 
                 ui.with_layout(egui::Layout::right_to_left(Align::Min), |ui| {
                     if ui.button("Report Issues").clicked() {
@@ -445,10 +340,8 @@ impl eframe::App for Gui {
 
             match self.current_tab {
                 Tab::Aimbot => self.aimbot_grid(ui),
-                Tab::Triggerbot => self.triggerbot_grid(ui),
                 Tab::Unsafe => self.unsafe_grid(ui),
                 Tab::Colors => self.colors_grid(ui),
-                Tab::Config => self.config_grid(ui),
             }
         });
 
