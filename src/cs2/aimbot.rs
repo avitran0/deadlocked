@@ -43,7 +43,7 @@ impl CS2 {
             self.target.angle
         } else {
             let head_position = target.bone_position(process, &self.offsets, Bones::Head.u64());
-            self.get_target_angle(
+            self.angle_to_target(
                 process,
                 &local_player,
                 &head_position,

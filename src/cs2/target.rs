@@ -88,7 +88,7 @@ impl CS2 {
 
             let head_position = player.bone_position(process, &self.offsets, Bones::Head.u64());
             let distance = eye_position.distance(head_position);
-            let angle = self.get_target_angle(process, &local_player, &head_position, &aim_punch);
+            let angle = self.angle_to_target(process, &local_player, &head_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
 
             if fov < smallest_fov {
@@ -111,7 +111,7 @@ impl CS2 {
         for bone in Bones::iter() {
             let bone_position = target.bone_position(process, &self.offsets, bone.u64());
             let distance = eye_position.distance(bone_position);
-            let angle = self.get_target_angle(process, &local_player, &bone_position, &aim_punch);
+            let angle = self.angle_to_target(process, &local_player, &bone_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
 
             if fov < smallest_fov {

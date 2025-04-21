@@ -5,7 +5,6 @@ pub struct LibraryOffsets {
     pub tier0: u64,
     pub input: u64,
     pub sdl: u64,
-    pub matchmaking: u64,
 }
 
 #[derive(Debug, Default)]
@@ -22,8 +21,6 @@ pub struct DirectOffsets {
     pub local_player: u64,
     pub button_state: u64,
     pub planted_c4: u64,
-    pub game_types: u64,
-    pub sdl_window: u64,
 }
 
 #[derive(Debug, Default)]

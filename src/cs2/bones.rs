@@ -28,25 +28,4 @@ impl Bones {
     pub fn u64(self) -> u64 {
         self as u64
     }
-
-    pub const CONNECTIONS: [(Bones, Bones); 18] = [
-        (Bones::Hip, Bones::Spine1),
-        (Bones::Spine1, Bones::Spine2),
-        (Bones::Spine2, Bones::Spine3),
-        (Bones::Spine3, Bones::Spine4),
-        (Bones::Spine4, Bones::Neck),
-        (Bones::Neck, Bones::Head),
-        (Bones::Neck, Bones::LeftShoulder),
-        (Bones::LeftShoulder, Bones::LeftElbow),
-        (Bones::LeftElbow, Bones::LeftHand),
-        (Bones::Neck, Bones::RightShoulder),
-        (Bones::RightShoulder, Bones::RightElbow),
-        (Bones::RightElbow, Bones::RightHand),
-        (Bones::Hip, Bones::LeftHip),
-        (Bones::LeftHip, Bones::LeftKnee),
-        (Bones::LeftKnee, Bones::LeftFoot),
-        (Bones::Hip, Bones::RightHip),
-        (Bones::RightHip, Bones::RightKnee),
-        (Bones::RightKnee, Bones::RightFoot),
-    ];
 }
