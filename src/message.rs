@@ -8,7 +8,5 @@ pub enum Message {
     Config(Config),
     Status(AimbotStatus),
     MouseStatus(DeviceStatus),
-    // KeyboardStatus(DeviceStatus),
     FrameTime(f64),
-    Quit,
 }

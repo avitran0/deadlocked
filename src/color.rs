@@ -26,10 +26,12 @@ impl Color {
         Color32::from_rgba_premultiplied(self.r, self.g, self.b, 255)
     }
 
+    // used for glow color
     pub const fn to_hex(&self) -> u32 {
         (255 << 24) | ((self.b as u32) << 16) | ((self.g as u32) << 8) | (self.r as u32)
     }
 
+    // used for color picker
     pub const fn to_array(&self) -> [u8; 3] {
         [self.r, self.g, self.b]
     }

@@ -93,10 +93,8 @@ impl AimbotManager {
     }
 
     fn parse_message(&mut self, message: Message) {
-        match message {
-            Message::Config(config) => self.config = config,
-            Message::Quit => std::process::exit(0),
-            _ => {}
+        if let Message::Config(config) = message {
+            self.config = config
         }
     }
 

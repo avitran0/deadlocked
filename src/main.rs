@@ -45,7 +45,7 @@ fn main() {
     let (tx_aimbot, rx_gui) = mpsc::channel();
     let (tx_gui, rx_aimbot) = mpsc::channel();
 
-    let aimbot = thread::spawn(move || {
+    thread::spawn(move || {
         aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
     });
 
@@ -84,7 +84,6 @@ fn main() {
         }),
     )
     .unwrap();
-    aimbot.join().unwrap();
 }
 
 fn gui_style(style: &mut Style) {
