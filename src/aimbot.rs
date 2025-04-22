@@ -44,7 +44,7 @@ impl AimbotManager {
     }
 
     fn send_message(&mut self, message: Message) {
-        let _ = self.tx.send(message);
+        self.tx.send(message).unwrap();
     }
 
     pub fn run(&mut self) {
@@ -93,8 +93,10 @@ impl AimbotManager {
     }
 
     fn parse_message(&mut self, message: Message) {
-        if let Message::Config(config) = message {
-            self.config = config
+        match message {
+            Message::Config(config) => self.config = config,
+            Message::Quit => std::process::exit(0),
+            _ => {}
         }
     }
 

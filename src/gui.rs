@@ -297,6 +297,9 @@ impl eframe::App for Gui {
         // makes it more inefficient to force draw 60fps, but else the mouse disconnect message does not show up
         // todo: when update is split into tick and show, put message parsing into tick and force update the ui when message are received
         ctx.request_repaint();
+        if ctx.input(|i|i.viewport().close_requested()) {
+            self.send_message(Message::Quit);
+        }
 
         while let Ok(message) = self.rx.try_recv() {
             match message {

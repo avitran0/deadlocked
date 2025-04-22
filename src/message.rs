@@ -10,4 +10,5 @@ pub enum Message {
     MouseStatus(DeviceStatus),
     // KeyboardStatus(DeviceStatus),
     FrameTime(f64),
+    Quit,
 }

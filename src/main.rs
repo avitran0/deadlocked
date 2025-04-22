@@ -13,10 +13,10 @@ mod config;
 mod constants;
 mod cs2;
 mod gui;
-mod mouse;
 mod key_codes;
 mod math;
 mod message;
+mod mouse;
 mod proc;
 mod process;
 
@@ -45,12 +45,9 @@ fn main() {
     let (tx_aimbot, rx_gui) = mpsc::channel();
     let (tx_gui, rx_aimbot) = mpsc::channel();
 
-    thread::Builder::new()
-        .name(String::from("deadlocked"))
-        .spawn(move || {
-            aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
-        })
-        .expect("could not create aimbot thread");
+    let aimbot = thread::spawn(move || {
+        aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
+    });
 
     let window_size = [420.0, 250.0];
     let options = eframe::NativeOptions {
@@ -87,6 +84,7 @@ fn main() {
         }),
     )
     .unwrap();
+    aimbot.join().unwrap();
 }
 
 fn gui_style(style: &mut Style) {
