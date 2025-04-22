@@ -171,19 +171,6 @@ impl CS2 {
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
 
-        let planted_c4 = process.scan_pattern(
-            &[
-                0x48, 0x8B, 0x05, 0x00, 0x00, 0x00, 0x00, 0x4C, 0x89, 0x24, 0xD8, 0x49, 0x8B, 0x44,
-                0x24,
-            ],
-            "xxx????xxxxxxxx".as_bytes(),
-            offsets.library.client,
-        );
-        if planted_c4.is_none() {
-            warn!("could not find planted c4 offset");
-        }
-        offsets.direct.planted_c4 = process.get_relative_address(planted_c4?, 0x03, 0x07);
-
         let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
             warn!("could not get mp_tammates_are_enemies convar offset");
@@ -381,24 +368,6 @@ impl CS2 {
                     }
                     offsets.spotted_state.mask = read_vec::<u32>(&client_dump, i + 0x18) as u64;
                 }
-                "m_bBombTicking" => {
-                    if offsets.bomb.is_ticking != 0 {
-                        continue;
-                    }
-                    offsets.bomb.is_ticking = read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_nBombSite" => {
-                    if !network_enable || offsets.bomb.bomb_site != 0 {
-                        continue;
-                    }
-                    offsets.bomb.bomb_site = read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_flC4Blow" => {
-                    if offsets.bomb.blow_time != 0 {
-                        continue;
-                    }
-                    offsets.bomb.blow_time = read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
                 "m_bGlowing" => {
                     if offsets.glow.is_glowing != 0 {
                         continue;
@@ -434,22 +403,6 @@ impl CS2 {
 
         warn!("not all offsets found: {:?}", offsets);
         None
-    }
-
-    // bomb
-    #[allow(unused)]
-    fn is_bomb_planted(&self, process: &Process) -> bool {
-        process.read::<u8>(self.offsets.direct.planted_c4 + self.offsets.bomb.is_ticking) != 0
-    }
-
-    #[allow(unused)]
-    fn get_bomb_site(&self, process: &Process) -> i32 {
-        process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.bomb_site)
-    }
-
-    #[allow(unused)]
-    fn get_bomb_blow_time(&self, process: &Process) -> u32 {
-        process.read(self.offsets.direct.planted_c4 + self.offsets.bomb.blow_time)
     }
 
     // convars

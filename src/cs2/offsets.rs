@@ -20,7 +20,6 @@ pub struct InterfaceOffsets {
 pub struct DirectOffsets {
     pub local_player: u64,
     pub button_state: u64,
-    pub planted_c4: u64,
 }
 
 #[derive(Debug, Default)]
@@ -110,19 +109,6 @@ impl SpottedStateOffsets {
 }
 
 #[derive(Debug, Default)]
-pub struct BombOffsets {
-    pub is_ticking: u64, // bool (m_bBombTicking)
-    pub bomb_site: u64,  // i32 (m_nBombSite)
-    pub blow_time: u64,  // u32? (m_flC4Blow)
-}
-
-impl BombOffsets {
-    pub fn all_found(&self) -> bool {
-        self.is_ticking != 0 && self.bomb_site != 0 && self.blow_time != 0
-    }
-}
-
-#[derive(Debug, Default)]
 pub struct GlowOffsets {
     pub is_glowing: u64,     // bool (m_bGlowing)
     pub glow_type: u64,      // i32 (m_iGlowType)
@@ -156,7 +142,6 @@ pub struct Offsets {
     pub pawn: PawnOffsets,
     pub game_scene_node: GameSceneNodeOffsets,
     pub spotted_state: SpottedStateOffsets,
-    pub bomb: BombOffsets,
     pub glow: GlowOffsets,
     pub camera_services: CameraServicesOffsets,
 }
@@ -167,7 +152,6 @@ impl Offsets {
             && self.pawn.all_found()
             && self.game_scene_node.all_found()
             && self.spotted_state.all_found()
-            && self.bomb.all_found()
             && self.glow.all_found()
             && self.camera_services.all_found()
     }
