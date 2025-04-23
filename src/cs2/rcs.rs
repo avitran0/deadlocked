@@ -48,12 +48,13 @@ impl CS2 {
         }
         let sensitivity =
             self.get_sensitivity(process) * local_player.fov_multiplier(process, &self.offsets);
-        let xy = (aim_punch - self.recoil.previous) * -1.0;
 
+        // todo: test that this works
         let mouse_angle = Vec2::new(
-            ((xy.y * 2.0) / sensitivity) / -0.022,
-            ((xy.x * 2.0) / sensitivity) / 0.022,
+            (aim_punch.y - self.recoil.previous.y) / sensitivity * 100.0,
+            -(aim_punch.x - self.recoil.previous.x) / sensitivity * 100.0,
         ) + self.recoil.unaccounted;
+
         self.recoil.unaccounted = Vec2::ZERO;
 
         // only if the aimbot is not active

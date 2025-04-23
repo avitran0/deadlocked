@@ -1,7 +1,6 @@
 use glam::{vec2, Vec2, Vec3};
 use rand::{rng, Rng};
 
-// t will be config.smooth
 pub fn aim_smooth(aim_coords: &Vec2, smooth: f32) -> Vec2 {
     let mut rng = rng();
     let smooth_coords = aim_coords / smooth;

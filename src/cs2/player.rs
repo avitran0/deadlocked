@@ -26,7 +26,7 @@ impl Player {
 
     fn get_client_entity(process: &Process, offsets: &Offsets, index: u64) -> Option<u64> {
         // wtf is this doing, and how?
-        let v1 = process.read::<u64>(offsets.interface.entity + 0x08 * (index >> 9) + 0x10);
+        let v1: u64 = process.read(offsets.interface.entity + 0x08 * (index >> 9) + 0x10);
         if v1 == 0 {
             return None;
         }
@@ -39,13 +39,13 @@ impl Player {
     }
 
     fn get_pawn(process: &Process, offsets: &Offsets, controller: u64) -> Option<u64> {
-        let v1 = process.read::<i32>(controller + offsets.controller.pawn);
+        let v1: i32 = process.read(controller + offsets.controller.pawn);
         if v1 == -1 {
             return None;
         }
 
         // what the fuck is this doing?
-        let v2 = process.read::<u64>(offsets.interface.player + 8 * ((v1 as u64 & 0x7fff) >> 9));
+        let v2: u64 = process.read(offsets.interface.player + 8 * ((v1 as u64 & 0x7fff) >> 9));
         if v2 == 0 {
             return None;
         }
@@ -81,12 +81,12 @@ impl Player {
 
     pub fn weapon_name(&self, process: &Process, offsets: &Offsets) -> String {
         // CEntityInstance
-        let weapon_entity_instance = process.read::<u64>(self.pawn + offsets.pawn.weapon);
+        let weapon_entity_instance: u64 = process.read(self.pawn + offsets.pawn.weapon);
         if weapon_entity_instance == 0 {
             return String::from(Constants::WEAPON_UNKNOWN);
         }
         // CEntityIdentity, 0x10 = m_pEntity
-        let weapon_entity_identity = process.read::<u64>(weapon_entity_instance + 0x10);
+        let weapon_entity_identity: u64 = process.read(weapon_entity_instance + 0x10);
         if weapon_entity_identity == 0 {
             return String::from(Constants::WEAPON_UNKNOWN);
         }
@@ -118,14 +118,14 @@ impl Player {
 
     pub fn eye_position(&self, process: &Process, offsets: &Offsets) -> Vec3 {
         let position = self.position(process, offsets);
-        let eye_offset = process.read::<Vec3>(self.pawn + offsets.pawn.eye_offset);
+        let eye_offset: Vec3 = process.read(self.pawn + offsets.pawn.eye_offset);
 
         position + eye_offset
     }
 
     pub fn bone_position(&self, process: &Process, offsets: &Offsets, bone_index: u64) -> Vec3 {
         let gs_node = self.game_scene_node(process, offsets);
-        let bone_data = process.read::<u64>(gs_node + offsets.game_scene_node.model_state + 0x80);
+        let bone_data: u64 = process.read(gs_node + offsets.game_scene_node.model_state + 0x80);
 
         if bone_data == 0 {
             return Vec3::ZERO;
@@ -171,12 +171,12 @@ impl Player {
     }
 
     pub fn aim_punch(&self, process: &Process, offsets: &Offsets) -> Vec2 {
-        let length = process.read::<u64>(self.pawn + offsets.pawn.aim_punch_cache);
+        let length: u64 = process.read(self.pawn + offsets.pawn.aim_punch_cache);
         if length < 1 {
             return Vec2::ZERO;
         }
 
-        let data_address = process.read::<u64>(self.pawn + offsets.pawn.aim_punch_cache + 0x08);
+        let data_address: u64 = process.read(self.pawn + offsets.pawn.aim_punch_cache + 0x08);
 
         process.read(data_address + (length - 1) * 12)
     }
