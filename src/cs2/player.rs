@@ -1,6 +1,6 @@
 use glam::{Vec2, Vec3};
 
-use crate::{constants::Constants, process::Process};
+use crate::{constants::cs2, process::Process};
 
 use super::{offsets::Offsets, weapon_class::WeaponClass, CS2};
 
@@ -83,17 +83,17 @@ impl Player {
         // CEntityInstance
         let weapon_entity_instance: u64 = process.read(self.pawn + offsets.pawn.weapon);
         if weapon_entity_instance == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
+            return String::from(cs2::WEAPON_UNKNOWN);
         }
         // CEntityIdentity, 0x10 = m_pEntity
         let weapon_entity_identity: u64 = process.read(weapon_entity_instance + 0x10);
         if weapon_entity_identity == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
+            return String::from(cs2::WEAPON_UNKNOWN);
         }
         // 0x20 = m_designerName (pointer -> string)
         let weapon_name_pointer = process.read(weapon_entity_identity + 0x20);
         if weapon_name_pointer == 0 {
-            return String::from(Constants::WEAPON_UNKNOWN);
+            return String::from(cs2::WEAPON_UNKNOWN);
         }
         process.read_string(weapon_name_pointer)
     }

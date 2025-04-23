@@ -1,7 +1,7 @@
 use glam::Vec2;
 use strum::IntoEnumIterator;
 
-use crate::{constants::Constants, math::angles_to_fov};
+use crate::{constants::cs2, math::angles_to_fov};
 
 use super::{bones::Bones, player::Player, weapon_class::WeaponClass, CS2};
 
@@ -34,7 +34,7 @@ impl CS2 {
         };
 
         let team = local_player.team(process, &self.offsets);
-        if team != Constants::TEAM_CT && team != Constants::TEAM_T {
+        if team != cs2::TEAM_CT && team != cs2::TEAM_T {
             self.target.reset();
             return;
         }

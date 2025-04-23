@@ -6,7 +6,7 @@ use rcs::Recoil;
 use crate::{
     aimbot::Aimbot,
     config::Config,
-    constants::Constants,
+    constants::cs2,
     cs2::{offsets::Offsets, target::Target},
     key_codes::KeyCode,
     math::{angles_from_vector, vec2_clamp},
@@ -45,7 +45,7 @@ impl Aimbot for CS2 {
     }
 
     fn setup(&mut self) {
-        let pid = match get_pid(Constants::PROCESS_NAME) {
+        let pid = match get_pid(cs2::PROCESS_NAME) {
             Some(pid) => pid,
             None => {
                 self.is_valid = false;
@@ -128,11 +128,11 @@ impl CS2 {
     fn find_offsets(&self, process: &Process) -> Option<Offsets> {
         let mut offsets = Offsets::default();
 
-        offsets.library.client = process.module_base_address(Constants::CLIENT_LIB)?;
-        offsets.library.engine = process.module_base_address(Constants::ENGINE_LIB)?;
-        offsets.library.tier0 = process.module_base_address(Constants::TIER0_LIB)?;
-        offsets.library.input = process.module_base_address(Constants::INPUT_LIB)?;
-        offsets.library.sdl = process.module_base_address(Constants::SDL_LIB)?;
+        offsets.library.client = process.module_base_address(cs2::CLIENT_LIB)?;
+        offsets.library.engine = process.module_base_address(cs2::ENGINE_LIB)?;
+        offsets.library.tier0 = process.module_base_address(cs2::TIER0_LIB)?;
+        offsets.library.input = process.module_base_address(cs2::INPUT_LIB)?;
+        offsets.library.sdl = process.module_base_address(cs2::SDL_LIB)?;
 
         let resource_offset =
             process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
@@ -171,12 +171,12 @@ impl CS2 {
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
 
-        let ffa_address = process.get_convar(&offsets.interface, "mp_teammates_are_enemies");
+        let ffa_address = process.get_convar(offsets.interface.cvar, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
             warn!("could not get mp_tammates_are_enemies convar offset");
         }
         offsets.convar.ffa = ffa_address?;
-        let sensitivity_address = process.get_convar(&offsets.interface, "sensitivity");
+        let sensitivity_address = process.get_convar(offsets.interface.cvar, "sensitivity");
         if sensitivity_address.is_none() {
             warn!("could not get sensitivity convar offset");
         }

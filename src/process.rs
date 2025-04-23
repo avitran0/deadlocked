@@ -8,7 +8,7 @@ use bytemuck::{AnyBitPattern, NoUninit};
 use libc::{iovec, process_vm_readv, process_vm_writev};
 use log::warn;
 
-use crate::{constants::Constants, cs2::offsets::InterfaceOffsets};
+use crate::constants::elf;
 
 #[derive(Debug)]
 pub struct Process {
@@ -183,7 +183,7 @@ impl Process {
 
     pub fn get_address_from_dynamic_section(&self, base_address: u64, tag: u64) -> Option<u64> {
         let dynamic_section_offset =
-            self.get_segment_from_pht(base_address, Constants::ELF_DYNAMIC_SECTION_PHT_TYPE)?;
+            self.get_segment_from_pht(base_address, elf::DYNAMIC_SECTION_PHT_TYPE)?;
 
         let register_size = 8;
         let mut address =
@@ -208,11 +208,10 @@ impl Process {
 
     pub fn get_segment_from_pht(&self, base_address: u64, tag: u64) -> Option<u64> {
         let first_entry =
-            self.read::<u64>(base_address + Constants::ELF_PROGRAM_HEADER_OFFSET) + base_address;
-        let entry_size =
-            self.read::<u16>(base_address + Constants::ELF_PROGRAM_HEADER_ENTRY_SIZE) as u64;
+            self.read::<u64>(base_address + elf::PROGRAM_HEADER_OFFSET) + base_address;
+        let entry_size = self.read::<u16>(base_address + elf::PROGRAM_HEADER_ENTRY_SIZE) as u64;
 
-        for i in 0..self.read::<u16>(base_address + Constants::ELF_PROGRAM_HEADER_NUM_ENTRIES) {
+        for i in 0..self.read::<u16>(base_address + elf::PROGRAM_HEADER_NUM_ENTRIES) {
             let entry = first_entry + i as u64 * entry_size;
             if self.read::<u32>(entry) as u64 == tag {
                 return Some(entry);
@@ -221,13 +220,13 @@ impl Process {
         None
     }
 
-    pub fn get_convar(&self, offsets: &InterfaceOffsets, convar_name: &str) -> Option<u64> {
-        if offsets.cvar == 0 {
+    pub fn get_convar(&self, convar_interface: u64, convar_name: &str) -> Option<u64> {
+        if convar_interface == 0 {
             return None;
         }
 
-        let objects = self.read::<u64>(offsets.cvar + 64);
-        for i in 0..self.read::<u32>(offsets.cvar + 160) as u64 {
+        let objects = self.read::<u64>(convar_interface + 64);
+        for i in 0..self.read::<u32>(convar_interface + 160) as u64 {
             let object = self.read(objects + i * 16);
             if object == 0 {
                 break;
@@ -243,12 +242,11 @@ impl Process {
     }
 
     pub fn module_size(&self, address: u64) -> u64 {
-        let section_header_offset =
-            self.read::<u64>(address + Constants::ELF_SECTION_HEADER_OFFSET);
+        let section_header_offset = self.read::<u64>(address + elf::SECTION_HEADER_OFFSET);
         let section_header_entry_size =
-            self.read::<u16>(address + Constants::ELF_SECTION_HEADER_ENTRY_SIZE) as u64;
+            self.read::<u16>(address + elf::SECTION_HEADER_ENTRY_SIZE) as u64;
         let section_header_num_entries =
-            self.read::<u16>(address + Constants::ELF_SECTION_HEADER_NUM_ENTRIES) as u64;
+            self.read::<u16>(address + elf::SECTION_HEADER_NUM_ENTRIES) as u64;
 
         section_header_offset + section_header_entry_size * section_header_num_entries
     }

@@ -1,4 +1,4 @@
-use crate::{config::Config, constants::Constants};
+use crate::{config::Config, constants::cs2};
 
 use super::{player::Player, CS2};
 
@@ -15,7 +15,7 @@ impl CS2 {
         };
 
         if !config.misc.fov_changer {
-            local_player.set_fov(process, &self.offsets, Constants::DEFAULT_FOV);
+            local_player.set_fov(process, &self.offsets, cs2::DEFAULT_FOV);
             return;
         }
 

@@ -5,7 +5,7 @@ use strum::IntoEnumIterator;
 use crate::{
     color::{Color, Colors},
     config::{parse_config, write_config, AimbotStatus, Config, VERSION},
-    constants::Constants,
+    constants::cs2,
     key_codes::KeyCode,
     message::Message,
     mouse::DeviceStatus,
@@ -211,7 +211,7 @@ impl Gui {
             }
 
             if ui.button("Reset").clicked() {
-                self.config.misc.desired_fov = Constants::DEFAULT_FOV;
+                self.config.misc.desired_fov = cs2::DEFAULT_FOV;
                 self.send_config();
             }
         });
