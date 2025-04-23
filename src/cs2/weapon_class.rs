@@ -5,7 +5,8 @@ pub enum WeaponClass {
     Knife,
     Pistol,
     Smg,
-    Heavy,  // shotguns and lmgs
+    Heavy, // negev and m249
+    Shotgun,
     Rifle,  // all rifles except snipers
     Sniper, // these require different handling in aimbot
     Grenade,
@@ -59,9 +60,13 @@ impl WeaponClass {
             "weapon_bizon" | "weapon_mac10" | "weapon_mp5sd" | "weapon_mp7" | "weapon_mp9"
             | "weapon_p90" | "weapon_ump45" => WeaponClass::Smg,
 
-            // Heavy weapons (Shotguns & LMGs)
-            "weapon_m249" | "weapon_negev" | "weapon_mag7" | "weapon_nova" | "weapon_sawedoff"
-            | "weapon_xm1014" => WeaponClass::Heavy,
+            // LMGs
+            "weapon_m249" | "weapon_negev" => WeaponClass::Heavy,
+
+            // Shotguns
+            "weapon_mag7" | "weapon_nova" | "weapon_sawedoff" | "weapon_xm1014" => {
+                WeaponClass::Shotgun
+            }
 
             // Rifles
             "weapon_ak47"

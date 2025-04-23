@@ -28,6 +28,7 @@ impl CS2 {
             WeaponClass::Knife,
             WeaponClass::Grenade,
             WeaponClass::Pistol,
+            WeaponClass::Shotgun,
         ]
         .contains(&weapon_class)
         {
