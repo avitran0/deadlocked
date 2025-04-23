@@ -3,7 +3,7 @@ use std::{
     path::Path,
 };
 
-use bytemuck::{Pod, Zeroable};
+use bytemuck::AnyBitPattern;
 
 use crate::process::Process;
 
@@ -46,7 +46,7 @@ pub fn open_process(pid: u64) -> Option<Process> {
     Some(Process::new(pid))
 }
 
-pub fn read_vec<T: Pod + Zeroable + Default>(data: &[u8], address: u64) -> T {
+pub fn read_vec<T: AnyBitPattern + Default>(data: &[u8], address: u64) -> T {
     let size = std::mem::size_of::<T>();
     if address as usize + size > data.len() {
         return T::default();

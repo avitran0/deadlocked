@@ -4,7 +4,7 @@ use std::{
     os::unix::fs::FileExt,
 };
 
-use bytemuck::{Pod, Zeroable};
+use bytemuck::{AnyBitPattern, NoUninit};
 use libc::{iovec, process_vm_readv, process_vm_writev};
 use log::warn;
 
@@ -20,7 +20,7 @@ impl Process {
         Self { pid }
     }
 
-    pub fn read<T: Pod + Zeroable + Default>(&self, address: u64) -> T {
+    pub fn read<T: AnyBitPattern + Default>(&self, address: u64) -> T {
         let mut buffer = vec![0u8; std::mem::size_of::<T>()];
         let local_iov = iovec {
             iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
@@ -40,7 +40,7 @@ impl Process {
             .unwrap_or_default()
     }
 
-    pub fn write<T: Pod>(&self, address: u64, value: T) {
+    pub fn write<T: NoUninit>(&self, address: u64, value: T) {
         let mut buffer = bytemuck::bytes_of(&value).to_vec();
         let local_iov = iovec {
             iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
