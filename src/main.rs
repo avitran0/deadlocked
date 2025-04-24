@@ -6,6 +6,7 @@ use std::{
 
 use color::Colors;
 use eframe::egui::{self, FontData, FontDefinitions, Stroke, Style};
+use log::{error, info};
 
 mod aimbot;
 mod color;
@@ -38,7 +39,7 @@ fn main() {
 
     let username = std::env::var("USER").unwrap_or_default();
     if username == "root" {
-        println!("start without sudo, and add your user to the input group.");
+        error!("start without sudo, and add your user to the input group.");
         return;
     }
 
@@ -48,6 +49,7 @@ fn main() {
     thread::spawn(move || {
         aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
     });
+    info!("started aimbot thread");
 
     let window_size = [420.0, 250.0];
     let options = eframe::NativeOptions {
@@ -84,6 +86,7 @@ fn main() {
         }),
     )
     .unwrap();
+    info!("exiting");
 }
 
 fn gui_style(style: &mut Style) {

@@ -6,7 +6,7 @@ use std::{
 
 use bytemuck::{AnyBitPattern, NoUninit};
 use libc::{iovec, process_vm_readv, process_vm_writev};
-use log::warn;
+use log::{error, warn};
 
 use crate::constants::elf;
 
@@ -100,7 +100,7 @@ impl Process {
 
     pub fn scan_pattern(&self, pattern: &[u8], mask: &[u8], base_address: u64) -> Option<u64> {
         if pattern.len() != mask.len() {
-            println!(
+            error!(
                 "pattern is {} bytes, mask is {} bytes long",
                 pattern.len(),
                 mask.len()
