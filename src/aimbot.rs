@@ -44,7 +44,9 @@ impl AimbotManager {
     }
 
     fn send_message(&mut self, message: Message) {
-        self.tx.send(message).unwrap();
+        if self.tx.send(message).is_err() {
+            std::process::exit(0);
+        }
     }
 
     pub fn run(&mut self) {

@@ -50,7 +50,6 @@ impl CS2 {
         let sensitivity =
             self.get_sensitivity(process) * local_player.fov_multiplier(process, &self.offsets);
 
-        // todo: test that this works
         let mouse_angle = Vec2::new(
             (aim_punch.y - self.recoil.previous.y) / sensitivity * 100.0,
             -(aim_punch.x - self.recoil.previous.x) / sensitivity * 100.0,
