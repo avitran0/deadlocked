@@ -917,7 +917,7 @@ void VisualInfo() {
 
 void Run() {
     VisualInfo();
-    FindTarget()
+    FindTarget();
     if (!Player::LocalPlayer().has_value()) {
         ClearVisualInfo();
         return;
