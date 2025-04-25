@@ -17,6 +17,7 @@ use crate::{
 
 mod aimbot;
 mod bones;
+mod esp;
 mod fov_changer;
 mod glow;
 mod noflash;
@@ -86,6 +87,7 @@ impl Aimbot for CS2 {
         self.glow(config);
         self.no_flash(config);
         self.fov_changer(config);
+        self.esp(config);
 
         if config.aimbot.rcs {
             self.rcs(mouse);
@@ -170,6 +172,31 @@ impl CS2 {
         offsets.direct.button_state = process
             .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
             as u64;
+
+        let mut is_other_enemy = process.scan_pattern(
+            &[
+                0x31, 0xc0, 0x48, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48, 0x89,
+                0xe5, 0x41, 0x54, 0x53,
+            ],
+            "xxxxxxx????xxxxxxx".as_bytes(),
+            offsets.library.client,
+        );
+        if is_other_enemy.is_none() {
+            // if byte was already patched
+            is_other_enemy = process.scan_pattern(
+                &[
+                    0x31, 0xc0, 0xC3, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48,
+                    0x89, 0xe5, 0x41, 0x54, 0x53,
+                ],
+                "xxxxxxx????xxxxxxx".as_bytes(),
+                offsets.library.client,
+            );
+        }
+        if is_other_enemy.is_none() {
+            warn!("could not get IsOtherEnemy function offset");
+        }
+        // offset by two bytes, because the test instruction is two bytes after the beginning
+        offsets.direct.is_other_enemy = is_other_enemy? + 2;
 
         let ffa_address = process.get_convar(offsets.interface.cvar, "mp_teammates_are_enemies");
         if ffa_address.is_none() {

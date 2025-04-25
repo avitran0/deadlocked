@@ -1,5 +1,5 @@
 use std::{
-    fs::File,
+    fs::{File, OpenOptions},
     io::{BufRead, BufReader},
     os::unix::fs::FileExt,
 };
@@ -54,6 +54,15 @@ impl Process {
         unsafe {
             process_vm_writev(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0);
         }
+    }
+
+    pub fn write_file<T: NoUninit>(&self, address: u64, value: T) {
+        let file = OpenOptions::new()
+            .write(true)
+            .open(format!("/proc/{}/mem", self.pid))
+            .unwrap();
+        let buffer = bytemuck::bytes_of(&value);
+        file.write_at(buffer, address).unwrap();
     }
 
     pub fn read_string(&self, address: u64) -> String {

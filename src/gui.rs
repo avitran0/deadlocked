@@ -214,6 +214,12 @@ impl Gui {
                 self.config.misc.desired_fov = cs2::DEFAULT_FOV;
                 self.send_config();
             }
+            ui.end_row();
+
+            ui.label("ESP");
+            if ui.checkbox(&mut self.config.misc.esp, "").changed() {
+                self.send_config();
+            }
         });
     }
 

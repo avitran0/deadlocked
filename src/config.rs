@@ -74,6 +74,7 @@ pub struct MiscConfig {
     pub max_flash_alpha: f32,
     pub fov_changer: bool,
     pub desired_fov: u32,
+    pub esp: bool,
 }
 
 impl Default for MiscConfig {
@@ -87,6 +88,7 @@ impl Default for MiscConfig {
             max_flash_alpha: 0.5,
             fov_changer: false,
             desired_fov: 90,
+            esp: false,
         }
     }
 }
