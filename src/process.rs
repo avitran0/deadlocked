@@ -6,7 +6,7 @@ use std::{
 
 use bytemuck::{AnyBitPattern, NoUninit};
 use libc::{iovec, process_vm_readv, process_vm_writev};
-use log::{error, warn};
+use log::{debug, warn};
 
 use crate::constants::elf;
 
@@ -51,8 +51,13 @@ impl Process {
             iov_len: buffer.len(),
         };
 
-        unsafe {
-            process_vm_writev(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0);
+        let bytes_written =
+            unsafe { process_vm_writev(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0) };
+
+        if bytes_written > 0 {
+            debug!("wrote {bytes_written} bytes at {address}");
+        } else {
+            warn!("write to {address} failed");
         }
     }
 
@@ -62,7 +67,10 @@ impl Process {
             .open(format!("/proc/{}/mem", self.pid))
             .unwrap();
         let buffer = bytemuck::bytes_of(&value);
-        file.write_at(buffer, address).unwrap();
+        match file.write_at(buffer, address) {
+            Ok(bytes_written) => debug!("wrote {bytes_written} bytes at {address}"),
+            Err(_) => warn!("write to {address} failed"),
+        }
     }
 
     pub fn read_string(&self, address: u64) -> String {
@@ -97,8 +105,11 @@ impl Process {
                 continue;
             }
             let (address, _) = line.split_once('-').unwrap();
-            return Some(u64::from_str_radix(address, 16).unwrap());
+            let address = u64::from_str_radix(address, 16).unwrap();
+            debug!("found module {module_name} at {address}");
+            return Some(address);
         }
+        warn!("module {module_name} not found");
         None
     }
 
@@ -108,14 +119,7 @@ impl Process {
     }
 
     pub fn scan_pattern(&self, pattern: &[u8], mask: &[u8], base_address: u64) -> Option<u64> {
-        if pattern.len() != mask.len() {
-            error!(
-                "pattern is {} bytes, mask is {} bytes long",
-                pattern.len(),
-                mask.len()
-            );
-            return None;
-        }
+        assert!(pattern.len() == mask.len(), "pattern length mismatch");
 
         let module = self.dump_module(base_address);
         if module.len() < 500 {
@@ -130,8 +134,11 @@ impl Process {
                     continue 'outer;
                 }
             }
-            return Some(base_address + i as u64);
+            let address = base_address + i as u64;
+            debug!("found pattern {pattern:?} at {address}");
+            return Some(address);
         }
+        warn!("pattern {pattern:?} not found, might be outdated");
         None
     }
 
@@ -226,6 +233,7 @@ impl Process {
                 return Some(entry);
             }
         }
+        warn!("did not find dynamic section in program header table");
         None
     }
 
@@ -247,6 +255,7 @@ impl Process {
                 return Some(object);
             }
         }
+        warn!("did not find convar {convar_name}");
         None
     }
 
