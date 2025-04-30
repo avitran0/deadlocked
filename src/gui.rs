@@ -1,5 +1,5 @@
 use eframe::egui::{self, vec2, Align, Align2, Color32, DragValue, Sense, Ui};
-use std::sync::mpsc;
+use std::{sync::mpsc, time::Duration};
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -25,8 +25,8 @@ pub struct Gui {
     config: Config,
     status: AimbotStatus,
     mouse_status: DeviceStatus,
-    frame_times: Vec<f64>,
-    average_frame_time: f64,
+    frame_times: Vec<Duration>,
+    average_frame_time: Duration,
 }
 
 impl Gui {
@@ -44,7 +44,7 @@ impl Gui {
             status,
             mouse_status: DeviceStatus::NotFound,
             frame_times: Vec::with_capacity(50),
-            average_frame_time: 0.0,
+            average_frame_time: Duration::ZERO,
         };
         write_config(&out.config);
         out
@@ -308,8 +308,8 @@ impl eframe::App for Gui {
                 Message::FrameTime(time) => {
                     self.frame_times.push(time);
                     if self.frame_times.len() >= self.frame_times.capacity() {
-                        self.average_frame_time = self.frame_times.iter().sum::<f64>()
-                            / self.frame_times.capacity() as f64;
+                        self.average_frame_time = self.frame_times.iter().sum::<Duration>()
+                            / self.frame_times.len() as u32;
                         self.frame_times.clear();
                     }
                 }
@@ -362,13 +362,25 @@ impl eframe::App for Gui {
             Colors::SUBTEXT,
         );
 
-        let frame_time = format!("{} us", self.average_frame_time);
+        let micro_time = self.average_frame_time.as_micros();
+        let frame_time = if micro_time > 1000 {
+            format!("{:.1} ms", micro_time as f32 / 1000.0)
+        } else {
+            format!("{} us", micro_time)
+        };
+        let color = if micro_time > 10000 {
+            Colors::RED
+        } else if micro_time > 5000 {
+            Colors::YELLOW
+        } else {
+            Colors::SUBTEXT
+        };
         ctx.layer_painter(egui::LayerId::background()).text(
             ctx.screen_rect().left_bottom() + vec2(4.0, -4.0),
             Align2::LEFT_BOTTOM,
             frame_time,
             font,
-            Colors::SUBTEXT,
+            color,
         );
     }
 }

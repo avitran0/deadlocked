@@ -81,7 +81,7 @@ impl AimbotManager {
 
             if self.aimbot.is_valid() && mouse_valid {
                 let elapsed = start.elapsed();
-                self.send_message(Message::FrameTime(elapsed.as_micros() as f64));
+                self.send_message(Message::FrameTime(elapsed));
                 if elapsed < LOOP_DURATION {
                     sleep(LOOP_DURATION - elapsed);
                 } else {
