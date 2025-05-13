@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <mithril/types.hpp>
 #include <string>
+#include <vector>
 
 struct PlayerInfo {
     glm::vec3 position;
@@ -27,6 +28,7 @@ struct EntityInfo {
 };
 
 struct MiscInfo {
+    std::vector<std::string> spectators;
     std::string held_weapon;
     std::string map_name;
     f32 gui_scale = -1.0f;

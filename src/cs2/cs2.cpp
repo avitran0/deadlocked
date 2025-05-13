@@ -847,6 +847,7 @@ void VisualInfo() {
     misc_info.in_game = true;
     const std::optional<u64> spectated_player = local_player->SpectatorTarget();
     player_info.clear();
+    misc_info.spectators.clear();
     for (const Player &player : players) {
         if ((spectated_player && player.controller == spectated_player) ||
             player.Equals(*local_player)) {
@@ -865,6 +866,12 @@ void VisualInfo() {
         info.weapon = player.WeaponName();
         info.weapons = player.AllWeapons();
         info.bones = player.AllBones();
+
+        const auto spectating = player.SpectatorTarget();
+        if (spectating.has_value() && *spectating == local_player->controller) {
+            const Player spectated_player = Player {*spectating, 0};
+            misc_info.spectators.push_back(spectated_player.Name());
+        }
 
         player_info.push_back(info);
     }

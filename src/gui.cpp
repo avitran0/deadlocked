@@ -383,13 +383,15 @@ void Gui() {
 
             ImGui::Checkbox("Player Tags (helmet, defuser, bomb)", &config.visuals.draw_tags);
 
-            ImGui::Checkbox("Dynamic Font Size", &config.visuals.dynamic_font);
-            ImGui::DragFloat(
-                "Static Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
-
             ImGui::Checkbox("Dropped Weapons", &config.visuals.dropped_weapons);
             ImGui::SameLine();
             ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
+
+            ImGui::Checkbox("Spectator List", &config.visuals.spectator_list);
+
+            ImGui::Checkbox("Dynamic Font Size", &config.visuals.dynamic_font);
+            ImGui::DragFloat(
+                "Static Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
 
             ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
 
@@ -583,6 +585,13 @@ void Gui() {
         }
         if (config.visuals.enabled) {
             vinfo_lock.lock();
+            f32 spectator_offset = 4.0f + 20.0f * scale;
+            for (const std::string &player : misc_info.spectators) {
+                OutlineText(
+                    overlay_draw_list, ImVec2 {spectator_offset, 4.0f}, 0xFFFFFFFF, player.c_str());
+                spectator_offset += 20.0f * scale;
+            }
+
             for (const PlayerInfo &player : player_info) {
                 if (!misc_info.is_ffa && player.team == local_player.team) {
                     continue;

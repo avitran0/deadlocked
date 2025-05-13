@@ -296,6 +296,7 @@ bool Player::HasBomb() const {
     return false;
 }
 
+/// returns spectated player controller
 std::optional<u64> Player::SpectatorTarget() const {
     const u64 observer_services = process.Read<u64>(pawn + offsets.pawn.observer_services);
     if (!observer_services) {

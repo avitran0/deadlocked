@@ -98,6 +98,7 @@ toml::table VisualsConfig::to_toml() const {
         {"draw_tags", draw_tags},
         {"dropped_weapons", dropped_weapons},
         {"sniper_crosshair", sniper_crosshair},
+        {"spectator_list", spectator_list},
         {"dynamic_font", dynamic_font},
         {"debug_window", debug_window}};
 }
@@ -127,6 +128,7 @@ VisualsConfig VisualsConfig::from_toml(const toml::table &table) {
     cfg.draw_tags = table["draw_tags"].value_or(cfg.draw_tags);
     cfg.dropped_weapons = table["dropped_weapons"].value_or(cfg.dropped_weapons);
     cfg.sniper_crosshair = table["sniper_crosshair"].value_or(cfg.sniper_crosshair);
+    cfg.spectator_list = table["spectator_list"].value_or(cfg.spectator_list);
     cfg.dynamic_font = table["dynamic_font"].value_or(cfg.dynamic_font);
     cfg.debug_window = table["debug_window"].value_or(cfg.debug_window);
     return cfg;
