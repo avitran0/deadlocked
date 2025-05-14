@@ -74,7 +74,7 @@ impl Process {
     }
 
     pub fn read_string(&self, address: u64) -> String {
-        let mut string = String::new();
+        let mut string = String::with_capacity(8);
         let mut i = address;
         loop {
             let c = self.read::<u8>(i);
