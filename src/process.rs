@@ -66,7 +66,7 @@ impl Process {
         if bytes_written > 0 {
             debug!("wrote {bytes_written} bytes at {address:X}");
         } else {
-            warn!("write to {address} failed");
+            debug!("write to {address} failed");
         }
     }
 
