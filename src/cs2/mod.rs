@@ -15,13 +15,12 @@ use crate::{
 };
 
 mod aimbot;
-mod bomb;
 mod bones;
 mod esp;
 mod fov_changer;
 mod glow;
 mod noflash;
-pub mod offsets;
+mod offsets;
 mod player;
 mod rcs;
 mod target;

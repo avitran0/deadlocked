@@ -10,7 +10,7 @@ impl CS2 {
         if config.misc.esp && instruction != 0xC3 {
             self.process
                 .write_file::<u8>(self.offsets.direct.is_other_enemy, 0xC3);
-        } else if instruction != 0x48 {
+        } else if !config.misc.esp && instruction != 0x48 {
             self.process
                 .write_file::<u8>(self.offsets.direct.is_other_enemy, 0x48);
         }
