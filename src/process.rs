@@ -149,7 +149,7 @@ impl Process {
             debug!("found pattern {pattern:?} at {address}");
             return Some(address);
         }
-        warn!("pattern {pattern:?} not found, might be outdated");
+        debug!("pattern {pattern:?} not found, might be outdated");
         None
     }
 
