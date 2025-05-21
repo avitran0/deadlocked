@@ -7,7 +7,7 @@ use bytemuck::AnyBitPattern;
 
 use crate::process::Process;
 
-pub fn get_pid(process_name: &str) -> Option<u64> {
+pub fn get_pid(process_name: &str) -> Option<i32> {
     for dir in read_dir("/proc").unwrap() {
         let entry = dir.unwrap();
         if !entry.file_type().unwrap().is_dir() {
@@ -28,17 +28,17 @@ pub fn get_pid(process_name: &str) -> Option<u64> {
         let (_, exe_name) = exe_path.to_str().unwrap().rsplit_once('/').unwrap();
 
         if exe_name == process_name {
-            return Some(pid.parse::<u64>().unwrap());
+            return Some(pid.parse::<i32>().unwrap());
         }
     }
     None
 }
 
-pub fn validate_pid(pid: u64) -> bool {
+pub fn validate_pid(pid: i32) -> bool {
     Path::new(&format!("/proc/{}", pid)).exists()
 }
 
-pub fn open_process(pid: u64) -> Option<Process> {
+pub fn open_process(pid: i32) -> Option<Process> {
     if !validate_pid(pid) {
         return None;
     }

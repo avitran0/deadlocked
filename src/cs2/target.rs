@@ -23,23 +23,17 @@ impl Target {
 
 impl CS2 {
     pub fn find_target(&mut self) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => return,
+        let Some(local_player) = Player::local_player(self) else {
+            return;
         };
 
-        let local_player = match Player::local_player(process, &self.offsets) {
-            Some(player) => player,
-            None => return,
-        };
-
-        let team = local_player.team(process, &self.offsets);
+        let team = local_player.team(self);
         if team != cs2::TEAM_CT && team != cs2::TEAM_T {
             self.target.reset();
             return;
         }
 
-        let weapon_class = local_player.weapon_class(process, &self.offsets);
+        let weapon_class = local_player.weapon_class(self);
         if [
             WeaponClass::Unknown,
             WeaponClass::Knife,
@@ -51,13 +45,10 @@ impl CS2 {
             return;
         }
 
-        let view_angles = local_player.view_angles(process, &self.offsets);
-        let ffa = self.is_ffa(process);
-        let shots_fired = local_player.shots_fired(process, &self.offsets);
-        let aim_punch = match (
-            weapon_class,
-            local_player.aim_punch(process, &self.offsets) * 2.0,
-        ) {
+        let view_angles = local_player.view_angles(self);
+        let ffa = self.is_ffa();
+        let shots_fired = local_player.shots_fired(self);
+        let aim_punch = match (weapon_class, local_player.aim_punch(self) * 2.0) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
             (_, punch) if punch.length() == 0.0 && shots_fired > 1 => {
                 self.target.previous_aim_punch
@@ -72,23 +63,23 @@ impl CS2 {
         }
 
         let mut smallest_fov = 360.0;
-        let eye_position = local_player.eye_position(process, &self.offsets);
+        let eye_position = local_player.eye_position(self);
         if self.target.player.is_none() {
             self.target.reset();
         }
         if let Some(player) = &self.target.player {
-            if !player.is_valid(process, &self.offsets) {
+            if !player.is_valid(self) {
                 self.target.reset();
             }
         }
         for player in &self.players {
-            if !ffa && team == player.team(process, &self.offsets) {
+            if !ffa && team == player.team(self) {
                 continue;
             }
 
-            let head_position = player.bone_position(process, &self.offsets, Bones::Head.u64());
+            let head_position = player.bone_position(self, Bones::Head.u64());
             let distance = eye_position.distance(head_position);
-            let angle = self.angle_to_target(process, &local_player, &head_position, &aim_punch);
+            let angle = self.angle_to_target(&local_player, &head_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
 
             if fov < smallest_fov {
@@ -109,9 +100,9 @@ impl CS2 {
         let mut smallest_fov = 360.0;
         let target = self.target.player.as_ref().unwrap();
         for bone in Bones::iter() {
-            let bone_position = target.bone_position(process, &self.offsets, bone.u64());
+            let bone_position = target.bone_position(self, bone.u64());
             let distance = eye_position.distance(bone_position);
-            let angle = self.angle_to_target(process, &local_player, &bone_position, &aim_punch);
+            let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
 
             if fov < smallest_fov {

@@ -1,15 +1,4 @@
-use glam::{vec2, Vec2, Vec3};
-use rand::{rng, Rng};
-
-pub fn aim_smooth(aim_coords: &Vec2, smooth: f32) -> Vec2 {
-    let mut rng = rng();
-    let smooth_coords = aim_coords / smooth;
-    let jitter = vec2(
-        rng.random_range(-0.5..=0.5) * smooth_coords.x,
-        rng.random_range(-0.5..=0.5) * smooth_coords.y,
-    );
-    (smooth_coords + jitter).clamp_length_max(200.0 / smooth)
-}
+use glam::{Vec2, Vec3};
 
 pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     let mut yaw;

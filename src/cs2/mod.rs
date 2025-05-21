@@ -16,6 +16,7 @@ use crate::{
 };
 
 mod aimbot;
+mod bomb;
 mod bones;
 mod esp;
 mod fov_changer;
@@ -30,7 +31,7 @@ mod weapon_class;
 #[derive(Debug)]
 pub struct CS2 {
     is_valid: bool,
-    process: Option<Process>,
+    process: Process,
     offsets: Offsets,
     target: Target,
     players: Vec<Player>,
@@ -39,45 +40,37 @@ pub struct CS2 {
 
 impl Aimbot for CS2 {
     fn is_valid(&self) -> bool {
-        if let Some(process) = &self.process {
-            return self.is_valid && validate_pid(process.pid);
-        }
-        false
+        self.is_valid && validate_pid(self.process.pid)
     }
 
     fn setup(&mut self) {
-        let pid = match get_pid(cs2::PROCESS_NAME) {
-            Some(pid) => pid,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+        let Some(pid) = get_pid(cs2::PROCESS_NAME) else {
+            self.is_valid = false;
+            return;
         };
 
-        let process = match open_process(pid) {
-            Some(process) => process,
-            None => {
-                self.is_valid = false;
-                return;
-            }
+        let Some(process) = open_process(pid) else {
+            self.is_valid = false;
+            return;
         };
         info!("game started, pid: {}", pid);
+        self.process = process;
 
-        self.offsets = match self.find_offsets(&process) {
+        self.offsets = match self.find_offsets() {
             Some(offsets) => offsets,
             None => {
+                self.process = Process::new(-1);
                 self.is_valid = false;
                 return;
             }
         };
         info!("offsets found");
 
-        self.process = Some(process);
         self.is_valid = true;
     }
 
     fn run(&mut self, config: &Config, mouse: &mut Mouse) {
-        if self.process.is_none() {
+        if !self.process.is_valid() {
             self.is_valid = false;
             return;
         }
@@ -103,7 +96,7 @@ impl CS2 {
     pub fn new() -> Self {
         Self {
             is_valid: false,
-            process: None,
+            process: Process::new(-1),
             offsets: Offsets::default(),
             target: Target::default(),
             players: Vec::with_capacity(64),
@@ -111,14 +104,8 @@ impl CS2 {
         }
     }
 
-    fn angle_to_target(
-        &self,
-        process: &Process,
-        local_player: &Player,
-        position: &Vec3,
-        aim_punch: &Vec2,
-    ) -> Vec2 {
-        let eye_position = local_player.eye_position(process, &self.offsets);
+    fn angle_to_target(&self, local_player: &Player, position: &Vec3, aim_punch: &Vec2) -> Vec2 {
+        let eye_position = local_player.eye_position(self);
         let forward = (position - eye_position).normalize();
 
         let mut angles = angles_from_vector(&forward) - aim_punch;
@@ -127,38 +114,42 @@ impl CS2 {
         angles
     }
 
-    fn find_offsets(&self, process: &Process) -> Option<Offsets> {
+    fn find_offsets(&self) -> Option<Offsets> {
         let mut offsets = Offsets::default();
 
-        offsets.library.client = process.module_base_address(cs2::CLIENT_LIB)?;
-        offsets.library.engine = process.module_base_address(cs2::ENGINE_LIB)?;
-        offsets.library.tier0 = process.module_base_address(cs2::TIER0_LIB)?;
-        offsets.library.input = process.module_base_address(cs2::INPUT_LIB)?;
-        offsets.library.sdl = process.module_base_address(cs2::SDL_LIB)?;
+        offsets.library.client = self.process.module_base_address(cs2::CLIENT_LIB)?;
+        offsets.library.engine = self.process.module_base_address(cs2::ENGINE_LIB)?;
+        offsets.library.tier0 = self.process.module_base_address(cs2::TIER0_LIB)?;
+        offsets.library.input = self.process.module_base_address(cs2::INPUT_LIB)?;
+        offsets.library.sdl = self.process.module_base_address(cs2::SDL_LIB)?;
 
-        let resource_offset =
-            process.get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
+        let resource_offset = self
+            .process
+            .get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
         if resource_offset.is_none() {
             warn!("could not get offset for GameResourceServiceClient");
         }
         offsets.interface.resource = resource_offset?;
 
-        offsets.interface.entity = process.read(offsets.interface.resource + 0x50);
+        offsets.interface.entity = self.process.read(offsets.interface.resource + 0x50);
         offsets.interface.player = offsets.interface.entity + 0x10;
 
-        let cvar_address = process.get_interface_offset(offsets.library.tier0, "VEngineCvar0");
+        let cvar_address = self
+            .process
+            .get_interface_offset(offsets.library.tier0, "VEngineCvar0");
         if cvar_address.is_none() {
             warn!("could not get convar interface offset");
         }
         offsets.interface.cvar = cvar_address?;
-        let input_address =
-            process.get_interface_offset(offsets.library.input, "InputSystemVersion0");
+        let input_address = self
+            .process
+            .get_interface_offset(offsets.library.input, "InputSystemVersion0");
         if input_address.is_none() {
             warn!("could not get input interface offset");
         }
         offsets.interface.input = input_address?;
 
-        let local_player = process.scan_pattern(
+        let local_player = self.process.scan_pattern(
             &[
                 0x48, 0x83, 0x3D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x95, 0xC0, 0xC3,
             ],
@@ -168,12 +159,14 @@ impl CS2 {
         if local_player.is_none() {
             warn!("could not find local player offset");
         }
-        offsets.direct.local_player = process.get_relative_address(local_player?, 0x03, 0x08);
-        offsets.direct.button_state = process
-            .read::<u32>(process.get_interface_function(offsets.interface.input, 19) + 0x14)
-            as u64;
+        offsets.direct.local_player = self.process.get_relative_address(local_player?, 0x03, 0x08);
+        offsets.direct.button_state = self.process.read::<u32>(
+            self.process
+                .get_interface_function(offsets.interface.input, 19)
+                + 0x14,
+        ) as u64;
 
-        let mut is_other_enemy = process.scan_pattern(
+        let mut is_other_enemy = self.process.scan_pattern(
             &[
                 0x31, 0xc0, 0x48, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48, 0x89,
                 0xe5, 0x41, 0x54, 0x53,
@@ -183,7 +176,7 @@ impl CS2 {
         );
         if is_other_enemy.is_none() {
             // if byte was already patched
-            is_other_enemy = process.scan_pattern(
+            is_other_enemy = self.process.scan_pattern(
                 &[
                     0x31, 0xc0, 0xC3, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48,
                     0x89, 0xe5, 0x41, 0x54, 0x53,
@@ -198,19 +191,23 @@ impl CS2 {
         // offset by two bytes, because the test instruction is two bytes after the beginning
         offsets.direct.is_other_enemy = is_other_enemy? + 2;
 
-        let ffa_address = process.get_convar(offsets.interface.cvar, "mp_teammates_are_enemies");
+        let ffa_address = self
+            .process
+            .get_convar(offsets.interface.cvar, "mp_teammates_are_enemies");
         if ffa_address.is_none() {
             warn!("could not get mp_tammates_are_enemies convar offset");
         }
         offsets.convar.ffa = ffa_address?;
-        let sensitivity_address = process.get_convar(offsets.interface.cvar, "sensitivity");
+        let sensitivity_address = self
+            .process
+            .get_convar(offsets.interface.cvar, "sensitivity");
         if sensitivity_address.is_none() {
             warn!("could not get sensitivity convar offset");
         }
         offsets.convar.sensitivity = sensitivity_address?;
 
-        let client_module_size = process.module_size(offsets.library.client);
-        let client_dump = process.dump_module(offsets.library.client);
+        let client_module_size = self.process.module_size(offsets.library.client);
+        let client_dump = self.process.dump_module(offsets.library.client);
 
         let base = offsets.library.client;
         for i in (0..=(client_module_size - 8)).rev().step_by(8) {
@@ -433,21 +430,21 @@ impl CS2 {
     }
 
     // convars
-    fn get_sensitivity(&self, process: &Process) -> f32 {
-        process.read(self.offsets.convar.sensitivity + 0x40)
+    fn get_sensitivity(&self) -> f32 {
+        self.process.read(self.offsets.convar.sensitivity + 0x40)
     }
 
-    fn is_ffa(&self, process: &Process) -> bool {
-        process.read::<u32>(self.offsets.convar.ffa + 0x40) == 1
+    fn is_ffa(&self) -> bool {
+        self.process.read::<u32>(self.offsets.convar.ffa + 0x40) == 1
     }
 
     // misc
-    fn is_button_down(&self, process: &Process, button: &KeyCode) -> bool {
+    fn is_button_down(&self, button: &KeyCode) -> bool {
         if *button == KeyCode::None {
             return true;
         }
         // what the actual fuck is happening here?
-        let value = process.read::<u32>(
+        let value = self.process.read::<u32>(
             self.offsets.interface.input
                 + (((button.u64() >> 5) * 4) + self.offsets.direct.button_state),
         );

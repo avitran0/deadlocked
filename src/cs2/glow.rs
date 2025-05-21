@@ -4,23 +4,17 @@ use super::{player::Player, CS2};
 
 impl CS2 {
     pub fn glow(&self, config: &Config) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => return,
-        };
-
         if !config.misc.glow {
             return;
         }
 
-        let local_player = match Player::local_player(process, &self.offsets) {
-            Some(player) => player,
-            None => return,
+        let Some(local_player) = Player::local_player(self) else {
+            return;
         };
 
-        let team = local_player.team(process, &self.offsets);
+        let team = local_player.team(self);
         for player in &self.players {
-            let player_team = player.team(process, &self.offsets);
+            let player_team = player.team(self);
             if !config.misc.friendly_glow && player_team == team {
                 continue;
             }
@@ -30,7 +24,7 @@ impl CS2 {
                 config.misc.enemy_color.to_hex()
             };
 
-            player.glow(process, &self.offsets, color);
+            player.glow(self, color);
         }
     }
 }

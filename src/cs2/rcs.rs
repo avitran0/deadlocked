@@ -12,17 +12,11 @@ pub struct Recoil {
 
 impl CS2 {
     pub fn rcs(&mut self, mouse: &mut Mouse) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => return,
+        let Some(local_player) = Player::local_player(self) else {
+            return;
         };
 
-        let local_player = match Player::local_player(process, &self.offsets) {
-            Some(player) => player,
-            None => return,
-        };
-
-        let weapon_class = local_player.weapon_class(process, &self.offsets);
+        let weapon_class = local_player.weapon_class(self);
         if [
             WeaponClass::Unknown,
             WeaponClass::Knife,
@@ -35,8 +29,8 @@ impl CS2 {
             return;
         }
 
-        let shots_fired = local_player.shots_fired(process, &self.offsets);
-        let aim_punch = match (weapon_class, local_player.aim_punch(process, &self.offsets)) {
+        let shots_fired = local_player.shots_fired(self);
+        let aim_punch = match (weapon_class, local_player.aim_punch(self)) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
             (_, punch) if punch.length() == 0.0 && shots_fired > 1 => self.recoil.previous,
             (_, punch) => punch,
@@ -47,8 +41,7 @@ impl CS2 {
             self.recoil.unaccounted = Vec2::ZERO;
             return;
         }
-        let sensitivity =
-            self.get_sensitivity(process) * local_player.fov_multiplier(process, &self.offsets);
+        let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
         let mouse_angle = Vec2::new(
             (aim_punch.y - self.recoil.previous.y) / sensitivity * 100.0,

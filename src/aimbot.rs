@@ -1,6 +1,6 @@
 use std::{sync::mpsc, thread::sleep, time::Instant};
 
-use log::{info, warn};
+use log::{debug, info};
 
 use crate::{
     config::{parse_config, AimbotStatus, LOOP_DURATION},
@@ -85,7 +85,7 @@ impl AimbotManager {
                 if elapsed < LOOP_DURATION {
                     sleep(LOOP_DURATION - elapsed);
                 } else {
-                    warn!("aimbot loop took {}ms", elapsed.as_millis());
+                    debug!("aimbot loop took {}ms", elapsed.as_millis());
                     sleep(LOOP_DURATION);
                 }
             } else {

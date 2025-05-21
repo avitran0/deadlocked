@@ -2,6 +2,7 @@ use std::{
     fs::{File, OpenOptions},
     io::{BufRead, BufReader},
     os::unix::fs::FileExt,
+    path::PathBuf,
 };
 
 use bytemuck::{AnyBitPattern, NoUninit};
@@ -12,12 +13,20 @@ use crate::constants::elf;
 
 #[derive(Debug)]
 pub struct Process {
-    pub pid: u64,
+    pub pid: i32,
+    path: PathBuf,
 }
 
 impl Process {
-    pub fn new(pid: u64) -> Self {
-        Self { pid }
+    pub fn new(pid: i32) -> Self {
+        Self {
+            pid,
+            path: PathBuf::from(format!("/proc/{pid}")),
+        }
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.path.exists()
     }
 
     pub fn read<T: AnyBitPattern + Default>(&self, address: u64) -> T {
@@ -32,7 +41,7 @@ impl Process {
         };
 
         unsafe {
-            process_vm_readv(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0);
+            process_vm_readv(self.pid, &local_iov, 1, &remote_iov, 1, 0);
         }
 
         bytemuck::try_from_bytes(&buffer)
@@ -52,23 +61,25 @@ impl Process {
         };
 
         let bytes_written =
-            unsafe { process_vm_writev(self.pid as i32, &local_iov, 1, &remote_iov, 1, 0) };
+            unsafe { process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0) };
 
         if bytes_written > 0 {
-            debug!("wrote {bytes_written} bytes at {address}");
+            debug!("wrote {bytes_written} bytes at {address:X}");
         } else {
             warn!("write to {address} failed");
         }
     }
 
     pub fn write_file<T: NoUninit>(&self, address: u64, value: T) {
-        let file = OpenOptions::new()
+        let Ok(file) = OpenOptions::new()
             .write(true)
             .open(format!("/proc/{}/mem", self.pid))
-            .unwrap();
+        else {
+            return;
+        };
         let buffer = bytemuck::bytes_of(&value);
         match file.write_at(buffer, address) {
-            Ok(bytes_written) => debug!("wrote {bytes_written} bytes at {address}"),
+            Ok(bytes_written) => debug!("wrote {bytes_written} bytes at {address:X}"),
             Err(_) => warn!("write to {address} failed"),
         }
     }

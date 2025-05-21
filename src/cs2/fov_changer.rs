@@ -4,25 +4,15 @@ use super::{player::Player, CS2};
 
 impl CS2 {
     pub fn fov_changer(&self, config: &Config) {
-        let process = match &self.process {
-            Some(process) => process,
-            None => return,
-        };
-
-        let local_player = match Player::local_player(process, &self.offsets) {
-            Some(player) => player,
-            None => return,
+        let Some(local_player) = Player::local_player(self) else {
+            return;
         };
 
         if !config.misc.fov_changer {
-            local_player.set_fov(process, &self.offsets, cs2::DEFAULT_FOV);
+            local_player.set_fov(self, cs2::DEFAULT_FOV);
             return;
         }
 
-        local_player.set_fov(
-            process,
-            &self.offsets,
-            config.misc.desired_fov.clamp(1, 179),
-        );
+        local_player.set_fov(self, config.misc.desired_fov.clamp(1, 179));
     }
 }
