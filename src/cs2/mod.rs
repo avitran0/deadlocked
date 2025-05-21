@@ -123,88 +123,106 @@ impl CS2 {
         offsets.library.input = self.process.module_base_address(cs2::INPUT_LIB)?;
         offsets.library.sdl = self.process.module_base_address(cs2::SDL_LIB)?;
 
-        let resource_offset = self
+        let Some(resource_offset) = self
             .process
-            .get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0");
-        if resource_offset.is_none() {
+            .get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0")
+        else {
             warn!("could not get offset for GameResourceServiceClient");
-        }
-        offsets.interface.resource = resource_offset?;
+            return None;
+        };
+        offsets.interface.resource = resource_offset;
 
         offsets.interface.entity = self.process.read(offsets.interface.resource + 0x50);
         offsets.interface.player = offsets.interface.entity + 0x10;
 
-        let cvar_address = self
+        let Some(cvar_address) = self
             .process
-            .get_interface_offset(offsets.library.tier0, "VEngineCvar0");
-        if cvar_address.is_none() {
+            .get_interface_offset(offsets.library.tier0, "VEngineCvar0")
+        else {
             warn!("could not get convar interface offset");
-        }
-        offsets.interface.cvar = cvar_address?;
-        let input_address = self
+            return None;
+        };
+        offsets.interface.cvar = cvar_address;
+        let Some(input_address) = self
             .process
-            .get_interface_offset(offsets.library.input, "InputSystemVersion0");
-        if input_address.is_none() {
+            .get_interface_offset(offsets.library.input, "InputSystemVersion0")
+        else {
             warn!("could not get input interface offset");
-        }
-        offsets.interface.input = input_address?;
+            return None;
+        };
+        offsets.interface.input = input_address;
 
-        let local_player = self.process.scan_pattern(
+        let Some(local_player) = self.process.scan_pattern(
             &[
                 0x48, 0x83, 0x3D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0F, 0x95, 0xC0, 0xC3,
             ],
             "xxx????xxxxx".as_bytes(),
             offsets.library.client,
-        );
-        if local_player.is_none() {
+        ) else {
             warn!("could not find local player offset");
-        }
-        offsets.direct.local_player = self.process.get_relative_address(local_player?, 0x03, 0x08);
+            return None;
+        };
+        offsets.direct.local_player = self.process.get_relative_address(local_player, 0x03, 0x08);
         offsets.direct.button_state = self.process.read::<u32>(
             self.process
                 .get_interface_function(offsets.interface.input, 19)
                 + 0x14,
         ) as u64;
 
-        let mut is_other_enemy = self.process.scan_pattern(
+        let is_other_enemy = match self.process.scan_pattern(
             &[
                 0x31, 0xc0, 0x48, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48, 0x89,
                 0xe5, 0x41, 0x54, 0x53,
             ],
             "xxxxxxx????xxxxxxx".as_bytes(),
             offsets.library.client,
-        );
-        if is_other_enemy.is_none() {
-            // if byte was already patched
-            is_other_enemy = self.process.scan_pattern(
-                &[
-                    0x31, 0xc0, 0xC3, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55, 0x48,
-                    0x89, 0xe5, 0x41, 0x54, 0x53,
-                ],
-                "xxxxxxx????xxxxxxx".as_bytes(),
-                offsets.library.client,
-            );
-        }
-        if is_other_enemy.is_none() {
-            warn!("could not get IsOtherEnemy function offset");
-        }
+        ) {
+            Some(func) => func,
+            None => {
+                // if byte was already patched
+                let Some(is_other_enemy) = self.process.scan_pattern(
+                    &[
+                        0x31, 0xc0, 0xC3, 0x85, 0xf6, 0x0f, 0x84, 0x00, 0x00, 0x00, 0x00, 0x55,
+                        0x48, 0x89, 0xe5, 0x41, 0x54, 0x53,
+                    ],
+                    "xxxxxxx????xxxxxxx".as_bytes(),
+                    offsets.library.client,
+                ) else {
+                    warn!("could not get IsOtherEnemy function offset");
+                    return None;
+                };
+                is_other_enemy
+            }
+        };
         // offset by two bytes, because the test instruction is two bytes after the beginning
-        offsets.direct.is_other_enemy = is_other_enemy? + 2;
+        offsets.direct.is_other_enemy = is_other_enemy + 2;
 
-        let ffa_address = self
+        let Some(planted_c4) = self.process.scan_pattern(
+            &[0x00, 0x00, 0x00, 0x00, 0x8B, 0x10, 0x85, 0xD2, 0x0F, 0x8F],
+            "????xxxxxx".as_bytes(),
+            offsets.library.client,
+        ) else {
+            warn!("could not find planted c4 offset");
+            return None;
+        };
+        offsets.direct.planted_c4 = planted_c4;
+
+        let Some(ffa_address) = self
             .process
-            .get_convar(offsets.interface.cvar, "mp_teammates_are_enemies");
-        if ffa_address.is_none() {
+            .get_convar(offsets.interface.cvar, "mp_teammates_are_enemies")
+        else {
             warn!("could not get mp_tammates_are_enemies convar offset");
-        }
-        offsets.convar.ffa = ffa_address?;
-        let sensitivity_address = self
+            return None;
+        };
+        offsets.convar.ffa = ffa_address;
+        let Some(sensitivity_address) = self
             .process
-            .get_convar(offsets.interface.cvar, "sensitivity");
-        if sensitivity_address.is_none() {
+            .get_convar(offsets.interface.cvar, "sensitivity")
+        else {
             warn!("could not get sensitivity convar offset");
-        }
-        offsets.convar.sensitivity = sensitivity_address?;
+            return None;
+        };
+        offsets.convar.sensitivity = sensitivity_address;
 
         let client_module_size = self.process.module_size(offsets.library.client);
         let client_dump = self.process.dump_module(offsets.library.client);

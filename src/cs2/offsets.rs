@@ -21,6 +21,7 @@ pub struct DirectOffsets {
     pub local_player: u64,
     pub button_state: u64,
     pub is_other_enemy: u64,
+    pub planted_c4: u64,
 }
 
 #[derive(Debug, Default)]
