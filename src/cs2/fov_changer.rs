@@ -8,11 +8,10 @@ impl CS2 {
             return;
         };
 
-        if !config.misc.fov_changer {
+        if config.misc.fov_changer {
+            local_player.set_fov(self, config.misc.desired_fov.clamp(1, 179));
+        } else {
             local_player.set_fov(self, cs2::DEFAULT_FOV);
-            return;
         }
-
-        local_player.set_fov(self, config.misc.desired_fov.clamp(1, 179));
     }
 }

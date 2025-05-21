@@ -17,15 +17,14 @@ impl CS2 {
         };
 
         let weapon_class = local_player.weapon_class(self);
-        if [
+        let disallowed_weapons = [
             WeaponClass::Unknown,
             WeaponClass::Knife,
             WeaponClass::Grenade,
             WeaponClass::Pistol,
             WeaponClass::Shotgun,
-        ]
-        .contains(&weapon_class)
-        {
+        ];
+        if disallowed_weapons.contains(&weapon_class) {
             return;
         }
 
