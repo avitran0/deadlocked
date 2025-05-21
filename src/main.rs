@@ -18,7 +18,6 @@ mod key_codes;
 mod math;
 mod message;
 mod mouse;
-mod proc;
 mod process;
 
 #[cfg(not(target_os = "linux"))]
@@ -37,10 +36,11 @@ fn main() {
     // and don't support disabling the maximize button
     std::env::remove_var("WAYLAND_DISPLAY");
 
-    let username = std::env::var("USER").unwrap_or_default();
-    if username == "root" {
-        error!("start without sudo, and add your user to the input group.");
-        return;
+    if let Ok(username) = std::env::var("USER") {
+        if username == "root" {
+            error!("start without sudo, and add your user to the input group.");
+            return;
+        }
     }
 
     let (tx_aimbot, rx_gui) = mpsc::channel();
@@ -49,7 +49,7 @@ fn main() {
     thread::spawn(move || {
         aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
     });
-    info!("started aimbot thread");
+    info!("started game thread");
 
     let window_size = [420.0, 250.0];
     let options = eframe::NativeOptions {
@@ -65,6 +65,7 @@ fn main() {
         Box::new(|cc| {
             cc.egui_ctx.set_pixels_per_point(1.2);
 
+            // add font
             let fira_sans = include_bytes!("../resources/FiraSans.ttf");
             let mut font_definitions = FontDefinitions::default();
             font_definitions.font_data.insert(
@@ -72,6 +73,7 @@ fn main() {
                 Arc::new(FontData::from_static(fira_sans)),
             );
 
+            // insert into font definitions, so it gets chosen as default
             font_definitions
                 .families
                 .get_mut(&egui::FontFamily::Proportional)
