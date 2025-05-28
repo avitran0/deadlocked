@@ -32,6 +32,8 @@ struct InputEvent {
     value: i32,
 }
 
+#[allow(unused)]
+#[repr(C)]
 struct MouseMove {
     x: libc::c_int,
     y: libc::c_int,

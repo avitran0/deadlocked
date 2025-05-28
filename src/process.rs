@@ -18,11 +18,24 @@ enum AccessMode {
     KernelModule,
 }
 
+#[allow(unused)]
+#[repr(C)]
 struct MemoryParams {
-    pub pid: libc::pid_t,
-    pub addr: libc::c_ulong,
-    pub size: libc::size_t,
-    pub buf: *mut libc::c_void,
+    pid: libc::pid_t,
+    addr: libc::c_ulong,
+    size: libc::size_t,
+    buf: *mut libc::c_void,
+}
+
+impl MemoryParams {
+    pub fn new(pid: i32, addr: u64, size: usize, buf: *mut libc::c_void) -> Self {
+        Self {
+            pid,
+            addr,
+            size,
+            buf,
+        }
+    }
 }
 
 ioctl_readwrite!(ioctl_read_mem, 0xBC, 1, MemoryParams);
@@ -50,7 +63,7 @@ impl Process {
                 AccessMode::Syscall => OpenOptions::new()
                     .write(true)
                     .open(format!("/proc/{pid}/mem"))
-                    .unwrap(),
+                    .unwrap_or_else(|_| OpenOptions::new().write(true).open("/dev/null").unwrap()),
                 AccessMode::KernelModule => OpenOptions::new()
                     .write(true)
                     .open("/dev/stealthmem")
@@ -61,38 +74,35 @@ impl Process {
     }
 
     pub fn is_valid(&self) -> bool {
-        self.path.exists()
+        self.path.exists() && self.pid > 0
     }
 
     pub fn read<T: AnyBitPattern + Default>(&self, address: u64) -> T {
         let mut buffer = vec![0u8; std::mem::size_of::<T>()];
 
         if self.mode == AccessMode::KernelModule {
-            let mut params = MemoryParams {
-                pid: self.pid,
-                addr: address,
-                size: std::mem::size_of::<T>(),
-                buf: buffer.as_mut_ptr() as *mut libc::c_void,
-            };
+            let mut params = MemoryParams::new(
+                self.pid,
+                address,
+                std::mem::size_of::<T>(),
+                buffer.as_mut_ptr() as *mut libc::c_void,
+            );
             unsafe {
                 ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
             };
-            return bytemuck::try_from_bytes(&buffer)
-                .copied()
-                .unwrap_or_default();
-        }
+        } else {
+            let local_iov = iovec {
+                iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+                iov_len: buffer.len(),
+            };
+            let remote_iov = iovec {
+                iov_base: address as *mut libc::c_void,
+                iov_len: buffer.len(),
+            };
 
-        let local_iov = iovec {
-            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
-        let remote_iov = iovec {
-            iov_base: address as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
-
-        unsafe {
-            process_vm_readv(self.pid, &local_iov, 1, &remote_iov, 1, 0);
+            unsafe {
+                process_vm_readv(self.pid, &local_iov, 1, &remote_iov, 1, 0);
+            }
         }
 
         bytemuck::try_from_bytes(&buffer)
@@ -102,36 +112,45 @@ impl Process {
 
     pub fn write<T: NoUninit>(&self, address: u64, value: T) {
         let mut buffer = bytemuck::bytes_of(&value).to_vec();
-        let local_iov = iovec {
-            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
-        let remote_iov = iovec {
-            iov_base: address as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
 
-        let bytes_written =
-            unsafe { process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0) };
-
-        if bytes_written > 0 {
-            debug!("wrote {bytes_written} bytes at {address:X}");
+        if self.mode == AccessMode::KernelModule {
+            let mut params = MemoryParams::new(
+                self.pid,
+                address,
+                std::mem::size_of::<T>(),
+                buffer.as_mut_ptr() as *mut libc::c_void,
+            );
+            unsafe {
+                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+            };
         } else {
-            debug!("write to {address} failed");
+            let local_iov = iovec {
+                iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+                iov_len: buffer.len(),
+            };
+            let remote_iov = iovec {
+                iov_base: address as *mut libc::c_void,
+                iov_len: buffer.len(),
+            };
+
+            unsafe { process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0) };
         }
     }
 
     pub fn write_file<T: NoUninit>(&self, address: u64, value: T) {
-        let Ok(file) = OpenOptions::new()
-            .write(true)
-            .open(format!("/proc/{}/mem", self.pid))
-        else {
-            return;
-        };
-        let buffer = bytemuck::bytes_of(&value);
-        match file.write_at(buffer, address) {
-            Ok(bytes_written) => debug!("wrote {bytes_written} bytes at {address:X}"),
-            Err(_) => warn!("write to {address} failed"),
+        let mut buffer = bytemuck::bytes_of(&value).to_vec();
+        if self.mode == AccessMode::KernelModule {
+            let mut params = MemoryParams::new(
+                self.pid,
+                address,
+                std::mem::size_of::<T>(),
+                buffer.as_mut_ptr() as *mut libc::c_void,
+            );
+            unsafe {
+                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+            };
+        } else {
+            self.file.write_at(&buffer, address).unwrap();
         }
     }
 
@@ -150,9 +169,20 @@ impl Process {
     }
 
     pub fn read_bytes(&self, address: u64, count: u64) -> Vec<u8> {
-        let file = File::open(format!("/proc/{}/mem", self.pid)).unwrap();
         let mut buffer = vec![0u8; count as usize];
-        file.read_at(&mut buffer, address).unwrap_or(0);
+        if self.mode == AccessMode::KernelModule {
+            let mut params = MemoryParams::new(
+                self.pid,
+                address,
+                count as usize,
+                buffer.as_mut_ptr() as *mut libc::c_void,
+            );
+            unsafe {
+                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+            };
+        } else {
+            self.file.read_at(&mut buffer, address).unwrap_or(0);
+        }
         buffer
     }
 
