@@ -178,7 +178,7 @@ impl Process {
                 buffer.as_mut_ptr() as *mut libc::c_void,
             );
             unsafe {
-                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
             };
         } else {
             self.file.read_at(&mut buffer, address).unwrap_or(0);
