@@ -89,7 +89,7 @@ impl Process {
                 buffer.as_mut_ptr() as *mut libc::c_void,
             );
             unsafe {
-                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap_or(0)
             };
         } else {
             let local_iov = iovec {
@@ -122,7 +122,8 @@ impl Process {
                 buffer.as_mut_ptr() as *mut libc::c_void,
             );
             unsafe {
-                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams)
+                    .unwrap_or(0)
             };
         } else {
             let local_iov = iovec {
@@ -148,10 +149,11 @@ impl Process {
                 buffer.as_mut_ptr() as *mut libc::c_void,
             );
             unsafe {
-                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+                ioctl_write_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams)
+                    .unwrap_or(0)
             };
         } else {
-            self.file.write_at(&buffer, address).unwrap();
+            self.file.write_at(&buffer, address).unwrap_or(0);
         }
     }
 
@@ -179,27 +181,32 @@ impl Process {
                 buffer.as_mut_ptr() as *mut libc::c_void,
             );
             unsafe {
-                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap_or(0)
             };
         } else {
-            self.file.read_at(&mut buffer, address).unwrap();
+            self.file.read_at(&mut buffer, address).unwrap_or(0);
         }
         buffer
     }
 
     pub fn module_base_address(&self, module_name: &str) -> Option<u64> {
-        let maps = File::open(format!("/proc/{}/maps", self.pid)).unwrap();
+        let Ok(maps) = File::open(format!("/proc/{}/maps", self.pid)) else {
+            return None;
+        };
         for line in BufReader::new(maps).lines() {
-            if line.is_err() {
+            let Ok(line) = line else {
                 continue;
-            }
-            let line = line.unwrap();
+            };
             if !line.contains(module_name) {
                 continue;
             }
-            let (address, _) = line.split_once('-').unwrap();
-            let address = u64::from_str_radix(address, 16).unwrap();
-            debug!("found module {module_name} at {address}");
+            let Some((address, _)) = line.split_once('-') else {
+                continue;
+            };
+            let Ok(address) = u64::from_str_radix(address, 16) else {
+                continue;
+            };
+            debug!("found module {module_name} at {address:X}");
             return Some(address);
         }
         warn!("module {module_name} not found");

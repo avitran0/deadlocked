@@ -221,240 +221,19 @@ impl CS2 {
         let client_dump = self.process.dump_module(offsets.library.client);
 
         let base = offsets.library.client;
-        for i in (0..=(client_module_size - 8)).rev().step_by(8) {
-            let mut network_enable = false;
-
-            let mut name_pointer = self.process.read_vec::<u64>(&client_dump, i);
-            if name_pointer >= base && name_pointer <= base + client_module_size {
-                name_pointer = self.process.read_vec(&client_dump, name_pointer - base);
-                if name_pointer >= base && name_pointer <= base + client_module_size {
-                    let name = self
-                        .process
-                        .read_string_vec(&client_dump, name_pointer - base);
-                    if name.to_lowercase() == "MNetworkEnable".to_lowercase() {
-                        network_enable = true;
-                    }
-                }
-            }
-
-            let name_ptr = match network_enable {
-                true => self.process.read_vec::<u64>(&client_dump, i + 0x08),
-                false => self.process.read_vec::<u64>(&client_dump, i),
-            };
-
-            if name_ptr < base || name_ptr > base + client_module_size {
+        for index in (0..=(client_module_size - 8)).rev().step_by(8) {
+            let Some((netvar_name, network_enable)) =
+                self.netvar_name(&client_dump, index, base, client_module_size)
+            else {
                 continue;
-            }
-
-            let netvar_name = self.process.read_string_vec(&client_dump, name_ptr - base);
-
-            match netvar_name.as_str() {
-                "m_sSanitizedPlayerName" => {
-                    if !network_enable || offsets.controller.name != 0 {
-                        continue;
-                    }
-                    offsets.controller.name =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_hPawn" => {
-                    if !network_enable || offsets.controller.pawn != 0 {
-                        continue;
-                    }
-                    offsets.controller.pawn =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_iDesiredFOV" => {
-                    if offsets.controller.desired_fov != 0 {
-                        continue;
-                    }
-                    offsets.controller.desired_fov =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x8) as u64;
-                }
-                "m_iHealth" => {
-                    if !network_enable || offsets.pawn.health != 0 {
-                        continue;
-                    }
-                    offsets.pawn.health =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_ArmorValue" => {
-                    if !network_enable || offsets.pawn.armor != 0 {
-                        continue;
-                    }
-                    offsets.pawn.armor =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_iTeamNum" => {
-                    if !network_enable || offsets.pawn.team != 0 {
-                        continue;
-                    }
-                    offsets.pawn.team = self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_lifeState" => {
-                    if !network_enable || offsets.pawn.life_state != 0 {
-                        continue;
-                    }
-                    offsets.pawn.life_state =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_pClippingWeapon" => {
-                    if offsets.pawn.weapon != 0 {
-                        continue;
-                    }
-                    offsets.pawn.weapon =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_flFOVSensitivityAdjust" => {
-                    if offsets.pawn.fov_multiplier != 0 {
-                        continue;
-                    }
-                    offsets.pawn.fov_multiplier =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_pGameSceneNode" => {
-                    if offsets.pawn.game_scene_node != 0 {
-                        continue;
-                    }
-                    offsets.pawn.game_scene_node =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_vecViewOffset" => {
-                    if !network_enable || offsets.pawn.eye_offset != 0 {
-                        continue;
-                    }
-                    offsets.pawn.eye_offset =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_vecAbsVelocity" => {
-                    if offsets.pawn.velocity != 0 {
-                        continue;
-                    }
-                    offsets.pawn.velocity =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_aimPunchCache" => {
-                    if !network_enable || offsets.pawn.aim_punch_cache != 0 {
-                        continue;
-                    }
-                    offsets.pawn.aim_punch_cache =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_iShotsFired" => {
-                    if !network_enable || offsets.pawn.shots_fired != 0 {
-                        continue;
-                    }
-                    offsets.pawn.shots_fired =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "v_angle" => {
-                    if offsets.pawn.view_angles != 0 {
-                        continue;
-                    }
-                    offsets.pawn.view_angles =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_entitySpottedState" => {
-                    if !network_enable || offsets.pawn.spotted_state != 0 {
-                        continue;
-                    }
-                    let offset = self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                    if !(10000..=14000).contains(&offset) {
-                        continue;
-                    }
-                    offsets.pawn.spotted_state = offset;
-                }
-                "m_Glow" => {
-                    if !network_enable || offsets.pawn.glow != 0 {
-                        continue;
-                    }
-                    offsets.pawn.glow = self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_flFlashMaxAlpha" => {
-                    if offsets.pawn.flash_alpha != 0 {
-                        continue;
-                    }
-                    offsets.pawn.flash_alpha =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_flFlashDuration" => {
-                    if offsets.pawn.flash_duration != 0 {
-                        continue;
-                    }
-                    offsets.pawn.flash_duration =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_pCameraServices" => {
-                    if !network_enable || offsets.pawn.camera_services != 0 {
-                        continue;
-                    }
-                    offsets.pawn.camera_services =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_bDormant" => {
-                    if offsets.game_scene_node.dormant != 0 {
-                        continue;
-                    }
-                    offsets.game_scene_node.dormant =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_vecAbsOrigin" => {
-                    if !network_enable || offsets.game_scene_node.origin != 0 {
-                        continue;
-                    }
-                    offsets.game_scene_node.origin =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_modelState" => {
-                    if offsets.game_scene_node.model_state != 0 {
-                        continue;
-                    }
-                    offsets.game_scene_node.model_state =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_bSpotted" => {
-                    if offsets.spotted_state.spotted != 0 {
-                        continue;
-                    }
-                    offsets.spotted_state.spotted =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x10) as u64;
-                }
-                "m_bSpottedByMask" => {
-                    if !network_enable || offsets.spotted_state.mask != 0 {
-                        continue;
-                    }
-                    offsets.spotted_state.mask =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_bGlowing" => {
-                    if offsets.glow.is_glowing != 0 {
-                        continue;
-                    }
-                    offsets.glow.is_glowing =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_iGlowType" => {
-                    if offsets.glow.glow_type != 0 {
-                        continue;
-                    }
-                    offsets.glow.glow_type =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                "m_glowColorOverride" => {
-                    if !network_enable || offsets.glow.color_override != 0 {
-                        continue;
-                    }
-                    offsets.glow.color_override =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x18) as u64;
-                }
-                "m_iFOV" => {
-                    if offsets.camera_services.fov != 0 {
-                        continue;
-                    }
-                    offsets.camera_services.fov =
-                        self.process.read_vec::<u32>(&client_dump, i + 0x08) as u64;
-                }
-                _ => {}
-            }
+            };
+            self.process_netvar(
+                &mut offsets,
+                &client_dump,
+                netvar_name,
+                network_enable,
+                index,
+            );
 
             if offsets.all_found() {
                 debug!("offsets: {:?}", offsets);
@@ -464,6 +243,258 @@ impl CS2 {
 
         warn!("not all offsets found: {:?}", offsets);
         None
+    }
+
+    fn netvar_name(
+        &self,
+        client_dump: &[u8],
+        index: u64,
+        base: u64,
+        size: u64,
+    ) -> Option<(String, bool)> {
+        let mut ne_pointer = self.process.read_vec::<u64>(client_dump, index);
+
+        if (base..base + size).contains(&ne_pointer) {
+            ne_pointer = self.process.read_vec(client_dump, ne_pointer - base);
+        }
+
+        let network_enable = if (base..base + size).contains(&ne_pointer) {
+            let name = self.process.read_string_vec(client_dump, ne_pointer - base);
+            name.to_lowercase() == "MNetworkEnable".to_lowercase()
+        } else {
+            false
+        };
+
+        let name_pointer = self.process.read_vec::<u64>(
+            client_dump,
+            index + if network_enable { 0x08 } else { 0x00 },
+        );
+
+        if !(base..base + size).contains(&name_pointer) {
+            return None;
+        }
+
+        Some((
+            self.process
+                .read_string_vec(client_dump, name_pointer - base),
+            network_enable,
+        ))
+    }
+
+    fn process_netvar(
+        &self,
+        offsets: &mut Offsets,
+        client_dump: &[u8],
+        netvar_name: String,
+        network_enable: bool,
+        index: u64,
+    ) {
+        match netvar_name.as_str() {
+            "m_sSanitizedPlayerName" => {
+                if !network_enable || offsets.controller.name != 0 {
+                    return;
+                }
+                offsets.controller.name =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_hPawn" => {
+                if !network_enable || offsets.controller.pawn != 0 {
+                    return;
+                }
+                offsets.controller.pawn =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_iDesiredFOV" => {
+                if offsets.controller.desired_fov != 0 {
+                    return;
+                }
+                offsets.controller.desired_fov =
+                    self.process.read_vec::<u32>(client_dump, index + 0x8) as u64;
+            }
+            "m_iHealth" => {
+                if !network_enable || offsets.pawn.health != 0 {
+                    return;
+                }
+                offsets.pawn.health =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_ArmorValue" => {
+                if !network_enable || offsets.pawn.armor != 0 {
+                    return;
+                }
+                offsets.pawn.armor = self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_iTeamNum" => {
+                if !network_enable || offsets.pawn.team != 0 {
+                    return;
+                }
+                offsets.pawn.team = self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_lifeState" => {
+                if !network_enable || offsets.pawn.life_state != 0 {
+                    return;
+                }
+                offsets.pawn.life_state =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_pClippingWeapon" => {
+                if offsets.pawn.weapon != 0 {
+                    return;
+                }
+                offsets.pawn.weapon =
+                    self.process.read_vec::<u32>(client_dump, index + 0x10) as u64;
+            }
+            "m_flFOVSensitivityAdjust" => {
+                if offsets.pawn.fov_multiplier != 0 {
+                    return;
+                }
+                offsets.pawn.fov_multiplier =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_pGameSceneNode" => {
+                if offsets.pawn.game_scene_node != 0 {
+                    return;
+                }
+                offsets.pawn.game_scene_node =
+                    self.process.read_vec::<u32>(client_dump, index + 0x10) as u64;
+            }
+            "m_vecViewOffset" => {
+                if !network_enable || offsets.pawn.eye_offset != 0 {
+                    return;
+                }
+                offsets.pawn.eye_offset =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_vecAbsVelocity" => {
+                if offsets.pawn.velocity != 0 {
+                    return;
+                }
+                offsets.pawn.velocity =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_aimPunchCache" => {
+                if !network_enable || offsets.pawn.aim_punch_cache != 0 {
+                    return;
+                }
+                offsets.pawn.aim_punch_cache =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_iShotsFired" => {
+                if !network_enable || offsets.pawn.shots_fired != 0 {
+                    return;
+                }
+                offsets.pawn.shots_fired =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "v_angle" => {
+                if offsets.pawn.view_angles != 0 {
+                    return;
+                }
+                offsets.pawn.view_angles =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_entitySpottedState" => {
+                if !network_enable || offsets.pawn.spotted_state != 0 {
+                    return;
+                }
+                let offset = self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+                if !(10000..=14000).contains(&offset) {
+                    return;
+                }
+                offsets.pawn.spotted_state = offset;
+            }
+            "m_Glow" => {
+                if !network_enable || offsets.pawn.glow != 0 {
+                    return;
+                }
+                offsets.pawn.glow = self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_flFlashMaxAlpha" => {
+                if offsets.pawn.flash_alpha != 0 {
+                    return;
+                }
+                offsets.pawn.flash_alpha =
+                    self.process.read_vec::<u32>(client_dump, index + 0x10) as u64;
+            }
+            "m_flFlashDuration" => {
+                if offsets.pawn.flash_duration != 0 {
+                    return;
+                }
+                offsets.pawn.flash_duration =
+                    self.process.read_vec::<u32>(client_dump, index + 0x10) as u64;
+            }
+            "m_pCameraServices" => {
+                if !network_enable || offsets.pawn.camera_services != 0 {
+                    return;
+                }
+                offsets.pawn.camera_services =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_bDormant" => {
+                if offsets.game_scene_node.dormant != 0 {
+                    return;
+                }
+                offsets.game_scene_node.dormant =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_vecAbsOrigin" => {
+                if !network_enable || offsets.game_scene_node.origin != 0 {
+                    return;
+                }
+                offsets.game_scene_node.origin =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_modelState" => {
+                if offsets.game_scene_node.model_state != 0 {
+                    return;
+                }
+                offsets.game_scene_node.model_state =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_bSpotted" => {
+                if offsets.spotted_state.spotted != 0 {
+                    return;
+                }
+                offsets.spotted_state.spotted =
+                    self.process.read_vec::<u32>(client_dump, index + 0x10) as u64;
+            }
+            "m_bSpottedByMask" => {
+                if !network_enable || offsets.spotted_state.mask != 0 {
+                    return;
+                }
+                offsets.spotted_state.mask =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_bGlowing" => {
+                if offsets.glow.is_glowing != 0 {
+                    return;
+                }
+                offsets.glow.is_glowing =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_iGlowType" => {
+                if offsets.glow.glow_type != 0 {
+                    return;
+                }
+                offsets.glow.glow_type =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            "m_glowColorOverride" => {
+                if !network_enable || offsets.glow.color_override != 0 {
+                    return;
+                }
+                offsets.glow.color_override =
+                    self.process.read_vec::<u32>(client_dump, index + 0x18) as u64;
+            }
+            "m_iFOV" => {
+                if offsets.camera_services.fov != 0 {
+                    return;
+                }
+                offsets.camera_services.fov =
+                    self.process.read_vec::<u32>(client_dump, index + 0x08) as u64;
+            }
+            _ => {}
+        }
     }
 
     // convars

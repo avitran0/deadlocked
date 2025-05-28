@@ -1,7 +1,6 @@
 use std::{
     io::Write,
     sync::{mpsc, Arc},
-    thread,
 };
 
 use color::Colors;
@@ -46,7 +45,7 @@ fn main() {
     let (tx_aimbot, rx_gui) = mpsc::channel();
     let (tx_gui, rx_aimbot) = mpsc::channel();
 
-    thread::spawn(move || {
+    std::thread::spawn(move || {
         aimbot::AimbotManager::new(tx_aimbot, rx_aimbot).run();
     });
     info!("started game thread");
