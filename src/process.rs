@@ -1,27 +1,62 @@
 use std::{
     fs::{read_dir, read_link, File, OpenOptions},
     io::{BufRead, BufReader},
-    os::unix::fs::FileExt,
-    path::PathBuf,
+    os::{fd::AsRawFd, unix::fs::FileExt},
+    path::{Path, PathBuf},
 };
 
 use bytemuck::{AnyBitPattern, NoUninit};
 use libc::{iovec, process_vm_readv, process_vm_writev};
 use log::{debug, warn};
+use nix::{ioctl_readwrite, libc};
 
 use crate::constants::elf;
+
+#[derive(Debug, PartialEq)]
+enum AccessMode {
+    Syscall,
+    KernelModule,
+}
+
+struct MemoryParams {
+    pub pid: libc::pid_t,
+    pub addr: libc::c_ulong,
+    pub size: libc::size_t,
+    pub buf: *mut libc::c_void,
+}
+
+ioctl_readwrite!(ioctl_read_mem, 0xBC, 1, MemoryParams);
+ioctl_readwrite!(ioctl_write_mem, 0xBD, 1, MemoryParams);
 
 #[derive(Debug)]
 pub struct Process {
     pub pid: i32,
+    file: File,
     path: PathBuf,
+    mode: AccessMode,
 }
 
 impl Process {
     pub fn new(pid: i32) -> Self {
+        let mode = if Path::new("/dev/stealthmem").exists() {
+            AccessMode::KernelModule
+        } else {
+            AccessMode::Syscall
+        };
         Self {
             pid,
             path: PathBuf::from(format!("/proc/{pid}")),
+            file: match mode {
+                AccessMode::Syscall => OpenOptions::new()
+                    .write(true)
+                    .open(format!("/proc/{pid}/mem"))
+                    .unwrap(),
+                AccessMode::KernelModule => OpenOptions::new()
+                    .write(true)
+                    .open("/dev/stealthmem")
+                    .unwrap(),
+            },
+            mode,
         }
     }
 
@@ -31,6 +66,22 @@ impl Process {
 
     pub fn read<T: AnyBitPattern + Default>(&self, address: u64) -> T {
         let mut buffer = vec![0u8; std::mem::size_of::<T>()];
+
+        if self.mode == AccessMode::KernelModule {
+            let mut params = MemoryParams {
+                pid: self.pid,
+                addr: address,
+                size: std::mem::size_of::<T>(),
+                buf: buffer.as_mut_ptr() as *mut libc::c_void,
+            };
+            unsafe {
+                ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
+            };
+            return bytemuck::try_from_bytes(&buffer)
+                .copied()
+                .unwrap_or_default();
+        }
+
         let local_iov = iovec {
             iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
             iov_len: buffer.len(),

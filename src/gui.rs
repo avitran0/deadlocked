@@ -253,6 +253,7 @@ impl Gui {
             );
 
             let mouse_text = match &self.mouse_status {
+                DeviceStatus::WorkingKernel(name) => &format!("{} (km)", name),
                 DeviceStatus::Working(name) => name,
                 DeviceStatus::PermissionsRequired => {
                     "mouse input only works when user is in input group"
