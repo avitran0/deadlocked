@@ -46,6 +46,10 @@ impl MouseMove {
             y: vec.y as i32,
         }
     }
+
+    pub const fn new() -> Self {
+        Self { x: 0, y: 0 }
+    }
 }
 
 ioctl_readwrite!(ioctl_mouse_move, 0xBE, 1, MouseMove);
@@ -193,10 +197,14 @@ impl Mouse {
     }
 
     pub fn is_valid(&mut self) -> bool {
-        if self.file.write_all(&SYN.bytes()).is_ok() {
-            return true;
+        if let DeviceStatus::WorkingKernel(_) = self.status {
+            // jesus christ the poor rust
+            unsafe {
+                ioctl_mouse_move(self.file.as_raw_fd(), &raw mut MOUSE_ZERO).is_ok()
+            }
+        } else {
+            self.file.write_all(&SYN.bytes()).is_ok()
         }
-        false
     }
 }
 
@@ -209,6 +217,8 @@ const SYN: InputEvent = InputEvent {
     code: SYN_REPORT,
     value: 0,
 };
+
+static mut MOUSE_ZERO: MouseMove = MouseMove::new();
 
 fn decompose_bits(bitmask: u64, index: usize) -> Vec<u64> {
     (0..64)

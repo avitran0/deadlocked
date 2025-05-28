@@ -46,7 +46,7 @@ impl Aimbot for CS2 {
             self.is_valid = false;
             return;
         };
-        info!("game started, pid: {}", process.pid);
+        info!("process found, pid: {}", process.pid);
         self.process = process;
 
         self.offsets = match self.find_offsets() {

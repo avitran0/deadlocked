@@ -61,6 +61,7 @@ impl Process {
             path: PathBuf::from(format!("/proc/{pid}")),
             file: match mode {
                 AccessMode::Syscall => OpenOptions::new()
+                    .read(true)
                     .write(true)
                     .open(format!("/proc/{pid}/mem"))
                     .unwrap_or_else(|_| OpenOptions::new().write(true).open("/dev/null").unwrap()),
@@ -181,7 +182,7 @@ impl Process {
                 ioctl_read_mem(self.file.as_raw_fd(), &mut params as *mut MemoryParams).unwrap()
             };
         } else {
-            self.file.read_at(&mut buffer, address).unwrap_or(0);
+            self.file.read_at(&mut buffer, address).unwrap();
         }
         buffer
     }

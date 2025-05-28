@@ -253,7 +253,7 @@ impl Gui {
             );
 
             let mouse_text = match &self.mouse_status {
-                DeviceStatus::WorkingKernel(name) => &format!("{} (km)", name),
+                DeviceStatus::WorkingKernel(name) => &format!("{} (Kernel Module)", name),
                 DeviceStatus::Working(name) => name,
                 DeviceStatus::PermissionsRequired => {
                     "mouse input only works when user is in input group"
@@ -261,14 +261,13 @@ impl Gui {
                 DeviceStatus::Disconnected => "mouse was disconnected",
                 DeviceStatus::NotFound => "no mouse was found",
             };
-            let color = if let DeviceStatus::Working(_) = &self.mouse_status {
-                Colors::SUBTEXT
-            } else {
-                Colors::YELLOW
+            let color = match &self.mouse_status {
+                DeviceStatus::Working(_) | DeviceStatus::WorkingKernel(_) => Colors::SUBTEXT,
+                _ => Colors::YELLOW,
             };
             ui.label(
                 egui::RichText::new(mouse_text)
-                    .line_height(Some(8.0))
+                    .line_height(Some(12.0))
                     .color(color),
             );
         });
