@@ -1,9 +1,5 @@
 # deadlocked
 
-<a href="https://www.buymeacoffee.com/avitrano">
-<img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" width="130" height="30" alt="buy me a coffee" />
-</a>
-
 ![downloads](https://img.shields.io/github/downloads/avitran0/deadlocked/total?color=blue)
 [![foss cs2 hacking](https://badgen.net/discord/members/eXjG4Ar9Sx)](https://discord.gg/eXjG4Ar9Sx)
 
@@ -58,7 +54,7 @@ if possible, do not use the precompiled releases. they might be out of date.
 - add your user to the `input` group: `sudo usermod -aG input $(whoami)`
 - restart your machine (this will **_not_** work without a restart!)
 - clone the repository: `git clone --recursive https://github.com/avitran0/deadlocked`
-- install cmake and a c++17 compiler (gcc 7+ or clang 4+) 
+- install cmake and a c++17 compiler (gcc 7+ or clang 4+)
 
 ## running
 
