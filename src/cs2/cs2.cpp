@@ -644,7 +644,7 @@ std::optional<Offsets> FindOffsets() {
 
 f32 Sensitivity() { return process.Read<f32>(offsets.convar.sensitivity + 0x40); }
 
-bool IsFfa() { return process.Read<bool>(offsets.convar.ffa + 0x40); }
+bool IsFfa() { return process.Read<i32>(offsets.convar.ffa + 0x40) == 1; }
 
 bool EntityHasOwner(const u64 entity) {
     // h_pOwnerEntity is a handle, which is an int
