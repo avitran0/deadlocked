@@ -644,7 +644,7 @@ std::optional<Offsets> FindOffsets() {
 
 f32 Sensitivity() { return process.Read<f32>(offsets.convar.sensitivity + 0x40); }
 
-bool IsFfa() { return process.Read<i32>(offsets.convar.ffa + 0x40) == 1; }
+bool IsFfa() { return process.Read<bool>(offsets.convar.ffa + 0x40); }
 
 bool EntityHasOwner(const u64 entity) {
     // h_pOwnerEntity is a handle, which is an int
@@ -781,7 +781,7 @@ bool FindTarget() {
     // update target player
     if (!IsButtonPressed(config.aimbot.hotkey) || !target.player) {
         for (const Player &player : players) {
-            if (!ffa && local_team == player.Team()) {
+            if ((!ffa && local_team == player.Team()) || player.IsLocalPlayer()) {
                 continue;
             }
 

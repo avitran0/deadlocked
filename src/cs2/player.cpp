@@ -329,3 +329,11 @@ std::optional<Player> Player::EntityInCrosshair() const {
 }
 
 bool Player::IsScoped() const { return process.Read<u8>(pawn + offsets.pawn.scoped) != 0; }
+
+bool Player::IsLocalPlayer() const {
+    const u64 local_controller = process.Read<u64>(offsets.direct.local_player);
+    if (!local_controller) {
+        return false;
+    }
+    return controller == local_controller;
+}

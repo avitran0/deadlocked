@@ -51,6 +51,8 @@ class Player {
     bool IsScoped() const;
 
     bool Equals(const Player &other) const {
-        return pawn == other.pawn || controller == other.controller;
+        return pawn != 0 && controller != 0 && (pawn == other.pawn || controller == other.controller);
     }
+
+    bool IsLocalPlayer() const;
 };
