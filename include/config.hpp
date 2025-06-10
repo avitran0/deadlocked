@@ -79,7 +79,6 @@ struct VisualsConfig {
     bool dropped_weapons = true;
     bool sniper_crosshair = true;
     bool spectator_list = true;
-    bool dynamic_font = false;
     bool debug_window = false;
 
     toml::table to_toml() const;

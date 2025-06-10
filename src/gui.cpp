@@ -25,6 +25,11 @@
 #include "mouse.hpp"
 #include "style.hpp"
 
+enum class Tab {
+    Aimbot,
+    Players,
+};
+
 ImU32 HealthColor(const i32 health) {
     // smooth gradient from 100 (green) over 50 (yellow) to 0 (red)
     const i32 clamped_health = glm::clamp(health, 0, 100);
@@ -247,9 +252,11 @@ void Gui() {
         ImGui_ImplSDL3_NewFrame();
         SDL_GetWindowSize(gui_window, &gui_vp_size.x, &gui_vp_size.y);
         ImGui::NewFrame();
+        ImGui::PushStyleColor(ImGuiCol_WindowBg, Colors::BASE);
         ImGui::Begin(
             "deadlocked", nullptr,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
+        ImGui::PopStyleColor();
         ImGui::SetWindowSize(
             ImVec2 {static_cast<f32>(gui_vp_size.x), static_cast<f32>(gui_vp_size.y)});
         ImGui::SetWindowPos(ImVec2 {0.0f, 0.0f});
@@ -260,7 +267,16 @@ void Gui() {
 
         if (ImGui::BeginTabItem("Aimbot")) {
             const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_aimbot", available);
+            ImGui::SetNextWindowSizeConstraints(
+                {0.0f, 0.0f}, {available.x / 2.0f, available.y - 20.0f});
+            const f32 spacing = ImGui::GetStyle().ItemSpacing.x * 3.0f;
+            const ImVec2 col_size = {(available.x - spacing) / 2, available.y};
+            ImGui::BeginChild(
+                "Aimbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            ImGui::Text("Aimbot");
+            ImGui::Separator();
 
             ImGui::Checkbox("Enable", &config.aimbot.enabled);
 
@@ -287,9 +303,8 @@ void Gui() {
             ImGui::SameLine();
             ImGui::Checkbox("Flash Check", &config.aimbot.flash_check);
 
-            ImGui::DragFloat(
-                "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f",
-                ImGuiSliderFlags_Logarithmic);
+            ImGui::SliderFloat(
+                "FOV", &config.aimbot.fov, 0.1f, 360.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
 
             ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
             ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
@@ -297,6 +312,15 @@ void Gui() {
             ImGui::Checkbox("RCS", &config.aimbot.rcs);
 
             ImGui::EndChild();
+
+            ImGui::SameLine(0, spacing);
+            ImGui::BeginChild(
+                "aimbot2", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+            ImGui::Text("aimbot2");
+            ImGui::Separator();
+            ImGui::EndChild();
+
             ImGui::EndTabItem();
         }
 
@@ -389,9 +413,7 @@ void Gui() {
 
             ImGui::Checkbox("Spectator List", &config.visuals.spectator_list);
 
-            ImGui::Checkbox("Dynamic Font Size", &config.visuals.dynamic_font);
-            ImGui::DragFloat(
-                "Static Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
+            ImGui::DragFloat("Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
 
             ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
 
@@ -430,7 +452,7 @@ void Gui() {
 
             ImGui::ColorEdit3("Armor", &config.visuals.armor_color.x);
 
-            ImGui::ColorEdit3("Crosshair", &config.visuals.crosshair_color.x);
+            ImGui::ColorEdit3("", &config.visuals.crosshair_color.x, ImGuiColorEditFlags_NoInputs);
 
             ImGui::EndChild();
             ImGui::EndTabItem();
@@ -634,8 +656,7 @@ void Gui() {
                 const f32 box_height = bottom.y - top.y;
                 const f32 box_width = box_height / 2.0f;
                 const f32 half_width = box_width / 2.0f;
-                f32 font_size =
-                    (config.visuals.dynamic_font ? half_width : config.visuals.font_size) * scale;
+                f32 font_size = config.visuals.font_size * scale;
                 if (font_size > 20.0f * scale) {
                     font_size = 20.0f * scale;
                 }

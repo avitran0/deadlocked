@@ -16,7 +16,7 @@ void Style() {
 
     style.Alpha = 1.0f;
     style.DisabledAlpha = 0.6f;
-    style.WindowPadding = ImVec2(8.0f, 8.0f);
+    style.WindowPadding = ImVec2(12.0f, 12.0f);
     style.WindowRounding = 8.0f;
     style.WindowBorderSize = 0.0f;
     style.WindowMinSize = ImVec2(32.0f, 32.0f);
@@ -38,26 +38,29 @@ void Style() {
     style.ScrollbarRounding = 8.0f;
     style.GrabMinSize = 8.0f;
     style.GrabRounding = 8.0f;
-    style.TabRounding = 8.0f;
+    style.TabRounding = 0.0f;
+    style.TabBorderSize = 0.0f;
+    style.TabBarOverlineSize = 2.0f;
     style.TabBorderSize = 0.0f;
     style.TabCloseButtonMinWidthSelected = 0.0f;
     style.TabCloseButtonMinWidthUnselected = 0.0f;
     style.ColorButtonPosition = ImGuiDir_Right;
+    style.WindowTitleAlign = ImVec2(0.02f, 0.5f);
     style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
     style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
 
-    style.Colors[ImGuiCol_Text] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-    style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.12f, 0.12f, 0.16f, 1.0f);
-    style.Colors[ImGuiCol_ChildBg] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
-    style.Colors[ImGuiCol_PopupBg] = ImVec4(0.23f, 0.23f, 0.3f, 1.0f);
-    style.Colors[ImGuiCol_Border] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
-    style.Colors[ImGuiCol_BorderShadow] = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+    style.Colors[ImGuiCol_Text] = Colors::TEXT;
+    style.Colors[ImGuiCol_TextDisabled] = Colors::SUBTEXT;
+    style.Colors[ImGuiCol_WindowBg] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_ChildBg] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_PopupBg] = Colors::BASE;
+    style.Colors[ImGuiCol_Border] = Colors::SUBTEXT;
+    style.Colors[ImGuiCol_BorderShadow] = Colors::TRANSPARENT;
     style.Colors[ImGuiCol_FrameBg] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
     style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
     style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
-    style.Colors[ImGuiCol_TitleBg] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
-    style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
+    style.Colors[ImGuiCol_TitleBg] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_TitleBgActive] = Colors::BACKDROP;
     style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
     style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
     style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
@@ -67,7 +70,7 @@ void Style() {
     style.Colors[ImGuiCol_CheckMark] = accent_color;
     style.Colors[ImGuiCol_SliderGrab] = accent_color;
     style.Colors[ImGuiCol_SliderGrabActive] = accent_color;
-    style.Colors[ImGuiCol_Button] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
+    style.Colors[ImGuiCol_Button] = Colors::TRANSPARENT;
     style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
     style.Colors[ImGuiCol_ButtonActive] = accent_color;
     style.Colors[ImGuiCol_Header] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
@@ -79,12 +82,13 @@ void Style() {
     style.Colors[ImGuiCol_ResizeGrip] = accent_color;
     style.Colors[ImGuiCol_ResizeGripHovered] = accent_color;
     style.Colors[ImGuiCol_ResizeGripActive] = accent_color;
-    style.Colors[ImGuiCol_Tab] = ImVec4(0.23f, 0.23f, 0.3f, 1.0f);
+    style.Colors[ImGuiCol_Tab] = Colors::BACKDROP;
     style.Colors[ImGuiCol_TabHovered] =
         ImVec4(accent_color.x, accent_color.y, accent_color.z, 0.6f);
     style.Colors[ImGuiCol_TabActive] = ImVec4(accent_color.x, accent_color.y, accent_color.z, 0.6f);
     style.Colors[ImGuiCol_TabUnfocused] = ImVec4(0.23f, 0.23f, 0.3f, 1.0f);
     style.Colors[ImGuiCol_TabUnfocusedActive] = accent_color;
+    style.Colors[ImGuiCol_TabSelectedOverline] = Colors::TEXT;
     style.Colors[ImGuiCol_PlotLines] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
     style.Colors[ImGuiCol_PlotLinesHovered] = ImVec4(0.94f, 0.55f, 0.35f, 1.0f);
     style.Colors[ImGuiCol_PlotHistogram] = ImVec4(0.94f, 0.78f, 0.47f, 1.0f);
