@@ -32,6 +32,7 @@ enum class Tab {
     Aimbot,
     Players,
     Hud,
+    Unsafe,
 };
 
 Tab active_tab = Tab::Aimbot;
@@ -155,8 +156,8 @@ void Gui() {
     ImGuiContext *gui_ctx = ImGui::CreateContext();
     ImGuiContext *overlay_ctx = ImGui::CreateContext();
 
-    constexpr i32 width = 620;
-    constexpr i32 height = 400;
+    constexpr i32 width = 720;
+    constexpr i32 height = 420;
     // gui window
     SDL_Window *gui_window = SDL_CreateWindow(
         "deadlocked", width, height,
@@ -314,9 +315,21 @@ void Gui() {
         ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal, 2.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.1f, 0.5f});
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
-        if (SidebarButton(ICON_MD_MOUSE " Aimbot", sidebar_button_size, active_tab == Tab::Aimbot)) active_tab = Tab::Aimbot;
-        if (SidebarButton(ICON_MD_GROUP " Players", sidebar_button_size, active_tab == Tab::Players)) active_tab = Tab::Players;
-        if (SidebarButton(ICON_MD_MONITOR " HUD", sidebar_button_size, active_tab == Tab::Hud)) active_tab = Tab::Hud;
+        if (SidebarButton(
+                ICON_MD_MOUSE " Aimbot", sidebar_button_size, active_tab == Tab::Aimbot)) {
+            active_tab = Tab::Aimbot;
+        }
+        if (SidebarButton(
+                ICON_MD_GROUP " Players", sidebar_button_size, active_tab == Tab::Players)) {
+            active_tab = Tab::Players;
+        }
+        if (SidebarButton(ICON_MD_MONITOR " HUD", sidebar_button_size, active_tab == Tab::Hud)) {
+            active_tab = Tab::Hud;
+        }
+        if (SidebarButton(
+                ICON_MD_ERROR_OUTLINE " Unsafe", sidebar_button_size, active_tab == Tab::Unsafe)) {
+            active_tab = Tab::Unsafe;
+        }
         ImGui::PopStyleVar(2);
 
         ImGui::EndChild();
@@ -325,17 +338,16 @@ void Gui() {
 
         // tabs
         config_lock.lock();
-        ImGui::BeginTabBar("tabs");
 
-        if (ImGui::BeginTabItem("Aimbot")) {
-            ImGui::SetCursorPos({sidebar_width + spacing, 72.0f});
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::SetNextWindowSizeConstraints(
-                {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
+        ImGui::SetCursorPos({sidebar_width + spacing, 72.0f});
+        const ImVec2 available = ImGui::GetContentRegionAvail();
+        ImGui::SetNextWindowSizeConstraints(
+            {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
 
-            const ImVec2 col_size = {(available.x - spacing) / 2, available.y};
-            const ImVec2 current_pos = ImGui::GetCursorPos();
-            ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
+        const ImVec2 col_size = {(available.x - spacing) / 2, available.y};
+        const ImVec2 current_pos = ImGui::GetCursorPos();
+        ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
+        if (active_tab == Tab::Aimbot) {
             ImGui::BeginChild(
                 "Aimbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -360,18 +372,19 @@ void Gui() {
             ImGui::DragInt("Start Bullet", &config.aimbot.start_bullet, 0.05f, 0, 10);
 
             ImGui::Checkbox("Multibone", &config.aimbot.multibone);
-            ImGui::SameLine();
-            ImGui::Checkbox("FOV Circle", &config.aimbot.fov_circle);
 
             ImGui::Checkbox("Visibility Check", &config.aimbot.visibility_check);
             ImGui::SameLine();
             ImGui::Checkbox("Flash Check", &config.aimbot.flash_check);
 
-            ImGui::SliderFloat(
-                "FOV", &config.aimbot.fov, 0.1f, 360.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
+            ImGui::DragFloat(
+                "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f",
+                ImGuiSliderFlags_Logarithmic);
 
             ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
-            ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
+            if (!config.aimbot.aim_lock) {
+                ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
+            }
 
             ImGui::Checkbox("RCS", &config.aimbot.rcs);
 
@@ -418,13 +431,21 @@ void Gui() {
             }
 
             ImGui::EndChild();
+        } else if (active_tab == Tab::Players) {
+            ImGui::BeginChild(
+                "Preview", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-            ImGui::EndTabItem();
-        }
+            Title("Preview");
 
-        if (ImGui::BeginTabItem("Visuals")) {
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_visuals", available);
+            ImGui::EndChild();
+            ImGui::SameLine(0, spacing);
+
+            ImGui::BeginChild(
+                "Players", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            Title("Players");
 
             ImGui::Checkbox("Enable", &config.visuals.enabled);
 
@@ -444,21 +465,18 @@ void Gui() {
             }
             ImGui::PopID();
 
-            ImGui::Text("Draw Skeleton");
-            ImGui::SameLine();
-            ImGui::PushID("draw_skeleton");
-            if (ImGui::RadioButton("None", config.visuals.draw_skeleton == DrawStyle::None)) {
-                config.visuals.draw_skeleton = DrawStyle::None;
+            if (ImGui::BeginCombo("Skeleton", draw_style_names.at(config.visuals.draw_skeleton))) {
+                for (const auto &[style, name] : draw_style_names) {
+                    const bool is_selected = style == config.visuals.draw_skeleton;
+                    if (ImGui::Selectable(name, is_selected)) {
+                        config.visuals.draw_skeleton = style;
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
             }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Color", config.visuals.draw_skeleton == DrawStyle::Color)) {
-                config.visuals.draw_skeleton = DrawStyle::Color;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Health", config.visuals.draw_skeleton == DrawStyle::Health)) {
-                config.visuals.draw_skeleton = DrawStyle::Health;
-            }
-            ImGui::PopID();
 
             ImGui::Checkbox("Health Bar", &config.visuals.draw_health);
             ImGui::SameLine();
@@ -485,25 +503,50 @@ void Gui() {
             ImGui::Checkbox("Debug Overlay", &config.visuals.debug_window);
 
             ImGui::EndChild();
-            ImGui::EndTabItem();
-        }
+        } else if (active_tab == Tab::Hud) {
+            ImGui::BeginChild(
+                "Preview", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        if (ImGui::BeginTabItem("Unsafe")) {
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_unsafe", available);
+            Title("HUD");
 
-            ImGui::Checkbox("No Flash", &config.misc.no_flash);
-            ImGui::DragFloat(
-                "Max Flash Alpha", &config.misc.max_flash_alpha, 0.2f, 0.0f, 255.0f, "%.0f");
-
-            ImGui::Checkbox("FOV Changer", &config.misc.fov_changer);
-            ImGui::DragInt("Desired FOV", &config.misc.desired_fov, 0.2f, 1, 179);
+            ImGui::Checkbox("FOV Circle", &config.aimbot.fov_circle);
 
             ImGui::EndChild();
-            ImGui::EndTabItem();
+            ImGui::SameLine(0, spacing);
+
+            ImGui::BeginChild(
+                "Players", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            Title("Players");
+
+            ImGui::EndChild();
+        } else if (active_tab == Tab::Unsafe) {
+            ImGui::BeginChild(
+                "Unsafe", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            Title("Unsafe");
+
+            ImGui::Checkbox("No Flash", &config.misc.no_flash);
+            if (config.misc.no_flash) {
+                ImGui::DragFloat(
+                    "Max Flash Alpha", &config.misc.max_flash_alpha, 0.2f, 0.0f, 255.0f, "%.0f");
+            }
+
+            ImGui::Checkbox("FOV Changer", &config.misc.fov_changer);
+            if (config.misc.fov_changer) {
+                ImGui::DragInt("Desired FOV", &config.misc.desired_fov, 0.2f, 1, 179);
+                if (ImGui::Button("Reset")) {
+                    config.misc.desired_fov = DEFAULT_FOV;
+                }
+            }
+
+            ImGui::EndChild();
         }
 
-        if (ImGui::BeginTabItem("Colors")) {
+        if (false) {
             const ImVec2 available = ImGui::GetContentRegionAvail();
             ImGui::BeginChild("tab_items_colors", available);
 
@@ -518,10 +561,9 @@ void Gui() {
             ImGui::ColorEdit3("", &config.visuals.crosshair_color.x, ImGuiColorEditFlags_NoInputs);
 
             ImGui::EndChild();
-            ImGui::EndTabItem();
         }
 
-        if (ImGui::BeginTabItem("Misc")) {
+        if (false) {
             const ImVec2 available = ImGui::GetContentRegionAvail();
             ImGui::BeginChild("tab_items_misc", available);
 
@@ -599,10 +641,7 @@ void Gui() {
             ImGui::ShowFontAtlas(gui_io.Fonts);
 
             ImGui::EndChild();
-            ImGui::EndTabItem();
         }
-
-        ImGui::EndTabBar();
 
         ImDrawList *gui_draw_list = ImGui::GetForegroundDrawList();
         std::string gui_fps = "FPS: " + std::to_string(static_cast<i32>(gui_io.Framerate));
@@ -613,10 +652,7 @@ void Gui() {
 
         const ImVec2 version_text_size = ImGui::CalcTextSize(VERSION);
         gui_draw_list->AddText(
-            ImVec2 {
-                gui_window_size.x - version_text_size.x - 4.0f,
-                gui_window_size.y - version_text_size.y - 4.0f},
-            0xFFFFFFFF, VERSION);
+            ImVec2 {24.0f, gui_window_size.y - version_text_size.y - 20.0f}, 0xFFFFFFFF, VERSION);
 
         ImGui::End();
 

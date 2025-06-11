@@ -63,10 +63,10 @@ void Style() {
     style.Colors[ImGuiCol_FrameBgActive] = Colors::HIGHLIGHTER;
     style.Colors[ImGuiCol_TitleBg] = Colors::BACKDROP;
     style.Colors[ImGuiCol_TitleBgActive] = Colors::BACKDROP;
-    style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
-    style.Colors[ImGuiCol_MenuBarBg] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
-    style.Colors[ImGuiCol_ScrollbarBg] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
-    style.Colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+    style.Colors[ImGuiCol_TitleBgCollapsed] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_MenuBarBg] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_ScrollbarBg] = Colors::BACKDROP;
+    style.Colors[ImGuiCol_ScrollbarGrab] = Colors::SUBTEXT;
     style.Colors[ImGuiCol_ScrollbarGrabHovered] = accent_color;
     style.Colors[ImGuiCol_ScrollbarGrabActive] = accent_color;
     style.Colors[ImGuiCol_CheckMark] = accent_color;
@@ -78,7 +78,7 @@ void Style() {
     style.Colors[ImGuiCol_Header] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
     style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
     style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
-    style.Colors[ImGuiCol_Separator] = ImVec4(0.7f, 0.7f, 0.7f, 1.0f);
+    style.Colors[ImGuiCol_Separator] = Colors::SUBTEXT;
     style.Colors[ImGuiCol_SeparatorHovered] = accent_color;
     style.Colors[ImGuiCol_SeparatorActive] = accent_color;
     style.Colors[ImGuiCol_ResizeGrip] = accent_color;

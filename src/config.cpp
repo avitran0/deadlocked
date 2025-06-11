@@ -1,5 +1,10 @@
 #include "config.hpp"
 
+const char *DrawStyleName(DrawStyle style) {
+    constexpr const char *names[] = {"None", "Color", "Health"};
+    return names[static_cast<i32>(style)];
+}
+
 toml::array imvec4_to_array(const ImVec4 &vec) {
     toml::array arr;
     arr.push_back(vec.x);
