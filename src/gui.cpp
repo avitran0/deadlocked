@@ -19,8 +19,11 @@
 #include "colors.hpp"
 #include "config.hpp"
 #include "cs2/cs2.hpp"
-#include "font.hpp"
+#include "fonts/fira_sans_regular.hpp"
+#include "fonts/icons.hpp"
+#include "fonts/material_icons.hpp"
 #include "globals.hpp"
+#include "imgui_internal.h"
 #include "math.hpp"
 #include "mouse.hpp"
 #include "style.hpp"
@@ -28,7 +31,10 @@
 enum class Tab {
     Aimbot,
     Players,
+    Hud,
 };
+
+Tab active_tab = Tab::Aimbot;
 
 ImU32 HealthColor(const i32 health) {
     // smooth gradient from 100 (green) over 50 (yellow) to 0 (red)
@@ -77,6 +83,26 @@ void PushButtonStyle(const ImVec4 color) {
 }
 
 void PopButtonStyle() { ImGui::PopStyleColor(4); }
+
+void Title(const char *title) {
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::SUBTEXT);
+    ImGui::PushStyleColor(ImGuiCol_Separator, Colors::SUBTEXT);
+    ImGui::Text("%s", title);
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal, 2.0f);
+    ImGui::PopStyleColor(2);
+}
+
+bool SidebarButton(const char *text, const ImVec2 size, const bool active) {
+    if (active) {
+        ImGui::PushStyleColor(ImGuiCol_Button, Colors::HIGHLIGHT);
+        ImGui::PushStyleColor(ImGuiCol_Text, GetAccentColor());
+    }
+    bool pressed = ImGui::Button(text, size);
+    if (active) {
+        ImGui::PopStyleColor(2);
+    }
+    return pressed;
+}
 
 void Gui() {
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
@@ -209,9 +235,18 @@ void Gui() {
     SetScale(scale);
     SetAccentColor(config.accent_color);
 
+    ImFontConfig font_config;
+    font_config.MergeMode = true;
+    font_config.PixelSnapH = true;
+    font_config.GlyphOffset.y = 3.0f;
+    constexpr ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
+
     ImGuiIO &gui_io = ImGui::GetIO();
     gui_io.IniFilename = nullptr;
-    gui_io.Fonts->AddFontFromMemoryTTF(font, font_len, 20.0f * scale);
+    gui_io.Fonts->AddFontFromMemoryTTF(FiraSansRegular_ttf, FiraSansRegular_ttf_len, 20.0f * scale);
+    gui_io.Fonts->AddFontFromMemoryTTF(
+        MaterialIcons_otf, MaterialIcons_otf_len, 16.0f * scale, &font_config, icon_ranges);
+    gui_io.Fonts->Build();
 
     ImGui_ImplSDL3_InitForOpenGL(gui_window, gui_gl);
     ImGui_ImplOpenGL3_Init("#version 130");
@@ -220,7 +255,11 @@ void Gui() {
 
     ImGuiIO &overlay_io = ImGui::GetIO();
     overlay_io.IniFilename = nullptr;
-    overlay_io.Fonts->AddFontFromMemoryTTF(font, font_len, 20.0f * scale);
+    overlay_io.Fonts->AddFontFromMemoryTTF(
+        FiraSansRegular_ttf, FiraSansRegular_ttf_len, 20.0f * scale);
+    overlay_io.Fonts->AddFontFromMemoryTTF(
+        MaterialIcons_otf, MaterialIcons_otf_len, 16.0f * scale, &font_config, icon_ranges);
+    overlay_io.Fonts->Build();
 
     ImGui_ImplSDL3_InitForOpenGL(overlay, overlay_gl);
     ImGui_ImplOpenGL3_Init("#version 130");
@@ -261,22 +300,47 @@ void Gui() {
             ImVec2 {static_cast<f32>(gui_vp_size.x), static_cast<f32>(gui_vp_size.y)});
         ImGui::SetWindowPos(ImVec2 {0.0f, 0.0f});
 
+        // sidebar
+        constexpr f32 sidebar_width = 250.0f;
+        constexpr f32 sidebar_button_height = 64.0f;
+        constexpr ImVec2 sidebar_button_size = {sidebar_width, sidebar_button_height};
+        const f32 spacing = ImGui::GetStyle().ItemSpacing.x * 2.0f;
+        ImGui::BeginChild(
+            "Sidebar", {sidebar_width, static_cast<f32>(gui_vp_size.y - 24)}, 0,
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        ImGui::SetCursorPos({16.0f, 12.0f});
+        ImGui::Text(ICON_MD_CYCLONE " deadlocked");
+        ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal, 2.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.1f, 0.5f});
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+        if (SidebarButton(ICON_MD_MOUSE " Aimbot", sidebar_button_size, active_tab == Tab::Aimbot)) active_tab = Tab::Aimbot;
+        if (SidebarButton(ICON_MD_GROUP " Players", sidebar_button_size, active_tab == Tab::Players)) active_tab = Tab::Players;
+        if (SidebarButton(ICON_MD_MONITOR " HUD", sidebar_button_size, active_tab == Tab::Hud)) active_tab = Tab::Hud;
+        ImGui::PopStyleVar(2);
+
+        ImGui::EndChild();
+
+        ImGui::SetCursorPos({sidebar_width + spacing * 2.0f, 12.0f});
+
         // tabs
         config_lock.lock();
         ImGui::BeginTabBar("tabs");
 
         if (ImGui::BeginTabItem("Aimbot")) {
+            ImGui::SetCursorPos({sidebar_width + spacing, 72.0f});
             const ImVec2 available = ImGui::GetContentRegionAvail();
             ImGui::SetNextWindowSizeConstraints(
-                {0.0f, 0.0f}, {available.x / 2.0f, available.y - 20.0f});
-            const f32 spacing = ImGui::GetStyle().ItemSpacing.x * 3.0f;
+                {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
+
             const ImVec2 col_size = {(available.x - spacing) / 2, available.y};
+            const ImVec2 current_pos = ImGui::GetCursorPos();
+            ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
             ImGui::BeginChild(
                 "Aimbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-            ImGui::Text("Aimbot");
-            ImGui::Separator();
+            Title("Aimbot");
 
             ImGui::Checkbox("Enable", &config.aimbot.enabled);
 
@@ -314,19 +378,13 @@ void Gui() {
             ImGui::EndChild();
 
             ImGui::SameLine(0, spacing);
+            ImGui::SetNextWindowSizeConstraints(
+                {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
             ImGui::BeginChild(
-                "aimbot2", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                "Triggerbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-            ImGui::Text("aimbot2");
-            ImGui::Separator();
-            ImGui::EndChild();
 
-            ImGui::EndTabItem();
-        }
-
-        if (ImGui::BeginTabItem("Triggerbot")) {
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_triggerbot", available);
+            Title("Triggerbot");
 
             ImGui::Checkbox("Enable", &config.triggerbot.enabled);
 
@@ -343,9 +401,6 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
-            // New option: Toggle Mode (instead of hold)
-            ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
-
             ImGui::DragIntRange2(
                 "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.2f, 0, 1000,
                 "%d", nullptr, ImGuiSliderFlags_AlwaysClamp);
@@ -355,7 +410,15 @@ void Gui() {
             ImGui::Checkbox("Scope Check", &config.triggerbot.scope_check);
             ImGui::Checkbox("Head Only", &config.triggerbot.head_only);
 
+            ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip(
+                    "choose whether to hold the triggerbot button\nor whether it should toggle on "
+                    "and off");
+            }
+
             ImGui::EndChild();
+
             ImGui::EndTabItem();
         }
 
@@ -532,6 +595,8 @@ void Gui() {
                 config.accent_color = Colors::PURPLE;
             }
             PopButtonStyle();
+
+            ImGui::ShowFontAtlas(gui_io.Fonts);
 
             ImGui::EndChild();
             ImGui::EndTabItem();

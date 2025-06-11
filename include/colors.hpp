@@ -6,7 +6,8 @@ namespace Colors {
     constexpr ImVec4 BACKDROP {0.094f, 0.094f, 0.125f, 1.0f};
     constexpr ImVec4 BASE {0.118f, 0.118f, 0.157f, 1.0f};
     constexpr ImVec4 HIGHLIGHT {0.196f, 0.196f, 0.275f, 1.0f};
-    constexpr ImVec4 SUBTEXT {0.706f, 0.706f, 0.706f, 1.0f};
+    constexpr ImVec4 HIGHLIGHTER {0.28f, 0.28f, 0.37f, 1.0f};
+    constexpr ImVec4 SUBTEXT {0.5f, 0.5f, 0.5f, 1.0f};
     constexpr ImVec4 TEXT {1.0f, 1.0f, 1.0f, 1.0f};
 
     constexpr ImVec4 RED {1.0f, 0.4f, 0.4f, 1.0f};

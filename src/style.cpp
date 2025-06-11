@@ -6,6 +6,8 @@
 
 ImVec4 accent_color = Colors::BLUE;
 
+ImVec4 &GetAccentColor() { return accent_color; }
+
 void SetAccentColor(const ImVec4 &color) {
     accent_color = color;
     Style();
@@ -29,7 +31,7 @@ void Style() {
     style.FramePadding = ImVec2(4.0f, 3.0f);
     style.FrameRounding = 8.0f;
     style.FrameBorderSize = 0.0f;
-    style.ItemSpacing = ImVec2(8.0f, 5.0f);
+    style.ItemSpacing = ImVec2(8.0f, 8.0f);
     style.ItemInnerSpacing = ImVec2(5.0f, 5.0f);
     style.CellPadding = ImVec2(4.0f, 2.0f);
     style.IndentSpacing = 20.0f;
@@ -56,9 +58,9 @@ void Style() {
     style.Colors[ImGuiCol_PopupBg] = Colors::BASE;
     style.Colors[ImGuiCol_Border] = Colors::SUBTEXT;
     style.Colors[ImGuiCol_BorderShadow] = Colors::TRANSPARENT;
-    style.Colors[ImGuiCol_FrameBg] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
-    style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
-    style.Colors[ImGuiCol_FrameBgActive] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
+    style.Colors[ImGuiCol_FrameBg] = Colors::HIGHLIGHT;
+    style.Colors[ImGuiCol_FrameBgHovered] = Colors::HIGHLIGHTER;
+    style.Colors[ImGuiCol_FrameBgActive] = Colors::HIGHLIGHTER;
     style.Colors[ImGuiCol_TitleBg] = Colors::BACKDROP;
     style.Colors[ImGuiCol_TitleBgActive] = Colors::BACKDROP;
     style.Colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.1f, 0.1f, 0.13f, 1.0f);
@@ -72,7 +74,7 @@ void Style() {
     style.Colors[ImGuiCol_SliderGrabActive] = accent_color;
     style.Colors[ImGuiCol_Button] = Colors::TRANSPARENT;
     style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
-    style.Colors[ImGuiCol_ButtonActive] = accent_color;
+    style.Colors[ImGuiCol_ButtonActive] = Colors::HIGHLIGHTER;
     style.Colors[ImGuiCol_Header] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
     style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
     style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
