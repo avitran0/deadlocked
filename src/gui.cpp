@@ -33,6 +33,7 @@ enum class Tab {
     Players,
     Hud,
     Unsafe,
+    Misc,
 };
 
 Tab active_tab = Tab::Aimbot;
@@ -85,6 +86,15 @@ void PushButtonStyle(const ImVec4 color) {
 
 void PopButtonStyle() { ImGui::PopStyleColor(4); }
 
+void ColorButton(const char *name, const ImVec4 color) {
+    PushButtonStyle(color);
+    if (ImGui::Button(name)) {
+        SetAccentColor(color);
+        config.accent_color = color;
+    }
+    PopButtonStyle();
+}
+
 void Title(const char *title) {
     ImGui::PushStyleColor(ImGuiCol_Text, Colors::SUBTEXT);
     ImGui::PushStyleColor(ImGuiCol_Separator, Colors::SUBTEXT);
@@ -94,6 +104,7 @@ void Title(const char *title) {
 }
 
 bool SidebarButton(const char *text, const ImVec2 size, const bool active) {
+    ImGui::PushStyleColor(ImGuiCol_Button, Colors::TRANSPARENT);
     if (active) {
         ImGui::PushStyleColor(ImGuiCol_Button, Colors::HIGHLIGHT);
         ImGui::PushStyleColor(ImGuiCol_Text, GetAccentColor());
@@ -102,8 +113,11 @@ bool SidebarButton(const char *text, const ImVec2 size, const bool active) {
     if (active) {
         ImGui::PopStyleColor(2);
     }
+    ImGui::PopStyleColor();
     return pressed;
 }
+
+void Spacer() { ImGui::Dummy({1.0f, 8.0f}); }
 
 void Gui() {
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
@@ -295,7 +309,8 @@ void Gui() {
         ImGui::PushStyleColor(ImGuiCol_WindowBg, Colors::BASE);
         ImGui::Begin(
             "deadlocked", nullptr,
-            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove);
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove |
+                ImGuiWindowFlags_NoScrollbar);
         ImGui::PopStyleColor();
         ImGui::SetWindowSize(
             ImVec2 {static_cast<f32>(gui_vp_size.x), static_cast<f32>(gui_vp_size.y)});
@@ -330,21 +345,31 @@ void Gui() {
                 ICON_MD_ERROR_OUTLINE " Unsafe", sidebar_button_size, active_tab == Tab::Unsafe)) {
             active_tab = Tab::Unsafe;
         }
+        if (SidebarButton(ICON_MD_ERROR "Misc", sidebar_button_size, active_tab == Tab::Misc)) {
+            active_tab = Tab::Misc;
+        }
         ImGui::PopStyleVar(2);
 
         ImGui::EndChild();
 
-        ImGui::SetCursorPos({sidebar_width + spacing * 2.0f, 12.0f});
+        // top bar
+        constexpr f32 top_bar_height = 80.0f;
+        ImGui::SetCursorPos({sidebar_width + spacing + 12.0f, 12.0f});
+        const ImVec2 available_top = ImGui::GetContentRegionAvail();
+
+        ImGui::BeginChild(
+            "TopBar", {available_top.x - 8.0f, top_bar_height},
+            ImGuiChildFlags_AlwaysUseWindowPadding,
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+        ImGui::EndChild();
 
         // tabs
         config_lock.lock();
 
-        ImGui::SetCursorPos({sidebar_width + spacing, 72.0f});
+        ImGui::SetCursorPos({sidebar_width + spacing, top_bar_height + 12.0f});
         const ImVec2 available = ImGui::GetContentRegionAvail();
-        ImGui::SetNextWindowSizeConstraints(
-            {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
 
-        const ImVec2 col_size = {(available.x - spacing) / 2, available.y};
+        const ImVec2 col_size = {(available.x - spacing * 2.0f) / 2, available.y - 16.0f};
         const ImVec2 current_pos = ImGui::GetCursorPos();
         ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
         if (active_tab == Tab::Aimbot) {
@@ -370,29 +395,35 @@ void Gui() {
             }
 
             ImGui::DragInt("Start Bullet", &config.aimbot.start_bullet, 0.05f, 0, 10);
-
-            ImGui::Checkbox("Multibone", &config.aimbot.multibone);
-
-            ImGui::Checkbox("Visibility Check", &config.aimbot.visibility_check);
-            ImGui::SameLine();
-            ImGui::Checkbox("Flash Check", &config.aimbot.flash_check);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip(
+                    "Which bullet to start aiming on, set to 0 to always be active.\nThis does not "
+                    "override the hotkey.");
+            }
 
             ImGui::DragFloat(
                 "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f",
                 ImGuiSliderFlags_Logarithmic);
+
+            ImGui::Checkbox("Multibone", &config.aimbot.multibone);
 
             ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
             if (!config.aimbot.aim_lock) {
                 ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
             }
 
-            ImGui::Checkbox("RCS", &config.aimbot.rcs);
+            Spacer();
+            Title("Checks");
+            ImGui::Checkbox("Visibility Check", &config.aimbot.visibility_check);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip(
+                    "This is currently slow, as it\nuses the same data as the in-game-radar.");
+            }
+            ImGui::Checkbox("Flash Check", &config.aimbot.flash_check);
 
             ImGui::EndChild();
 
             ImGui::SameLine(0, spacing);
-            ImGui::SetNextWindowSizeConstraints(
-                {0.0f, 0.0f}, {available.x / 2.0f - 16.0f, available.y - 16.0f});
             ImGui::BeginChild(
                 "Triggerbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -418,17 +449,28 @@ void Gui() {
                 "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.2f, 0, 1000,
                 "%d", nullptr, ImGuiSliderFlags_AlwaysClamp);
 
+            ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip(
+                    "Choose whether to hold the Triggerbot button\nor whether it should toggle on "
+                    "and off.");
+            }
+
+            Spacer();
+            Title("Checks");
+
             ImGui::Checkbox("Visibility Check", &config.triggerbot.visibility_check);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip(
+                    "This is currently slow, as it\nuses the same data as the in-game-radar.");
+            }
             ImGui::Checkbox("Flash Check", &config.triggerbot.flash_check);
             ImGui::Checkbox("Scope Check", &config.triggerbot.scope_check);
             ImGui::Checkbox("Head Only", &config.triggerbot.head_only);
 
-            ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetItemTooltip(
-                    "choose whether to hold the triggerbot button\nor whether it should toggle on "
-                    "and off");
-            }
+            Spacer();
+            Title("Recoil");
+            ImGui::Checkbox("RCS", &config.aimbot.rcs);
 
             ImGui::EndChild();
         } else if (active_tab == Tab::Players) {
@@ -449,21 +491,18 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.visuals.enabled);
 
-            ImGui::Text("Draw Box");
-            ImGui::SameLine();
-            ImGui::PushID("draw_box");
-            if (ImGui::RadioButton("None", config.visuals.draw_box == DrawStyle::None)) {
-                config.visuals.draw_box = DrawStyle::None;
+            if (ImGui::BeginCombo("Box", draw_style_names.at(config.visuals.draw_box))) {
+                for (const auto &[style, name] : draw_style_names) {
+                    const bool is_selected = style == config.visuals.draw_box;
+                    if (ImGui::Selectable(name, is_selected)) {
+                        config.visuals.draw_box = style;
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
             }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Color", config.visuals.draw_box == DrawStyle::Color)) {
-                config.visuals.draw_box = DrawStyle::Color;
-            }
-            ImGui::SameLine();
-            if (ImGui::RadioButton("Health", config.visuals.draw_box == DrawStyle::Health)) {
-                config.visuals.draw_box = DrawStyle::Health;
-            }
-            ImGui::PopID();
 
             if (ImGui::BeginCombo("Skeleton", draw_style_names.at(config.visuals.draw_skeleton))) {
                 for (const auto &[style, name] : draw_style_names) {
@@ -478,48 +517,72 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
+            Spacer();
+            Title("Info");
+
             ImGui::Checkbox("Health Bar", &config.visuals.draw_health);
-            ImGui::SameLine();
             ImGui::Checkbox("Armor Bar", &config.visuals.draw_armor);
 
             ImGui::Checkbox("Player Name", &config.visuals.draw_name);
-            ImGui::SameLine();
             ImGui::Checkbox("Weapon Name", &config.visuals.draw_weapon);
 
-            ImGui::Checkbox("Player Tags (helmet, defuser, bomb)", &config.visuals.draw_tags);
+            ImGui::Checkbox("Player Tags", &config.visuals.draw_tags);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetItemTooltip("Shows whether the player has\nhelmet, defuser, or bomb.");
+            }
 
-            ImGui::Checkbox("Dropped Weapons", &config.visuals.dropped_weapons);
-            ImGui::SameLine();
-            ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
+            Spacer();
+            Title("Colors");
 
-            ImGui::Checkbox("Spectator List", &config.visuals.spectator_list);
-
-            ImGui::DragFloat("Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
-
-            ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
-
-            ImGui::DragInt("Overlay FPS", &config.visuals.overlay_fps, 0.2f, 60, 240);
-
-            ImGui::Checkbox("Debug Overlay", &config.visuals.debug_window);
+            if (config.visuals.draw_box == DrawStyle::Color) {
+                ImGui::ColorEdit3(
+                    "Box Color", &config.visuals.box_color.x, ImGuiColorEditFlags_NoInputs);
+            }
+            if (config.visuals.draw_skeleton == DrawStyle::Color) {
+                ImGui::ColorEdit3(
+                    "Skeleton Color", &config.visuals.skeleton_color.x,
+                    ImGuiColorEditFlags_NoInputs);
+            }
 
             ImGui::EndChild();
         } else if (active_tab == Tab::Hud) {
             ImGui::BeginChild(
-                "Preview", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                "HUD", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
             Title("HUD");
 
             ImGui::Checkbox("FOV Circle", &config.aimbot.fov_circle);
+            ImGui::Checkbox("Spectator List", &config.visuals.spectator_list);
+
+            ImGui::Checkbox("Show Dropped Weapons", &config.visuals.dropped_weapons);
+            ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
+
+            Spacer();
+            Title("Colors");
+
+            ImGui::ColorEdit3(
+                "Text Color", &config.visuals.text_color.x, ImGuiColorEditFlags_NoInputs);
+            if (config.visuals.sniper_crosshair) {
+                ImGui::ColorEdit3(
+                    "Crosshair Color", &config.visuals.crosshair_color.x,
+                    ImGuiColorEditFlags_NoInputs);
+            }
 
             ImGui::EndChild();
             ImGui::SameLine(0, spacing);
 
             ImGui::BeginChild(
-                "Players", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                "Advanced", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-            Title("Players");
+            Title("Advanced");
+
+            ImGui::DragFloat("Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
+            ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
+
+            ImGui::DragInt("Overlay FPS", &config.visuals.overlay_fps, 0.2f, 60, 240);
+            ImGui::Checkbox("Debug Overlay", &config.visuals.debug_window);
 
             ImGui::EndChild();
         } else if (active_tab == Tab::Unsafe) {
@@ -538,121 +601,53 @@ void Gui() {
             ImGui::Checkbox("FOV Changer", &config.misc.fov_changer);
             if (config.misc.fov_changer) {
                 ImGui::DragInt("Desired FOV", &config.misc.desired_fov, 0.2f, 1, 179);
-                if (ImGui::Button("Reset")) {
+                if (ImGui::Button("Reset FOV")) {
                     config.misc.desired_fov = DEFAULT_FOV;
                 }
             }
 
             ImGui::EndChild();
-        }
+        } else if (active_tab == Tab::Misc) {
+            ImGui::BeginChild(
+                "Misc", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        if (false) {
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_colors", available);
-
-            ImGui::ColorEdit3("Text", &config.visuals.text_color.x);
-
-            ImGui::ColorEdit3("Box", &config.visuals.box_color.x);
-
-            ImGui::ColorEdit3("Skeleton", &config.visuals.skeleton_color.x);
-
-            ImGui::ColorEdit3("Armor", &config.visuals.armor_color.x);
-
-            ImGui::ColorEdit3("", &config.visuals.crosshair_color.x, ImGuiColorEditFlags_NoInputs);
-
-            ImGui::EndChild();
-        }
-
-        if (false) {
-            const ImVec2 available = ImGui::GetContentRegionAvail();
-            ImGui::BeginChild("tab_items_misc", available);
+            Title("Misc");
 
             if (ImGui::Button("Reset Config")) {
                 ResetConfig();
             }
-            ImGui::SameLine();
+
             if (ImGui::Button("Report Issue")) {
                 std::system("xdg-open https://github.com/avitran0/deadlocked");
             }
 
             ImGui::Text("Accent Color");
 
-            PushButtonStyle(Colors::RED);
-            if (ImGui::Button("Red")) {
-                SetAccentColor(Colors::RED);
-                config.accent_color = Colors::RED;
-            }
-            PopButtonStyle();
-
+            ColorButton("Red", Colors::RED);
             ImGui::SameLine();
-
-            PushButtonStyle(Colors::ORANGE);
-            if (ImGui::Button("Orange")) {
-                SetAccentColor(Colors::ORANGE);
-                config.accent_color = Colors::ORANGE;
-            }
-            PopButtonStyle();
-
+            ColorButton("Orange", Colors::ORANGE);
             ImGui::SameLine();
+            ColorButton("Yellow", Colors::YELLOW);
 
-            PushButtonStyle(Colors::YELLOW);
-            if (ImGui::Button("Yellow")) {
-                SetAccentColor(Colors::YELLOW);
-                config.accent_color = Colors::YELLOW;
-            }
-            PopButtonStyle();
-
+            ColorButton("Green", Colors::GREEN);
             ImGui::SameLine();
-
-            PushButtonStyle(Colors::GREEN);
-            if (ImGui::Button("Green")) {
-                SetAccentColor(Colors::GREEN);
-                config.accent_color = Colors::GREEN;
-            }
-            PopButtonStyle();
-
+            ColorButton("Cyan", Colors::CYAN);
             ImGui::SameLine();
-
-            PushButtonStyle(Colors::CYAN);
-            if (ImGui::Button("Cyan")) {
-                SetAccentColor(Colors::CYAN);
-                config.accent_color = Colors::CYAN;
-            }
-            PopButtonStyle();
-
+            ColorButton("Blue", Colors::BLUE);
             ImGui::SameLine();
-
-            PushButtonStyle(Colors::BLUE);
-            if (ImGui::Button("Blue")) {
-                SetAccentColor(Colors::BLUE);
-                config.accent_color = Colors::BLUE;
-            }
-            PopButtonStyle();
-
-            ImGui::SameLine();
-
-            PushButtonStyle(Colors::PURPLE);
-            if (ImGui::Button("Purple")) {
-                SetAccentColor(Colors::PURPLE);
-                config.accent_color = Colors::PURPLE;
-            }
-            PopButtonStyle();
-
-            ImGui::ShowFontAtlas(gui_io.Fonts);
+            ColorButton("Purple", Colors::PURPLE);
 
             ImGui::EndChild();
         }
 
         ImDrawList *gui_draw_list = ImGui::GetForegroundDrawList();
-        std::string gui_fps = "FPS: " + std::to_string(static_cast<i32>(gui_io.Framerate));
+        std::string gui_fps =
+            VERSION " | FPS: " + std::to_string(static_cast<i32>(gui_io.Framerate));
         const ImVec2 text_size = ImGui::CalcTextSize(gui_fps.c_str());
         const ImVec2 gui_window_size = ImGui::GetWindowSize();
         gui_draw_list->AddText(
-            ImVec2 {gui_window_size.x - text_size.x - 4.0f, 12.0f}, 0xFFFFFFFF, gui_fps.c_str());
-
-        const ImVec2 version_text_size = ImGui::CalcTextSize(VERSION);
-        gui_draw_list->AddText(
-            ImVec2 {24.0f, gui_window_size.y - version_text_size.y - 20.0f}, 0xFFFFFFFF, VERSION);
+            ImVec2 {24.0f, gui_window_size.y - text_size.y - 20.0f}, 0xFFFFFFFF, gui_fps.c_str());
 
         ImGui::End();
 

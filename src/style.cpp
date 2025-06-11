@@ -72,7 +72,7 @@ void Style() {
     style.Colors[ImGuiCol_CheckMark] = accent_color;
     style.Colors[ImGuiCol_SliderGrab] = accent_color;
     style.Colors[ImGuiCol_SliderGrabActive] = accent_color;
-    style.Colors[ImGuiCol_Button] = Colors::TRANSPARENT;
+    style.Colors[ImGuiCol_Button] = Colors::HIGHLIGHT;
     style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.28f, 0.28f, 0.37f, 1.0f);
     style.Colors[ImGuiCol_ButtonActive] = Colors::HIGHLIGHTER;
     style.Colors[ImGuiCol_Header] = ImVec4(0.17f, 0.17f, 0.23f, 1.0f);
