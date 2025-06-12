@@ -349,7 +349,7 @@ void Gui() {
         ImGui::EndChild();
 
         // top bar
-        constexpr f32 top_bar_height = 80.0f;
+        const f32 top_bar_height = 50.0f * scale;
         ImGui::SetCursorPos({sidebar_width + spacing + 12.0f, 12.0f});
         const ImVec2 available_top = ImGui::GetContentRegionAvail();
 
