@@ -170,11 +170,20 @@ void Gui() {
     ImGuiContext *gui_ctx = ImGui::CreateContext();
     ImGuiContext *overlay_ctx = ImGui::CreateContext();
 
-    constexpr i32 width = 720;
-    constexpr i32 height = 420;
+    f32 scale;
+    if (misc_info.gui_scale > 0.0f) {
+        scale = misc_info.gui_scale;
+    } else {
+        const SDL_DisplayID display = SDL_GetPrimaryDisplay();
+        scale = SDL_GetDisplayContentScale(display);
+        logging::Info("detected display scale: {}", scale);
+    }
+
+    constexpr i32 width = 900;
+    constexpr i32 height = 540;
     // gui window
     SDL_Window *gui_window = SDL_CreateWindow(
-        "deadlocked", width, height,
+        "deadlocked", static_cast<i32>(width * scale), static_cast<i32>(height * scale),
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!gui_window) {
         logging::Error("could not create gui window");
@@ -231,19 +240,6 @@ void Gui() {
 
     SDL_ShowWindow(overlay);
     SDL_ShowWindow(gui_window);
-
-    f32 scale;
-    if (misc_info.gui_scale > 0.0f) {
-        scale = misc_info.gui_scale;
-    } else {
-        const SDL_DisplayID display = SDL_GetPrimaryDisplay();
-        scale = SDL_GetDisplayContentScale(display);
-        logging::Info("detected display scale: {}", scale);
-    }
-
-    SDL_SetWindowSize(
-        gui_window, static_cast<i32>(static_cast<f32>(width) * scale),
-        static_cast<i32>(static_cast<f32>(height) * scale));
 
     ImGui::SetCurrentContext(gui_ctx);
     Style();
@@ -317,9 +313,9 @@ void Gui() {
         ImGui::SetWindowPos(ImVec2 {0.0f, 0.0f});
 
         // sidebar
-        constexpr f32 sidebar_width = 250.0f;
-        constexpr f32 sidebar_button_height = 64.0f;
-        constexpr ImVec2 sidebar_button_size = {sidebar_width, sidebar_button_height};
+        const f32 sidebar_width = 150.0f * scale;
+        const f32 sidebar_button_height = 32.0f * scale;
+        const ImVec2 sidebar_button_size = {sidebar_width, sidebar_button_height};
         const f32 spacing = ImGui::GetStyle().ItemSpacing.x * 2.0f;
         ImGui::BeginChild(
             "Sidebar", {sidebar_width, static_cast<f32>(gui_vp_size.y - 24)}, 0,
