@@ -54,6 +54,9 @@ struct TriggerbotConfig {
     i32 delay_min = 100;
     i32 delay_max = 200;
 
+    i32 indicator_x = 20;
+    i32 indicator_y = 20;
+
     bool enabled = false;
     bool visibility_check = true;
     bool flash_check = true;

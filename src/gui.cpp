@@ -444,6 +444,9 @@ void Gui() {
             ImGui::DragIntRange2(
                 "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.2f, 0, 1000,
                 "%d", nullptr, ImGuiSliderFlags_AlwaysClamp);
+              
+            ImGui::DragInt("Indicator X", &config.triggerbot.indicator_x, 0.2f, 0, 3840);
+            ImGui::DragInt("Indicator Y", &config.triggerbot.indicator_y, 0.2f, 0, 3840);
 
             ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
             if (ImGui::IsItemHovered()) {
@@ -921,8 +924,8 @@ void Gui() {
             ImVec2 center {
                 static_cast<f32>(maxX - minX) * 0.5f, static_cast<f32>(maxY - minY) * 0.5f};
             ImVec2 trigger_pos {
-                center.x + static_cast<f32>(maxX - minX) / 64.0f,
-                center.y - static_cast<f32>(maxY - minY) / 64.0f};
+                config.triggerbot.indicator_x,
+                config.triggerbot.indicator_y};
             OutlineText(overlay_draw_list, trigger_pos, 0xFFFFFFFF, "Trigger Enabled");
         }
 
