@@ -125,14 +125,21 @@ void Process::ReadString(const u64 address, std::string &value) {
 #endif
 }
 
-i32 bytes_file = -1;
 std::vector<u8> Process::ReadBytes(const u64 address, const u64 count) const {
-    if (bytes_file < 0) {
-        const auto path = "/proc/" + std::to_string(pid) + "/mem";
-        bytes_file = open(path.c_str(), O_RDONLY);
-    }
     std::vector<u8> buffer(count);
-    pread(bytes_file, buffer.data(), count, static_cast<long>(address));
+    if (kernel) {
+        memory_params params = {.pid = pid, .addr = address, .size = count, .buf = buffer.data()};
+
+        if (ioctl(mem, IOCTL_READ_MEM, &params) < 0) {
+            logging::Warning("could not read bytes");
+            return buffer;
+        }
+    } else {
+        const auto path = "/proc/" + std::to_string(pid) + "/mem";
+        const i32 file = open(path.c_str(), O_RDONLY);
+        pread(file, buffer.data(), count, static_cast<long>(address));
+        close(file);
+    }
     return buffer;
 }
 
