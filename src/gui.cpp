@@ -339,7 +339,7 @@ void Gui() {
                 ICON_MD_ERROR_OUTLINE " Unsafe", sidebar_button_size, active_tab == Tab::Unsafe)) {
             active_tab = Tab::Unsafe;
         }
-        if (SidebarButton(ICON_MD_ERROR "Misc", sidebar_button_size, active_tab == Tab::Misc)) {
+        if (SidebarButton(ICON_MD_APPS " Misc", sidebar_button_size, active_tab == Tab::Misc)) {
             active_tab = Tab::Misc;
         }
         ImGui::PopStyleVar(2);
@@ -551,6 +551,21 @@ void Gui() {
 
             ImGui::Checkbox("Show Dropped Weapons", &config.visuals.dropped_weapons);
             ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
+
+            if (ImGui::BeginCombo(
+                    "Triggerbot Indicator",
+                    position_names.at(config.triggerbot.indicator_position))) {
+                for (const auto &[position, name] : position_names) {
+                    const bool is_selected = position == config.triggerbot.indicator_position;
+                    if (ImGui::Selectable(name, is_selected)) {
+                        config.triggerbot.indicator_position = position;
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
 
             Spacer();
             Title("Colors");
@@ -915,13 +930,31 @@ void Gui() {
             vinfo_lock.unlock();
         }
 
-        if (misc_info.triggerbot_active) {
-            ImVec2 center {
-                static_cast<f32>(maxX - minX) * 0.5f, static_cast<f32>(maxY - minY) * 0.5f};
-            ImVec2 trigger_pos {
-                center.x + static_cast<f32>(maxX - minX) / 64.0f,
-                center.y - static_cast<f32>(maxY - minY) / 64.0f};
-            OutlineText(overlay_draw_list, trigger_pos, 0xFFFFFFFF, "Trigger Enabled");
+        if (misc_info.triggerbot_active && misc_info.in_game) {
+            const ImVec2 text_size = ImGui::CalcTextSize("Trigger Enabled");
+            ImVec2 tb_position {};
+            const f32 offset = 4.0f * scale;
+            switch (config.triggerbot.indicator_position) {
+                case Position::TopLeft:
+                    tb_position = {window_size.x + offset, window_size.y + offset + 20.0f * scale};
+                    break;
+                case Position::TopRight:
+                    tb_position = {
+                        window_size.x + window_size.z - text_size.x - offset,
+                        window_size.y + offset};
+                    break;
+                case Position::BottomLeft:
+                    tb_position = {
+                        window_size.x + offset,
+                        window_size.y + window_size.w - text_size.y - offset};
+                    break;
+                case Position::BottomRight:
+                    tb_position = {
+                        window_size.x + window_size.z - text_size.x - offset,
+                        window_size.y + window_size.w - text_size.y - offset};
+                    break;
+            }
+            OutlineText(overlay_draw_list, tb_position, 0xFFFFFFFF, "Trigger Enabled");
         }
 
         ImGui::End();

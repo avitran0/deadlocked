@@ -17,6 +17,20 @@ constexpr std::chrono::seconds save_interval {1};
 toml::array imvec4_to_array(const ImVec4 &vec);
 ImVec4 array_to_imvec4(const toml::array &arr);
 
+enum class Position : u8 {
+    TopLeft,
+    TopRight,
+    BottomLeft,
+    BottomRight,
+};
+
+const std::map<Position, const char *> position_names = {
+    {Position::TopLeft, "Top Left"},
+    {Position::TopRight, "Top Right"},
+    {Position::BottomLeft, "Bottom Left"},
+    {Position::BottomRight, "Bottom Right"},
+};
+
 enum class DrawStyle : u8 {
     None,
     Color,
@@ -54,6 +68,7 @@ struct TriggerbotConfig {
     i32 delay_min = 100;
     i32 delay_max = 200;
 
+    Position indicator_position = Position::BottomLeft;
     bool enabled = false;
     bool visibility_check = true;
     bool flash_check = true;
