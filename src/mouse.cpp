@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <linux/input-event-codes.h>
 #include <linux/input.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 
 #include <cerrno>
@@ -11,7 +12,11 @@
 #include <mithril/logging.hpp>
 #include <mithril/types.hpp>
 
-i32 mouse = 0;
+#include "process.hpp"
+#include "stealthmem.hpp"
+
+i32 mouse = -1;
+bool kernel = KernelModuleActive();
 
 std::vector<bool> HexToReversedBinary(const char hex_char) {
     int value = 0;
@@ -78,6 +83,15 @@ std::vector<bool> DecodeCapabilities(const std::string &filename) {
 }
 
 void MouseInit() {
+    if (KernelModuleActive()) {
+        mouse = open("/dev/stealthmem", O_RDWR);
+        if (mouse < 0) {
+            logging::Error("could not connect to kernel driver");
+        }
+        logging::Info("using kernel driver mouse input");
+        return;
+    }
+
     for (const auto &entry : std::filesystem::directory_iterator("/dev/input")) {
         if (!entry.is_character_file()) {
             continue;
@@ -135,13 +149,22 @@ void MouseInit() {
 }
 
 void MouseQuit() {
-    if (mouse) {
+    if (mouse >= 0) {
         close(mouse);
     }
 }
 
 void MouseMove(const glm::ivec2 &coords) {
     logging::Debug("mouse move: {}/{}", coords.x, coords.y);
+
+    if (kernel) {
+        mouse_move move = {.x = coords.x, .y = coords.y};
+        if (ioctl(mouse, IOCTL_MOUSE_MOVE, &move) < 0) {
+            logging::Warning("could not move mouse");
+        }
+        return;
+    }
+
     input_event ev {};
 
     // x
@@ -167,6 +190,15 @@ void MouseMove(const glm::ivec2 &coords) {
 
 void MouseLeftPress() {
     logging::Debug("pressed left mouse button");
+
+    if (kernel) {
+        key_press key = {.key = BTN_LEFT, .press = true};
+        if (ioctl(mouse, IOCTL_KEY_PRESS, &key) < 0) {
+            logging::Warning("could not press left mouse button");
+        }
+        return;
+    }
+
     input_event ev {};
 
     // y
@@ -186,6 +218,15 @@ void MouseLeftPress() {
 
 void MouseLeftRelease() {
     logging::Debug("released left mouse button");
+
+    if (kernel) {
+        key_press key = {.key = BTN_LEFT, .press = false};
+        if (ioctl(mouse, IOCTL_KEY_PRESS, &key) < 0) {
+            logging::Warning("could not release left mouse button");
+        }
+        return;
+    }
+
     input_event ev {};
 
     // y
@@ -204,6 +245,10 @@ void MouseLeftRelease() {
 }
 
 bool MouseValid() {
+    if (kernel) {
+        return true;
+    }
+
     struct input_event ev {
         .time = {.tv_sec = 0, .tv_usec = 0},
         .type = EV_SYN,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <sys/ioctl.h>
 #include <sys/uio.h>
 #include <unistd.h>
 
@@ -10,30 +11,43 @@
 
 #include "config.hpp"
 #include "globals.hpp"
+#include "mithril/logging.hpp"
+#include "stealthmem.hpp"
+
+bool KernelModuleActive();
 
 class Process {
   public:
     i32 pid = 0;
     i32 mem = -1;
+    bool kernel = KernelModuleActive();
 
     template <typename T>
     T Read(const u64 address) {
-        if (!flags.file_mem) {
-            T value;
+        T value;
+        if (kernel) {
+            memory_params params = {.pid = pid, .addr = address, .size = sizeof(T), .buf = &value};
+            if (ioctl(mem, IOCTL_READ_MEM, &params) < 0) {
+                logging::Warning("could not read bytes");
+            }
+        } else if (!flags.file_mem) {
             const iovec local_iov = {.iov_base = &value, .iov_len = sizeof(T)};
             const iovec remote_iov = {
                 .iov_base = reinterpret_cast<void *>(address), .iov_len = sizeof(T)};
             process_vm_readv(pid, &local_iov, 1, &remote_iov, 1, 0);
-            return value;
+        } else {
+            pread(mem, &value, sizeof(value), address);
         }
-        T value;
-        pread(mem, &value, sizeof(value), address);
         return value;
     }
 
     template <typename T>
     void Write(const u64 address, T value) {
-        if (!flags.file_mem) {
+        if (kernel) {
+            const memory_params params = {
+                .pid = pid, .addr = address, .size = sizeof(T), .buf = &value};
+            ioctl(mem, IOCTL_WRITE_MEM, &params);
+        } else if (!flags.file_mem) {
             const iovec local_iov = {.iov_base = &value, .iov_len = sizeof(T)};
             const iovec remote_iov = {
                 .iov_base = reinterpret_cast<void *>(address), .iov_len = sizeof(T)};

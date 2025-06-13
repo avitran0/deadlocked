@@ -47,15 +47,29 @@ bool ValidatePid(const i32 pid) {
     return access(("/proc/" + std::to_string(pid)).c_str(), F_OK) == 0;
 }
 
+bool KernelModuleActive() { return access("/dev/stealthmem", F_OK) == 0; }
+
 std::optional<Process> OpenProcess(const i32 pid) {
     if (!ValidatePid(pid)) {
         return std::nullopt;
     }
+    if (KernelModuleActive()) {
+        const i32 mem = open("/dev/stealthmem", O_RDWR);
+        if (mem < 0) {
+            logging::Error("could not connect to kernel driver");
+            return std::nullopt;
+        }
+        return Process {.pid = pid, .mem = mem};
+    }
     if (!flags.file_mem) {
         return Process {.pid = pid};
     }
-    return Process {
-        .pid = pid, .mem = open(("/proc/" + std::to_string(pid) + "/mem").c_str(), O_RDWR)};
+    const i32 mem = open(("/proc/" + std::to_string(pid) + "/mem").c_str(), O_RDWR);
+    if (mem < 0) {
+        logging::Error("could not open /proc/{}/mem", pid);
+        return std::nullopt;
+    }
+    return Process {.pid = pid, .mem = mem};
 }
 
 std::string Process::ReadString(const u64 address) {
@@ -111,12 +125,14 @@ void Process::ReadString(const u64 address, std::string &value) {
 #endif
 }
 
+i32 bytes_file = -1;
 std::vector<u8> Process::ReadBytes(const u64 address, const u64 count) const {
-    const auto path = "/proc/" + std::to_string(pid) + "/mem";
-    const i32 file = open(path.c_str(), O_RDONLY);
+    if (bytes_file < 0) {
+        const auto path = "/proc/" + std::to_string(pid) + "/mem";
+        bytes_file = open(path.c_str(), O_RDONLY);
+    }
     std::vector<u8> buffer(count);
-    pread(file, buffer.data(), count, static_cast<long>(address));
-    close(file);
+    pread(bytes_file, buffer.data(), count, static_cast<long>(address));
     return buffer;
 }
 

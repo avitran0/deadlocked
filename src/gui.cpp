@@ -257,7 +257,7 @@ void Gui() {
     gui_io.Fonts->AddFontFromMemoryTTF(FiraSansRegular_ttf, FiraSansRegular_ttf_len, 20.0f * scale);
     gui_io.Fonts->AddFontFromMemoryTTF(
         MaterialIcons_otf, MaterialIcons_otf_len, 16.0f * scale, &font_config, icon_ranges);
-    gui_io.Fonts->Build();
+    // gui_io.Fonts->Build();
 
     ImGui_ImplSDL3_InitForOpenGL(gui_window, gui_gl);
     ImGui_ImplOpenGL3_Init("#version 130");
@@ -270,7 +270,7 @@ void Gui() {
         FiraSansRegular_ttf, FiraSansRegular_ttf_len, 20.0f * scale);
     overlay_io.Fonts->AddFontFromMemoryTTF(
         MaterialIcons_otf, MaterialIcons_otf_len, 16.0f * scale, &font_config, icon_ranges);
-    overlay_io.Fonts->Build();
+    // overlay_io.Fonts->Build();
 
     ImGui_ImplSDL3_InitForOpenGL(overlay, overlay_gl);
     ImGui_ImplOpenGL3_Init("#version 130");
