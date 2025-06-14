@@ -3316,7 +3316,7 @@ TOML_NAMESPACE_START {
     inline namespace literals {
     TOML_NODISCARD
     TOML_ALWAYS_INLINE
-    path operator"" _tpath(const char *str, size_t len) { return path(std::string_view{str, len}); }
+    path operator""_tpath(const char *str, size_t len) { return path(std::string_view{str, len}); }
     }  // namespace literals
 
     TOML_NODISCARD
@@ -8323,7 +8323,7 @@ TOML_NAMESPACE_START {
 
     TOML_NODISCARD
     TOML_ALWAYS_INLINE
-    parse_result operator"" _toml(const char *str, size_t len) {
+    parse_result operator""_toml(const char *str, size_t len) {
         return parse(std::string_view{str, len});
     }
 

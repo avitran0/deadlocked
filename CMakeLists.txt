@@ -35,10 +35,5 @@ target_link_libraries(deadlocked PRIVATE mithril)
 
 # valgrind/callgrind does not work with native, but with skylake it does
 target_compile_options(deadlocked PRIVATE "-march=native")
-if (CMAKE_BUILD_TYPE MATCHES "Debug")
-    target_compile_options(deadlocked PRIVATE "-O1" "-g3" "-Wall" "-Wextra" "-Wconversion"
-    "-Wdouble-promotion" "-Wno-unused-parameter" "-Wno-unused-function"
-    "-Wno-sign-conversion")
-endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS 1)
