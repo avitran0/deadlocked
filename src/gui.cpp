@@ -119,6 +119,28 @@ bool SidebarButton(const char *text, const ImVec2 size, const bool active) {
 
 void Spacer() { ImGui::Dummy({1.0f, 8.0f}); }
 
+struct sizes {
+    f32 scale;
+    f32 spacing;
+    f32 sidebar_width;
+    f32 sidebar_button_height;
+    ImVec2 sidebar_button_size;
+    f32 top_bar_height;
+
+    f32 combo_width;
+    f32 drag_width;
+
+    sizes(f32 scale, f32 spacing)
+        : scale(scale),
+          spacing(spacing),
+          sidebar_width(150.0f * scale),
+          sidebar_button_height(32.0f * scale),
+          sidebar_button_size({sidebar_width, sidebar_button_height}),
+          top_bar_height(50.0f * scale),
+          combo_width(150.0f * scale),
+          drag_width(100.0f * scale) {}
+};
+
 void Gui() {
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
 
@@ -275,6 +297,8 @@ void Gui() {
 
     std::thread cs2(CS2);
 
+    const sizes sizes(scale, ImGui::GetStyle().ItemSpacing.x * 2.0f);
+
     bool should_close = false;
     auto save_timer = std::chrono::steady_clock::now();
     while (!should_close) {
@@ -311,12 +335,8 @@ void Gui() {
         ImGui::SetWindowPos(ImVec2 {0.0f, 0.0f});
 
         // sidebar
-        const f32 sidebar_width = 150.0f * scale;
-        const f32 sidebar_button_height = 32.0f * scale;
-        const ImVec2 sidebar_button_size = {sidebar_width, sidebar_button_height};
-        const f32 spacing = ImGui::GetStyle().ItemSpacing.x * 2.0f;
         ImGui::BeginChild(
-            "Sidebar", {sidebar_width, static_cast<f32>(gui_vp_size.y - 24)}, 0,
+            "Sidebar", {sizes.sidebar_width, static_cast<f32>(gui_vp_size.y - 24)}, 0,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
         ImGui::SetCursorPos({16.0f, 12.0f});
@@ -325,21 +345,24 @@ void Gui() {
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, {0.1f, 0.5f});
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
         if (SidebarButton(
-                ICON_MD_MOUSE " Aimbot", sidebar_button_size, active_tab == Tab::Aimbot)) {
+                ICON_MD_MOUSE " Aimbot", sizes.sidebar_button_size, active_tab == Tab::Aimbot)) {
             active_tab = Tab::Aimbot;
         }
         if (SidebarButton(
-                ICON_MD_GROUP " Players", sidebar_button_size, active_tab == Tab::Players)) {
+                ICON_MD_GROUP " Players", sizes.sidebar_button_size, active_tab == Tab::Players)) {
             active_tab = Tab::Players;
         }
-        if (SidebarButton(ICON_MD_MONITOR " HUD", sidebar_button_size, active_tab == Tab::Hud)) {
+        if (SidebarButton(
+                ICON_MD_MONITOR " HUD", sizes.sidebar_button_size, active_tab == Tab::Hud)) {
             active_tab = Tab::Hud;
         }
         if (SidebarButton(
-                ICON_MD_ERROR_OUTLINE " Unsafe", sidebar_button_size, active_tab == Tab::Unsafe)) {
+                ICON_MD_ERROR_OUTLINE " Unsafe", sizes.sidebar_button_size,
+                active_tab == Tab::Unsafe)) {
             active_tab = Tab::Unsafe;
         }
-        if (SidebarButton(ICON_MD_APPS " Misc", sidebar_button_size, active_tab == Tab::Misc)) {
+        if (SidebarButton(
+                ICON_MD_APPS " Misc", sizes.sidebar_button_size, active_tab == Tab::Misc)) {
             active_tab = Tab::Misc;
         }
         ImGui::PopStyleVar(2);
@@ -347,12 +370,11 @@ void Gui() {
         ImGui::EndChild();
 
         // top bar
-        const f32 top_bar_height = 50.0f * scale;
-        ImGui::SetCursorPos({sidebar_width + spacing + 12.0f, 12.0f});
+        ImGui::SetCursorPos({sizes.sidebar_width + sizes.spacing + 12.0f, 12.0f});
         const ImVec2 available_top = ImGui::GetContentRegionAvail();
 
         ImGui::BeginChild(
-            "TopBar", {available_top.x - 8.0f, top_bar_height},
+            "TopBar", {available_top.x - 8.0f, sizes.top_bar_height},
             ImGuiChildFlags_AlwaysUseWindowPadding,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
         ImGui::EndChild();
@@ -360,10 +382,11 @@ void Gui() {
         // tabs
         config_lock.lock();
 
-        ImGui::SetCursorPos({sidebar_width + spacing, top_bar_height + 12.0f});
-        const ImVec2 available = ImGui::GetContentRegionAvail();
+        ImGui::SetCursorPos({sizes.sidebar_width + sizes.spacing, sizes.top_bar_height + 12.0f});
+        const ImVec2 available_main = ImGui::GetContentRegionAvail();
 
-        const ImVec2 col_size = {(available.x - spacing * 2.0f) / 2, available.y - 16.0f};
+        const ImVec2 col_size = {
+            (available_main.x - sizes.spacing * 2.0f) / 2, available_main.y - 16.0f};
         const ImVec2 current_pos = ImGui::GetCursorPos();
         ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
         if (active_tab == Tab::Aimbot) {
@@ -375,7 +398,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.aimbot.enabled);
 
-            ImGui::SetNextItemWidth(150.0f * scale);
+            ImGui::SetNextItemWidth(sizes.combo_width);
             if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.aimbot.hotkey))) {
                 for (const auto &[key, name] : key_code_names) {
                     const bool is_selected = key == config.aimbot.hotkey;
@@ -389,7 +412,7 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragInt("Start Bullet", &config.aimbot.start_bullet, 0.05f, 0, 10);
             if (ImGui::IsItemHovered()) {
                 ImGui::SetItemTooltip(
@@ -397,7 +420,7 @@ void Gui() {
                     "override the hotkey.");
             }
 
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat(
                 "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f°",
                 ImGuiSliderFlags_Logarithmic);
@@ -406,7 +429,7 @@ void Gui() {
 
             ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
             if (!config.aimbot.aim_lock) {
-                ImGui::SetNextItemWidth(100.0f * scale);
+                ImGui::SetNextItemWidth(sizes.drag_width);
                 ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
             }
 
@@ -421,7 +444,7 @@ void Gui() {
 
             ImGui::EndChild();
 
-            ImGui::SameLine(0, spacing);
+            ImGui::SameLine(0, sizes.spacing);
             ImGui::BeginChild(
                 "Triggerbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -430,7 +453,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.triggerbot.enabled);
 
-            ImGui::SetNextItemWidth(150.0f * scale);
+            ImGui::SetNextItemWidth(sizes.combo_width);
             if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.triggerbot.hotkey))) {
                 for (const auto &[key, name] : key_code_names) {
                     bool is_selected = key == config.triggerbot.hotkey;
@@ -444,7 +467,7 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
-            ImGui::SetNextItemWidth(200.0f * scale);
+            ImGui::SetNextItemWidth(2.0f * sizes.drag_width);
             ImGui::DragIntRange2(
                 "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.5f, 0, 1000,
                 "%d ms", nullptr, ImGuiSliderFlags_AlwaysClamp);
@@ -481,7 +504,7 @@ void Gui() {
             Title("Preview");
 
             ImGui::EndChild();
-            ImGui::SameLine(0, spacing);
+            ImGui::SameLine(0, sizes.spacing);
 
             ImGui::BeginChild(
                 "Players", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
@@ -491,7 +514,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.visuals.enabled);
 
-            ImGui::SetNextItemWidth(150.0f * scale);
+            ImGui::SetNextItemWidth(sizes.combo_width);
             if (ImGui::BeginCombo("Box", draw_style_names.at(config.visuals.draw_box))) {
                 for (const auto &[style, name] : draw_style_names) {
                     const bool is_selected = style == config.visuals.draw_box;
@@ -505,7 +528,7 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
-            ImGui::SetNextItemWidth(150.0f * scale);
+            ImGui::SetNextItemWidth(sizes.combo_width);
             if (ImGui::BeginCombo("Skeleton", draw_style_names.at(config.visuals.draw_skeleton))) {
                 for (const auto &[style, name] : draw_style_names) {
                     const bool is_selected = style == config.visuals.draw_skeleton;
@@ -560,7 +583,7 @@ void Gui() {
             ImGui::Checkbox("Show Dropped Weapons", &config.visuals.dropped_weapons);
             ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
 
-            ImGui::SetNextItemWidth(150.0f * scale);
+            ImGui::SetNextItemWidth(sizes.combo_width);
             if (ImGui::BeginCombo(
                     "Triggerbot Indicator",
                     position_names.at(config.triggerbot.indicator_position))) {
@@ -576,12 +599,12 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat(
                 "##indicator_inset_x", &config.triggerbot.indicator_inset.x, 0.2f, 0.0f, 9999.0f,
                 "x: %.1f");
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat(
                 "Indicator Inset", &config.triggerbot.indicator_inset.y, 1.0f, 0.0f, 9999.0f,
                 "y: %.1f");
@@ -598,7 +621,7 @@ void Gui() {
             }
 
             ImGui::EndChild();
-            ImGui::SameLine(0, spacing);
+            ImGui::SameLine(0, sizes.spacing);
 
             ImGui::BeginChild(
                 "Advanced", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
@@ -606,12 +629,12 @@ void Gui() {
 
             Title("Advanced");
 
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat("Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
 
-            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragInt("Overlay FPS", &config.visuals.overlay_fps, 0.2f, 60, 240);
             ImGui::Checkbox("Debug Overlay", &config.visuals.debug_window);
 
