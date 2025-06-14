@@ -25,6 +25,22 @@ ImVec4 array_to_imvec4(const toml::array &arr) {
     return vec;
 }
 
+toml::array imvec2_to_array(const ImVec2 &vec) {
+    toml::array arr;
+    arr.push_back(vec.x);
+    arr.push_back(vec.y);
+    return arr;
+}
+
+ImVec2 array_to_imvec2(const toml::array &arr) {
+    ImVec2 vec;
+    if (arr.size() >= 4) {
+        vec.x = arr[0].value_or(0.0f);
+        vec.y = arr[1].value_or(0.0f);
+    }
+    return vec;
+}
+
 toml::table AimbotConfig::to_toml() const {
     return toml::table {
         {"hotkey", static_cast<int>(hotkey)},
@@ -58,6 +74,7 @@ AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
 
 toml::table TriggerbotConfig::to_toml() const {
     return toml::table {
+        {"indicator_inset", imvec2_to_array(indicator_inset)},
         {"hotkey", static_cast<int>(hotkey)},
         {"delay_min", delay_min},
         {"delay_max", delay_max},
@@ -72,6 +89,10 @@ toml::table TriggerbotConfig::to_toml() const {
 
 TriggerbotConfig TriggerbotConfig::from_toml(const toml::table &table) {
     TriggerbotConfig cfg;
+    if (const auto arr = table["indicator_inset"].as_array()) {
+        cfg.indicator_inset = array_to_imvec2(*arr);
+    }
+
     cfg.hotkey = static_cast<KeyCode>(table["hotkey"].value_or(static_cast<int>(cfg.hotkey)));
     cfg.delay_min = table["delay_min"].value_or(cfg.delay_min);
     cfg.delay_max = table["delay_max"].value_or(cfg.delay_max);
@@ -112,13 +133,21 @@ toml::table VisualsConfig::to_toml() const {
 
 VisualsConfig VisualsConfig::from_toml(const toml::table &table) {
     VisualsConfig cfg;
-    if (const auto arr = table["text_color"].as_array()) cfg.text_color = array_to_imvec4(*arr);
-    if (const auto arr = table["box_color"].as_array()) cfg.box_color = array_to_imvec4(*arr);
-    if (const auto arr = table["skeleton_color"].as_array())
+    if (const auto arr = table["text_color"].as_array()) {
+        cfg.text_color = array_to_imvec4(*arr);
+    }
+    if (const auto arr = table["box_color"].as_array()) {
+        cfg.box_color = array_to_imvec4(*arr);
+    }
+    if (const auto arr = table["skeleton_color"].as_array()) {
         cfg.skeleton_color = array_to_imvec4(*arr);
-    if (const auto arr = table["armor_color"].as_array()) cfg.armor_color = array_to_imvec4(*arr);
-    if (const auto arr = table["crosshair_color"].as_array())
+    }
+    if (const auto arr = table["armor_color"].as_array()) {
+        cfg.armor_color = array_to_imvec4(*arr);
+    }
+    if (const auto arr = table["crosshair_color"].as_array()) {
         cfg.crosshair_color = array_to_imvec4(*arr);
+    }
 
     cfg.overlay_fps = table["overlay_fps"].value_or(cfg.overlay_fps);
     cfg.line_width = table["line_width"].value_or(cfg.line_width);
@@ -168,14 +197,21 @@ toml::table Config::to_toml() const {
 
 Config Config::from_toml(const toml::table &table) {
     Config cfg;
-    if (auto table_aimbot = table["aimbot"].as_table())
+    if (auto table_aimbot = table["aimbot"].as_table()) {
         cfg.aimbot = AimbotConfig::from_toml(*table_aimbot);
-    if (auto table_triggerbot = table["triggerbot"].as_table())
+    }
+    if (auto table_triggerbot = table["triggerbot"].as_table()) {
         cfg.triggerbot = TriggerbotConfig::from_toml(*table_triggerbot);
-    if (auto table_visuals = table["visuals"].as_table())
+    }
+    if (auto table_visuals = table["visuals"].as_table()) {
         cfg.visuals = VisualsConfig::from_toml(*table_visuals);
-    if (auto table_misc = table["misc"].as_table()) cfg.misc = MiscConfig::from_toml(*table_misc);
+    }
+    if (auto table_misc = table["misc"].as_table()) {
+        cfg.misc = MiscConfig::from_toml(*table_misc);
+    }
 
-    if (auto arr = table["accent_color"].as_array()) cfg.accent_color = array_to_imvec4(*arr);
+    if (auto arr = table["accent_color"].as_array()) {
+        cfg.accent_color = array_to_imvec4(*arr);
+    }
     return cfg;
 }

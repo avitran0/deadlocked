@@ -18,22 +18,22 @@ void Style() {
 
     style.Alpha = 1.0f;
     style.DisabledAlpha = 0.6f;
-    style.WindowPadding = ImVec2(12.0f, 12.0f);
+    style.WindowPadding = ImVec2 {12.0f, 12.0f};
     style.WindowRounding = 8.0f;
     style.WindowBorderSize = 0.0f;
-    style.WindowMinSize = ImVec2(32.0f, 32.0f);
-    style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
+    style.WindowMinSize = ImVec2 {32.0f, 32.0f};
+    style.WindowTitleAlign = ImVec2 {0.5f, 0.5f};
     style.WindowMenuButtonPosition = ImGuiDir_None;
     style.ChildRounding = 8.0f;
     style.ChildBorderSize = 1.0f;
     style.PopupRounding = 8.0f;
     style.PopupBorderSize = 1.0f;
-    style.FramePadding = ImVec2(4.0f, 3.0f);
+    style.FramePadding = ImVec2 {6.0f, 3.0f};
     style.FrameRounding = 8.0f;
     style.FrameBorderSize = 0.0f;
-    style.ItemSpacing = ImVec2(8.0f, 8.0f);
-    style.ItemInnerSpacing = ImVec2(5.0f, 5.0f);
-    style.CellPadding = ImVec2(4.0f, 2.0f);
+    style.ItemSpacing = ImVec2 {8.0f, 8.0f};
+    style.ItemInnerSpacing = ImVec2 {5.0f, 5.0f};
+    style.CellPadding = ImVec2 {4.0f, 2.0f};
     style.IndentSpacing = 20.0f;
     style.ColumnsMinSpacing = 5.0f;
     style.ScrollbarSize = 16.0f;
@@ -47,9 +47,9 @@ void Style() {
     style.TabCloseButtonMinWidthSelected = 0.0f;
     style.TabCloseButtonMinWidthUnselected = 0.0f;
     style.ColorButtonPosition = ImGuiDir_Right;
-    style.WindowTitleAlign = ImVec2(0.02f, 0.5f);
-    style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
-    style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
+    style.WindowTitleAlign = ImVec2 {0.02f, 0.5f};
+    style.ButtonTextAlign = ImVec2 {0.5f, 0.5f};
+    style.SelectableTextAlign = ImVec2 {0.0f, 0.0f};
 
     style.Colors[ImGuiCol_Text] = Colors::TEXT;
     style.Colors[ImGuiCol_TextDisabled] = Colors::SUBTEXT;

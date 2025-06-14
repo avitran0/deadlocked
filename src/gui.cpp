@@ -375,6 +375,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.aimbot.enabled);
 
+            ImGui::SetNextItemWidth(150.0f * scale);
             if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.aimbot.hotkey))) {
                 for (const auto &[key, name] : key_code_names) {
                     const bool is_selected = key == config.aimbot.hotkey;
@@ -388,6 +389,7 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
+            ImGui::SetNextItemWidth(100.0f * scale);
             ImGui::DragInt("Start Bullet", &config.aimbot.start_bullet, 0.05f, 0, 10);
             if (ImGui::IsItemHovered()) {
                 ImGui::SetItemTooltip(
@@ -395,14 +397,16 @@ void Gui() {
                     "override the hotkey.");
             }
 
+            ImGui::SetNextItemWidth(100.0f * scale);
             ImGui::DragFloat(
-                "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f",
+                "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f°",
                 ImGuiSliderFlags_Logarithmic);
 
             ImGui::Checkbox("Multibone", &config.aimbot.multibone);
 
             ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
             if (!config.aimbot.aim_lock) {
+                ImGui::SetNextItemWidth(100.0f * scale);
                 ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
             }
 
@@ -426,6 +430,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.triggerbot.enabled);
 
+            ImGui::SetNextItemWidth(150.0f * scale);
             if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.triggerbot.hotkey))) {
                 for (const auto &[key, name] : key_code_names) {
                     bool is_selected = key == config.triggerbot.hotkey;
@@ -439,9 +444,10 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
+            ImGui::SetNextItemWidth(200.0f * scale);
             ImGui::DragIntRange2(
-                "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.2f, 0, 1000,
-                "%d", nullptr, ImGuiSliderFlags_AlwaysClamp);
+                "Delay", &config.triggerbot.delay_min, &config.triggerbot.delay_max, 0.5f, 0, 1000,
+                "%d ms", nullptr, ImGuiSliderFlags_AlwaysClamp);
 
             ImGui::Checkbox("Toggle Mode", &config.triggerbot.toggle_mode);
             if (ImGui::IsItemHovered()) {
@@ -485,6 +491,7 @@ void Gui() {
 
             ImGui::Checkbox("Enable", &config.visuals.enabled);
 
+            ImGui::SetNextItemWidth(150.0f * scale);
             if (ImGui::BeginCombo("Box", draw_style_names.at(config.visuals.draw_box))) {
                 for (const auto &[style, name] : draw_style_names) {
                     const bool is_selected = style == config.visuals.draw_box;
@@ -498,6 +505,7 @@ void Gui() {
                 ImGui::EndCombo();
             }
 
+            ImGui::SetNextItemWidth(150.0f * scale);
             if (ImGui::BeginCombo("Skeleton", draw_style_names.at(config.visuals.draw_skeleton))) {
                 for (const auto &[style, name] : draw_style_names) {
                     const bool is_selected = style == config.visuals.draw_skeleton;
@@ -552,6 +560,7 @@ void Gui() {
             ImGui::Checkbox("Show Dropped Weapons", &config.visuals.dropped_weapons);
             ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
 
+            ImGui::SetNextItemWidth(150.0f * scale);
             if (ImGui::BeginCombo(
                     "Triggerbot Indicator",
                     position_names.at(config.triggerbot.indicator_position))) {
@@ -566,6 +575,16 @@ void Gui() {
                 }
                 ImGui::EndCombo();
             }
+
+            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::DragFloat(
+                "##indicator_inset_x", &config.triggerbot.indicator_inset.x, 0.2f, 0.0f, 9999.0f,
+                "x: %.1f");
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(100.0f * scale);
+            ImGui::DragFloat(
+                "Indicator Inset", &config.triggerbot.indicator_inset.y, 1.0f, 0.0f, 9999.0f,
+                "y: %.1f");
 
             Spacer();
             Title("Colors");
@@ -587,9 +606,12 @@ void Gui() {
 
             Title("Advanced");
 
+            ImGui::SetNextItemWidth(100.0f * scale);
             ImGui::DragFloat("Font Size", &config.visuals.font_size, 0.02f, 1.0f, 50.0f, "%.1f");
+            ImGui::SetNextItemWidth(100.0f * scale);
             ImGui::DragFloat("Line Width", &config.visuals.line_width, 0.01f, 0.2f, 3.0f, "%.1f");
 
+            ImGui::SetNextItemWidth(100.0f * scale);
             ImGui::DragInt("Overlay FPS", &config.visuals.overlay_fps, 0.2f, 60, 240);
             ImGui::Checkbox("Debug Overlay", &config.visuals.debug_window);
 
@@ -688,11 +710,6 @@ void Gui() {
         const ImU32 text_color = IM_COL32(
             config.visuals.text_color.x * 255, config.visuals.text_color.y * 255,
             config.visuals.text_color.z * 255, 255);
-
-        std::string overlay_fps = "FPS: " + std::to_string(static_cast<i32>(overlay_io.Framerate));
-        OutlineText(
-            overlay_draw_list, ImVec2 {window_size.x + 4.0f, window_size.y + 4.0f}, text_color,
-            overlay_fps.c_str());
 
         if (config.visuals.debug_window) {
             // frame
@@ -934,24 +951,26 @@ void Gui() {
             const ImVec2 text_size = ImGui::CalcTextSize("Trigger Enabled");
             ImVec2 tb_position {};
             const f32 offset = 4.0f * scale;
+            const ImVec2 inset = config.triggerbot.indicator_inset;
             switch (config.triggerbot.indicator_position) {
                 case Position::TopLeft:
-                    tb_position = {window_size.x + offset, window_size.y + offset + 20.0f * scale};
+                    tb_position = {
+                        window_size.x + offset + inset.x, window_size.y + offset * inset.y};
                     break;
                 case Position::TopRight:
                     tb_position = {
-                        window_size.x + window_size.z - text_size.x - offset,
-                        window_size.y + offset};
+                        window_size.x + window_size.z - text_size.x - offset - inset.x,
+                        window_size.y + offset + inset.y};
                     break;
                 case Position::BottomLeft:
                     tb_position = {
-                        window_size.x + offset,
-                        window_size.y + window_size.w - text_size.y - offset};
+                        window_size.x + offset + inset.x,
+                        window_size.y + window_size.w - text_size.y - offset - inset.y};
                     break;
                 case Position::BottomRight:
                     tb_position = {
-                        window_size.x + window_size.z - text_size.x - offset,
-                        window_size.y + window_size.w - text_size.y - offset};
+                        window_size.x + window_size.z - text_size.x - offset - inset.x,
+                        window_size.y + window_size.w - text_size.y - offset - inset.y};
                     break;
             }
             OutlineText(overlay_draw_list, tb_position, 0xFFFFFFFF, "Trigger Enabled");

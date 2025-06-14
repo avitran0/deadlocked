@@ -17,6 +17,9 @@ constexpr std::chrono::seconds save_interval {1};
 toml::array imvec4_to_array(const ImVec4 &vec);
 ImVec4 array_to_imvec4(const toml::array &arr);
 
+toml::array imvec2_to_array(const ImVec2 &vec);
+ImVec2 array_to_imvec2(const toml::array &arr);
+
 enum class Position : u8 {
     TopLeft,
     TopRight,
@@ -64,6 +67,8 @@ struct AimbotConfig {
 };
 
 struct TriggerbotConfig {
+    ImVec2 indicator_inset {0.0f, 0.0f};
+
     KeyCode hotkey = KeyCode::Mouse4;
     i32 delay_min = 100;
     i32 delay_max = 200;
@@ -81,11 +86,11 @@ struct TriggerbotConfig {
 };
 
 struct VisualsConfig {
-    ImVec4 text_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-    ImVec4 box_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-    ImVec4 skeleton_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
-    ImVec4 armor_color = ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
-    ImVec4 crosshair_color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    ImVec4 text_color {1.0f, 1.0f, 1.0f, 1.0f};
+    ImVec4 box_color {1.0f, 1.0f, 1.0f, 1.0f};
+    ImVec4 skeleton_color {1.0f, 1.0f, 1.0f, 1.0f};
+    ImVec4 armor_color {0.0f, 0.0f, 1.0f, 1.0f};
+    ImVec4 crosshair_color {1.0f, 1.0f, 1.0f, 1.0f};
 
     i32 overlay_fps = 120;
     f32 line_width = 2.0;
