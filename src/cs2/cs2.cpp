@@ -837,7 +837,7 @@ void ClearVisualInfo() {
 void VisualInfo() {
     vinfo_lock.lock();
     const std::optional<Player> local_player = Player::LocalPlayer();
-    if (local_player->Team() != TEAM_CT && local_player->Team() != TEAM_T) {
+    if (!local_player || local_player->Team() != TEAM_CT && local_player->Team() != TEAM_T) {
         player_info.clear();
         entity_info.clear();
         vinfo_lock.unlock();

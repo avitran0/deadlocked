@@ -62,6 +62,9 @@ struct WeaponConfig {
 
     toml::table to_toml() const;
     static WeaponConfig from_toml(const toml::table &table);
+
+    WeaponConfig() {}
+    WeaponConfig(bool enabled) : enabled(enabled) {}
 };
 
 struct AimbotConfig {
@@ -153,7 +156,7 @@ struct AimbotConfig {
 
             // Utility
             {"taser", WeaponConfig()}};
-    WeaponConfig global;
+    WeaponConfig global = WeaponConfig(true);
     KeyCode hotkey = KeyCode::Mouse5;
 
     bool fov_circle = false;
