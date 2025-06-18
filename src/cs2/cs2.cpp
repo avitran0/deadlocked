@@ -773,8 +773,8 @@ bool FindTarget() {
         target.Reset();
     }
 
-    if (AnglesToFov(view_angles, target.angle) >
-        config.aimbot.fov * DistanceScale(target.distance)) {
+    const WeaponConfig &aim_config = config.aimbot.CurrentWeaponConfig(local_player->WeaponName());
+    if (AnglesToFov(view_angles, target.angle) > aim_config.fov * DistanceScale(target.distance)) {
         target.Reset();
     }
 
@@ -806,7 +806,7 @@ bool FindTarget() {
     }
 
     // update target angle
-    if (config.aimbot.multibone) {
+    if (aim_config.multibone) {
         smallest_fov = 360.0f;
         for (const Bones bone : all_bones) {
             const glm::vec3 bone_position = target.player->BonePosition(bone);

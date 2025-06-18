@@ -65,7 +65,94 @@ struct WeaponConfig {
 };
 
 struct AimbotConfig {
-    std::unordered_map<std::string, WeaponConfig> weapons = {};
+    std::unordered_map<std::string, WeaponConfig> weapons =
+        {  // Knives
+            {"bayonet", WeaponConfig()},
+            {"knife", WeaponConfig()},
+            {"knife_bowie", WeaponConfig()},
+            {"knife_butterfly", WeaponConfig()},
+            {"knife_canis", WeaponConfig()},
+            {"knife_cord", WeaponConfig()},
+            {"knife_css", WeaponConfig()},
+            {"knife_falchion", WeaponConfig()},
+            {"knife_flip", WeaponConfig()},
+            {"knife_gut", WeaponConfig()},
+            {"knife_gypsy_jackknife", WeaponConfig()},
+            {"knife_karambit", WeaponConfig()},
+            {"knife_kukri", WeaponConfig()},
+            {"knife_m9_bayonet", WeaponConfig()},
+            {"knife_outdoor", WeaponConfig()},
+            {"knife_push", WeaponConfig()},
+            {"knife_skeleton", WeaponConfig()},
+            {"knife_stiletto", WeaponConfig()},
+            {"knife_survival_bowie", WeaponConfig()},
+            {"knife_t", WeaponConfig()},
+            {"knife_tactical", WeaponConfig()},
+            {"knife_twinblade", WeaponConfig()},
+            {"knife_ursus", WeaponConfig()},
+            {"knife_widowmaker", WeaponConfig()},
+
+            // Pistols
+            {"cz75a", WeaponConfig()},
+            {"deagle", WeaponConfig()},
+            {"elite", WeaponConfig()},
+            {"fiveseven", WeaponConfig()},
+            {"glock", WeaponConfig()},
+            {"hkp2000", WeaponConfig()},
+            {"p2000", WeaponConfig()},
+            {"p250", WeaponConfig()},
+            {"revolver", WeaponConfig()},
+            {"tec9", WeaponConfig()},
+            {"usp_silencer", WeaponConfig()},
+            {"usp_silencer_off", WeaponConfig()},
+
+            // SMGs
+            {"bizon", WeaponConfig()},
+            {"mac10", WeaponConfig()},
+            {"mp5sd", WeaponConfig()},
+            {"mp7", WeaponConfig()},
+            {"mp9", WeaponConfig()},
+            {"p90", WeaponConfig()},
+            {"ump45", WeaponConfig()},
+
+            // Heavy
+            {"m249", WeaponConfig()},
+            {"negev", WeaponConfig()},
+
+            // Shotguns
+            {"mag7", WeaponConfig()},
+            {"nova", WeaponConfig()},
+            {"sawedoff", WeaponConfig()},
+            {"xm1014", WeaponConfig()},
+
+            // Rifles
+            {"ak47", WeaponConfig()},
+            {"aug", WeaponConfig()},
+            {"famas", WeaponConfig()},
+            {"galilar", WeaponConfig()},
+            {"m4a1_silencer", WeaponConfig()},
+            {"m4a1_silencer_off", WeaponConfig()},
+            {"m4a1", WeaponConfig()},
+            {"sg556", WeaponConfig()},
+
+            // Snipers
+            {"awp", WeaponConfig()},
+            {"g3sg1", WeaponConfig()},
+            {"scar20", WeaponConfig()},
+            {"ssg08", WeaponConfig()},
+
+            // Grenades
+            {"decoy", WeaponConfig()},
+            {"firebomb", WeaponConfig()},
+            {"flashbang", WeaponConfig()},
+            {"frag_grenade", WeaponConfig()},
+            {"hegrenade", WeaponConfig()},
+            {"incgrenade", WeaponConfig()},
+            {"molotov", WeaponConfig()},
+            {"smokegrenade", WeaponConfig()},
+
+            // Utility
+            {"taser", WeaponConfig()}};
     WeaponConfig global;
     KeyCode hotkey = KeyCode::Mouse5;
 
@@ -74,6 +161,9 @@ struct AimbotConfig {
 
     toml::table to_toml() const;
     static AimbotConfig from_toml(const toml::table &table);
+
+    WeaponConfig &GetWeaponConfig(const std::string &name);
+    WeaponConfig &CurrentWeaponConfig(const std::string &name);
 };
 
 struct TriggerbotConfig {

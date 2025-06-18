@@ -4,7 +4,14 @@
 #include "mouse.hpp"
 
 void Aimbot() {
-    if (!config.aimbot.enabled || !target.player || !IsButtonPressed(config.aimbot.hotkey)) {
+    const std::optional<Player> local_player = Player::LocalPlayer();
+    if (!local_player) {
+        return;
+    }
+
+    const WeaponConfig &aim_config = config.aimbot.CurrentWeaponConfig(local_player->WeaponName());
+
+    if (!config.aimbot.global.enabled || !target.player || !IsButtonPressed(config.aimbot.hotkey)) {
         return;
     }
 
@@ -12,23 +19,18 @@ void Aimbot() {
         return;
     }
 
-    const std::optional<Player> local_player = Player::LocalPlayer();
-    if (!local_player) {
+    if (aim_config.flash_check && local_player->IsFlashed()) {
         return;
     }
 
-    if (config.aimbot.flash_check && local_player->IsFlashed()) {
-        return;
-    }
-
-    if (config.aimbot.visibility_check) {
+    if (aim_config.visibility_check) {
         if ((target.player->SpottedMask() & 1 << target.local_pawn_index) == 0) {
             return;
         }
     }
 
     glm::vec2 target_angle {};
-    if (config.aimbot.multibone) {
+    if (aim_config.multibone) {
         target_angle = target.angle;
     } else {
         target_angle = TargetAngle(
@@ -36,12 +38,11 @@ void Aimbot() {
     }
 
     const glm::vec2 view_angles = local_player->ViewAngles();
-    if (AnglesToFov(view_angles, target_angle) >
-        config.aimbot.fov * DistanceScale(target.distance)) {
+    if (AnglesToFov(view_angles, target_angle) > aim_config.fov * DistanceScale(target.distance)) {
         return;
     }
 
-    if (local_player->ShotsFired() < config.aimbot.start_bullet) {
+    if (local_player->ShotsFired() < aim_config.start_bullet) {
         return;
     }
 
@@ -55,9 +56,9 @@ void Aimbot() {
 
     const glm::vec2 xy {aim_angles.y / sensitivity * 25.0f, -aim_angles.x / sensitivity * 25.0f};
     glm::vec2 smooth_angles;
-    if (!config.aimbot.aim_lock && config.aimbot.smooth > 0.0f) {
+    if (!aim_config.aim_lock && aim_config.smooth > 0.0f) {
         smooth_angles =
-            glm::vec2 {xy.x / (config.aimbot.smooth + 1.0f), xy.y / (config.aimbot.smooth + 1.0f)};
+            glm::vec2 {xy.x / (aim_config.smooth + 1.0f), xy.y / (aim_config.smooth + 1.0f)};
     } else {
         smooth_angles = xy;
     }

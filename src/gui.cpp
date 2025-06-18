@@ -19,6 +19,7 @@
 #include "colors.hpp"
 #include "config.hpp"
 #include "cs2/cs2.hpp"
+#include "cs2/weapon_names.hpp"
 #include "fonts/fira_sans_regular.hpp"
 #include "fonts/icons.hpp"
 #include "fonts/material_icons.hpp"
@@ -298,6 +299,8 @@ void Gui() {
     std::thread cs2(CS2);
 
     const sizes sizes(scale, ImGui::GetStyle().ItemSpacing.x * 2.0f);
+    bool aimbot_global = true;
+    std::string aimbot_current_weapon = "ak47";
 
     bool should_close = false;
     auto save_timer = std::chrono::steady_clock::now();
@@ -378,9 +381,15 @@ void Gui() {
             ImGuiChildFlags_AlwaysUseWindowPadding,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-        ImGui::Button("Global");
-        ImGui::SameLine();
-        ImGui::Button("Weapons");
+        if (active_tab == Tab::Aimbot) {
+            if (ImGui::Button("Global")) {
+                aimbot_global = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Weapons")) {
+                aimbot_global = false;
+            }
+        }
 
         ImGui::EndChild();
 
@@ -394,6 +403,7 @@ void Gui() {
             (available_main.x - sizes.spacing * 2.0f) / 2, available_main.y - 16.0f};
         const ImVec2 current_pos = ImGui::GetCursorPos();
         ImGui::SetNextWindowPos({current_pos.x + 10.0f, current_pos.y + 15.0f});
+
         if (active_tab == Tab::Aimbot) {
             ImGui::BeginChild(
                 "Aimbot", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
@@ -401,26 +411,49 @@ void Gui() {
 
             Title("Aimbot");
 
-            WeaponConfig &active_config = misc_info.held_weapon
+            WeaponConfig &aim_config = aimbot_global
+                                           ? config.aimbot.global
+                                           : config.aimbot.GetWeaponConfig(aimbot_current_weapon);
 
-            ImGui::Checkbox("Enable", &config.aimbot.enabled);
-
-            ImGui::SetNextItemWidth(sizes.combo_width);
-            if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.aimbot.hotkey))) {
-                for (const auto &[key, name] : key_code_names) {
-                    const bool is_selected = key == config.aimbot.hotkey;
-                    if (ImGui::Selectable(name, is_selected)) {
-                        config.aimbot.hotkey = key;
+            if (!aimbot_global) {
+                if (ImGui::BeginCombo("Weapon", weapon_names.at(aimbot_current_weapon))) {
+                    for (const auto &[weapon, name] : weapon_names) {
+                        const bool is_selected = weapon == aimbot_current_weapon;
+                        if (ImGui::Selectable(name, is_selected)) {
+                            aimbot_current_weapon = weapon;
+                        }
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
                     }
-                    if (is_selected) {
-                        ImGui::SetItemDefaultFocus();
-                    }
+                    ImGui::EndCombo();
                 }
-                ImGui::EndCombo();
+            }
+
+            if (aimbot_global) {
+                ImGui::Checkbox("Enable", &aim_config.enabled);
+            } else {
+                ImGui::Checkbox("Enable Override", &aim_config.enabled);
+            }
+
+            if (aimbot_global) {
+                ImGui::SetNextItemWidth(sizes.combo_width);
+                if (ImGui::BeginCombo("Hotkey", key_code_names.at(config.aimbot.hotkey))) {
+                    for (const auto &[key, name] : key_code_names) {
+                        const bool is_selected = key == config.aimbot.hotkey;
+                        if (ImGui::Selectable(name, is_selected)) {
+                            config.aimbot.hotkey = key;
+                        }
+                        if (is_selected) {
+                            ImGui::SetItemDefaultFocus();
+                        }
+                    }
+                    ImGui::EndCombo();
+                }
             }
 
             ImGui::SetNextItemWidth(sizes.drag_width);
-            ImGui::DragInt("Start Bullet", &config.aimbot.start_bullet, 0.05f, 0, 10);
+            ImGui::DragInt("Start Bullet", &aim_config.start_bullet, 0.05f, 0, 10);
             if (ImGui::IsItemHovered()) {
                 ImGui::SetItemTooltip(
                     "Which bullet to start aiming on, set to 0 to always be active.\nThis does not "
@@ -429,25 +462,24 @@ void Gui() {
 
             ImGui::SetNextItemWidth(sizes.drag_width);
             ImGui::DragFloat(
-                "FOV", &config.aimbot.fov, 0.2f, 0.1f, 360.0f, "%.1f°",
-                ImGuiSliderFlags_Logarithmic);
+                "FOV", &aim_config.fov, 0.2f, 0.1f, 360.0f, "%.1f°", ImGuiSliderFlags_Logarithmic);
 
-            ImGui::Checkbox("Multibone", &config.aimbot.multibone);
+            ImGui::Checkbox("Multibone", &aim_config.multibone);
 
-            ImGui::Checkbox("Aim Lock", &config.aimbot.aim_lock);
-            if (!config.aimbot.aim_lock) {
+            ImGui::Checkbox("Aim Lock", &aim_config.aim_lock);
+            if (!aim_config.aim_lock) {
                 ImGui::SetNextItemWidth(sizes.drag_width);
-                ImGui::DragFloat("Smooth", &config.aimbot.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
+                ImGui::DragFloat("Smooth", &aim_config.smooth, 0.02f, 0.0f, 10.0f, "%.1f");
             }
 
             Spacer();
             Title("Checks");
-            ImGui::Checkbox("Visibility Check", &config.aimbot.visibility_check);
+            ImGui::Checkbox("Visibility Check", &aim_config.visibility_check);
             if (ImGui::IsItemHovered()) {
                 ImGui::SetItemTooltip(
                     "This is currently slow, as it\nuses the same data as the in-game-radar.");
             }
-            ImGui::Checkbox("Flash Check", &config.aimbot.flash_check);
+            ImGui::Checkbox("Flash Check", &aim_config.flash_check);
 
             ImGui::EndChild();
 
@@ -948,8 +980,10 @@ void Gui() {
             if (config.aimbot.fov_circle && misc_info.in_game) {
                 const f32 pawn_fov =
                     config.misc.fov_changer ? static_cast<f32>(config.misc.desired_fov) : 90.0f;
-                // todo: get current weapon fov
-                const f32 radius = tanf(config.aimbot.fov / 180.0f * numbers::pi<f32>() / 2.0f) /
+                const WeaponConfig &weapon_config =
+                    aimbot_global ? config.aimbot.global
+                                  : config.aimbot.GetWeaponConfig(misc_info.held_weapon);
+                const f32 radius = tanf(weapon_config.fov / 180.0f * numbers::pi<f32>() / 2.0f) /
                                    tanf(pawn_fov / 180.0f * numbers::pi<f32>() / 2.0f) *
                                    window_size.z / 2.0f;
                 const ImVec2 center {

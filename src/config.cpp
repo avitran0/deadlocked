@@ -1,5 +1,7 @@
 #include "config.hpp"
 
+#include "mithril/logging.hpp"
+
 const char *DrawStyleName(DrawStyle style) {
     constexpr const char *names[] = {"None", "Color", "Health"};
     return names[static_cast<i32>(style)];
@@ -84,6 +86,23 @@ AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
     cfg.fov_circle = table["fov_circle"].value_or(cfg.fov_circle);
     cfg.rcs = table["rcs"].value_or(cfg.rcs);
     return cfg;
+}
+
+WeaponConfig &AimbotConfig::GetWeaponConfig(const std::string &name) {
+    const auto it = weapons.find(name);
+    if (it != weapons.end()) {
+        return it->second;
+    }
+    logging::Error("could not find weapon config for: {}", name);
+    return global;
+}
+
+WeaponConfig &AimbotConfig::CurrentWeaponConfig(const std::string &name) {
+    const auto it = weapons.find(name);
+    if (it != weapons.end() && it->second.enabled) {
+        return it->second;
+    }
+    return global;
 }
 
 toml::table TriggerbotConfig::to_toml() const {
