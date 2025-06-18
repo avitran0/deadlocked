@@ -41,9 +41,8 @@ ImVec2 array_to_imvec2(const toml::array &arr) {
     return vec;
 }
 
-toml::table AimbotConfig::to_toml() const {
+toml::table WeaponConfig::to_toml() const {
     return toml::table {
-        {"hotkey", static_cast<int>(hotkey)},
         {"start_bullet", start_bullet},
         {"fov", fov},
         {"smooth", smooth},
@@ -52,13 +51,11 @@ toml::table AimbotConfig::to_toml() const {
         {"visibility_check", visibility_check},
         {"multibone", multibone},
         {"flash_check", flash_check},
-        {"fov_circle", fov_circle},
-        {"rcs", rcs}};
+    };
 }
 
-AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
-    AimbotConfig cfg;
-    cfg.hotkey = static_cast<KeyCode>(table["hotkey"].value_or(static_cast<int>(cfg.hotkey)));
+WeaponConfig WeaponConfig::from_toml(const toml::table &table) {
+    WeaponConfig cfg;
     cfg.start_bullet = table["start_bullet"].value_or(cfg.start_bullet);
     cfg.fov = table["fov"].value_or(cfg.fov);
     cfg.smooth = table["smooth"].value_or(cfg.smooth);
@@ -67,6 +64,23 @@ AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
     cfg.visibility_check = table["visibility_check"].value_or(cfg.visibility_check);
     cfg.multibone = table["multibone"].value_or(cfg.multibone);
     cfg.flash_check = table["flash_check"].value_or(cfg.flash_check);
+    return cfg;
+}
+
+toml::table AimbotConfig::to_toml() const {
+    return toml::table {
+        {"global", global.to_toml()},
+        {"hotkey", static_cast<int>(hotkey)},
+        {"fov_circle", fov_circle},
+        {"rcs", rcs}};
+}
+
+AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
+    AimbotConfig cfg;
+    if (auto table_global = table["global"].as_table()) {
+        cfg.global = WeaponConfig::from_toml(*table_global);
+    }
+    cfg.hotkey = static_cast<KeyCode>(table["hotkey"].value_or(static_cast<int>(cfg.hotkey)));
     cfg.fov_circle = table["fov_circle"].value_or(cfg.fov_circle);
     cfg.rcs = table["rcs"].value_or(cfg.rcs);
     return cfg;

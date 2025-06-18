@@ -4,6 +4,7 @@
 
 #include <chrono>
 #include <mithril/types.hpp>
+#include <unordered_map>
 
 #include "colors.hpp"
 #include "key_code.hpp"
@@ -48,17 +49,26 @@ const std::map<DrawStyle, const char *> draw_style_names = {
 
 constexpr i32 DEFAULT_FOV = 90;
 
-struct AimbotConfig {
-    KeyCode hotkey = KeyCode::Mouse5;
+struct WeaponConfig {
     i32 start_bullet = 2;
     f32 fov = 2.5f;
     f32 smooth = 5.0f;
 
-    bool enabled = true;
+    bool enabled = false;
     bool aim_lock = false;
     bool visibility_check = true;
     bool multibone = true;
     bool flash_check = true;
+
+    toml::table to_toml() const;
+    static WeaponConfig from_toml(const toml::table &table);
+};
+
+struct AimbotConfig {
+    std::unordered_map<std::string, WeaponConfig> weapons = {};
+    WeaponConfig global;
+    KeyCode hotkey = KeyCode::Mouse5;
+
     bool fov_circle = false;
     bool rcs = false;
 

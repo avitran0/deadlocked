@@ -377,6 +377,11 @@ void Gui() {
             "TopBar", {available_top.x - 8.0f, sizes.top_bar_height},
             ImGuiChildFlags_AlwaysUseWindowPadding,
             ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+        ImGui::Button("Global");
+        ImGui::SameLine();
+        ImGui::Button("Weapons");
+
         ImGui::EndChild();
 
         // tabs
@@ -395,6 +400,8 @@ void Gui() {
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
             Title("Aimbot");
+
+            WeaponConfig &active_config = misc_info.held_weapon
 
             ImGui::Checkbox("Enable", &config.aimbot.enabled);
 
@@ -941,6 +948,7 @@ void Gui() {
             if (config.aimbot.fov_circle && misc_info.in_game) {
                 const f32 pawn_fov =
                     config.misc.fov_changer ? static_cast<f32>(config.misc.desired_fov) : 90.0f;
+                // todo: get current weapon fov
                 const f32 radius = tanf(config.aimbot.fov / 180.0f * numbers::pi<f32>() / 2.0f) /
                                    tanf(pawn_fov / 180.0f * numbers::pi<f32>() / 2.0f) *
                                    window_size.z / 2.0f;
