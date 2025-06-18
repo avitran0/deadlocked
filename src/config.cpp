@@ -70,7 +70,12 @@ WeaponConfig WeaponConfig::from_toml(const toml::table &table) {
 }
 
 toml::table AimbotConfig::to_toml() const {
+    toml::table weapons_table;
+    for (const auto &[weapon, conf] : weapons) {
+        weapons_table.emplace(weapon, conf.to_toml());
+    }
     return toml::table {
+        {"weapons", weapons_table},
         {"global", global.to_toml()},
         {"hotkey", static_cast<int>(hotkey)},
         {"fov_circle", fov_circle},
@@ -79,6 +84,12 @@ toml::table AimbotConfig::to_toml() const {
 
 AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
     AimbotConfig cfg;
+    if (auto table_weapons = table["weapons"].as_table()) {
+        for (const auto &[key, node] : *table_weapons) {
+            const std::string weapon_name = std::string(key);
+            cfg.weapons[weapon_name] = WeaponConfig::from_toml(*node.as_table());
+        }
+    }
     if (auto table_global = table["global"].as_table()) {
         cfg.global = WeaponConfig::from_toml(*table_global);
     }

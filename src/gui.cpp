@@ -412,6 +412,12 @@ void Gui() {
             }
             ImGui::Checkbox("Flash Check", &aim_config.flash_check);
 
+            if (!aimbot_global) {
+                if (ImGui::Button("Reset Weapon Settings")) {
+                    aim_config = WeaponConfig();
+                }
+            }
+
             ImGui::EndChild();
 
             ImGui::SameLine(0, sizes.spacing);
