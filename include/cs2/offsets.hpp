@@ -61,6 +61,7 @@ struct PawnOffsets {
     u64 scoped = 0;             // bool (m_bIsScoped)
     u64 spotted_state = 0;      // SpottedState (m_entitySpottedState)
     u64 crosshair_entity = 0;   // EntityIndex (m_iIDEntIndex)
+    u64 velocity = 0;           // Vec3 (m_vecAbsVelocity)
     u64 observer_services = 0;  // Pointer -> ObserverServices (m_pObserverServices)
     u64 camera_services = 0;    // Pointer -> CameraServices (m_pCameraServices)
     u64 item_services = 0;      // Pointer -> ItemServices (m_pItemServices)
@@ -70,8 +71,8 @@ struct PawnOffsets {
         return health && armor && team && life_state && weapon && fov_multiplier &&
                game_scene_node && eye_offset && aim_punch_cache && shots_fired && view_angles &&
                eye_angles && flash_alpha && flash_duration && scoped && spotted_state &&
-               crosshair_entity && observer_services && camera_services && item_services &&
-               weapon_services;
+               crosshair_entity && velocity && observer_services && camera_services &&
+               item_services && weapon_services;
     }
 };
 

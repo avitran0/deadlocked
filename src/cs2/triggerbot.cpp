@@ -57,6 +57,12 @@ void Triggerbot() {
         return;
     }
 
+    const glm::vec3 velocity = local_player->Velocity();
+    if (config.triggerbot.velocity_check &&
+        glm::length(velocity) > config.triggerbot.velocity_threshold) {
+        return;
+    }
+
     const std::optional<Player> crosshair_entity = local_player->EntityInCrosshair();
     if (!crosshair_entity) {
         return;

@@ -122,13 +122,15 @@ toml::table TriggerbotConfig::to_toml() const {
         {"hotkey", static_cast<int>(hotkey)},
         {"delay_min", delay_min},
         {"delay_max", delay_max},
+        {"velocity_threshold", velocity_threshold},
         {"indicator_position", static_cast<int>(indicator_position)},
         {"enabled", enabled},
         {"visibility_check", visibility_check},
         {"flash_check", flash_check},
         {"scope_check", scope_check},
         {"head_only", head_only},
-        {"toggle_mode", toggle_mode}};
+        {"toggle_mode", toggle_mode},
+        {"velocity_check", velocity_check}};
 }
 
 TriggerbotConfig TriggerbotConfig::from_toml(const toml::table &table) {
@@ -140,6 +142,7 @@ TriggerbotConfig TriggerbotConfig::from_toml(const toml::table &table) {
     cfg.hotkey = static_cast<KeyCode>(table["hotkey"].value_or(static_cast<int>(cfg.hotkey)));
     cfg.delay_min = table["delay_min"].value_or(cfg.delay_min);
     cfg.delay_max = table["delay_max"].value_or(cfg.delay_max);
+    cfg.velocity_threshold = table["velocity_threshold"].value_or(cfg.velocity_threshold);
     cfg.indicator_position = static_cast<Position>(
         table["indicator_position"].value_or(static_cast<int>(cfg.indicator_position)));
     cfg.enabled = table["enabled"].value_or(cfg.enabled);
@@ -148,6 +151,7 @@ TriggerbotConfig TriggerbotConfig::from_toml(const toml::table &table) {
     cfg.scope_check = table["scope_check"].value_or(cfg.scope_check);
     cfg.head_only = table["head_only"].value_or(cfg.head_only);
     cfg.toggle_mode = table["toggle_mode"].value_or(cfg.toggle_mode);
+    cfg.velocity_check = table["velocity_check"].value_or(cfg.velocity_check);
     return cfg;
 }
 

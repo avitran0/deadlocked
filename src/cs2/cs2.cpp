@@ -481,6 +481,13 @@ std::optional<Offsets> FindOffsets() {
             logging::Debug(
                 "player crosshair entity netvar offset: {}",
                 hex::HexString(offsets.pawn.crosshair_entity));
+        } else if (name == "m_vecAbsVelocity") {
+            if (offsets.pawn.velocity != 0) {
+                continue;
+            }
+            offsets.pawn.velocity = *reinterpret_cast<i32 *>(entry + 0x08);
+            logging::Debug(
+                "player velocity netvar offset: {}", hex::HexString(offsets.pawn.velocity));
         } else if (name == "m_pObserverServices") {
             if (offsets.pawn.observer_services != 0) {
                 continue;

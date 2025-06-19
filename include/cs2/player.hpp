@@ -49,6 +49,7 @@ class Player {
     // returns player with pawn only, no controller set
     std::optional<Player> EntityInCrosshair() const;
     bool IsScoped() const;
+    glm::vec3 Velocity() const;
 
     bool Equals(const Player &other) const {
         return pawn != 0 && controller != 0 && (pawn == other.pawn || controller == other.controller);

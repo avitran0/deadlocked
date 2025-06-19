@@ -175,6 +175,7 @@ struct TriggerbotConfig {
     KeyCode hotkey = KeyCode::Mouse4;
     i32 delay_min = 100;
     i32 delay_max = 200;
+    f32 velocity_threshold = 100.0f;
 
     Position indicator_position = Position::BottomLeft;
     bool enabled = false;
@@ -183,6 +184,7 @@ struct TriggerbotConfig {
     bool scope_check = true;
     bool head_only = false;
     bool toggle_mode = false;
+    bool velocity_check = false;
 
     toml::table to_toml() const;
     static TriggerbotConfig from_toml(const toml::table &table);

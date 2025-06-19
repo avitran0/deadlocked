@@ -465,7 +465,19 @@ void Gui() {
             }
             ImGui::Checkbox("Flash Check", &config.triggerbot.flash_check);
             ImGui::Checkbox("Scope Check", &config.triggerbot.scope_check);
+            ImGui::Checkbox("Velocity Check", &config.triggerbot.velocity_check);
             ImGui::Checkbox("Head Only", &config.triggerbot.head_only);
+
+            if (config.triggerbot.velocity_check) {
+                ImGui::SetNextItemWidth(sizes.drag_width);
+                ImGui::DragFloat(
+                    "Velocity Threshold", &config.triggerbot.velocity_threshold, 0.5f, 0.0f, 500.0f,
+                    "%.0f");
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetItemTooltip(
+                        "The maximum allowed player velocity, in units per second");
+                }
+            }
 
             Spacer();
             Title("Recoil");
