@@ -84,6 +84,13 @@ struct GameSceneNodeOffsets {
     bool AllFound() const { return dormant && origin && model_state; }
 };
 
+struct SmokeOffsets {
+    u64 did_smoke_effect = 0;  // bool (m_bDidSmokeEffect)
+    u64 smoke_color = 0;       // Color (m_vSmokeColor)
+
+    bool AllFound() const { return did_smoke_effect && smoke_color; }
+};
+
 struct SpottedStateOffsets {
     u64 spotted = 0;  // bool (m_bSpotted)
     u64 mask = 0;     // i32[2] or u64? (m_bSpottedByMask)
@@ -136,6 +143,7 @@ struct Offsets {
     PlayerControllerOffsets controller;
     PawnOffsets pawn;
     GameSceneNodeOffsets game_scene_node;
+    SmokeOffsets smoke;
     SpottedStateOffsets spotted_state;
     ObserverServiceOffsets observer_service;
     CameraServiceOffsets camera_service;
@@ -145,7 +153,7 @@ struct Offsets {
 
     bool AllFound() const {
         return controller.AllFound() && pawn.AllFound() && game_scene_node.AllFound() &&
-               spotted_state.AllFound() && observer_service.AllFound() &&
+               smoke.AllFound() && spotted_state.AllFound() && observer_service.AllFound() &&
                camera_service.AllFound() && item_service.AllFound() && weapon_service.AllFound() &&
                planted_c4.AllFound();
     }

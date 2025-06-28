@@ -219,11 +219,14 @@ struct VisualsConfig {
 };
 
 struct MiscConfig {
+    ImVec4 smoke_color;
     f32 max_flash_alpha = 0.0f;
     i32 desired_fov = DEFAULT_FOV;
 
     bool no_flash = false;
     bool fov_changer = false;
+    bool no_smoke = false;
+    bool change_smoke_color = false;
 
     toml::table to_toml() const;
     static MiscConfig from_toml(const toml::table &table);

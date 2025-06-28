@@ -37,7 +37,6 @@ WeaponClass WeaponClassFromString(const std::string &name) {
         {"fiveseven", WeaponClass::Pistol},
         {"glock", WeaponClass::Pistol},
         {"hkp2000", WeaponClass::Pistol},
-        {"p2000", WeaponClass::Pistol},
         {"p250", WeaponClass::Pistol},
         {"revolver", WeaponClass::Pistol},
         {"tec9", WeaponClass::Pistol},

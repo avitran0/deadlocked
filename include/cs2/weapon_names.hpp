@@ -11,7 +11,6 @@ const std::unordered_map<std::string, const char *> weapon_names = {
     {"fiveseven", "Five-SeveN"},
     {"glock", "Glock-18"},
     {"hkp2000", "P2000"},
-    {"p2000", "P2000"},
     {"p250", "P250"},
     {"revolver", "R8 Revolver"},
     {"tec9", "Tec-9"},

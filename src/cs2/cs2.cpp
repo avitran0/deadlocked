@@ -10,6 +10,7 @@
 #include "cs2/constants.hpp"
 #include "cs2/features.hpp"
 #include "cs2/player.hpp"
+#include "cs2/smoke.hpp"
 #include "math.hpp"
 #include "process.hpp"
 
@@ -19,6 +20,7 @@ Offsets offsets {};
 Target target {};
 glm::vec2 aim_punch {};
 std::vector<Player> players {};
+std::vector<Smoke> smokes {};
 
 void CS2() {
     logging::Info("game thread started");
@@ -544,6 +546,21 @@ std::optional<Offsets> FindOffsets() {
             logging::Debug(
                 "player skeleton netvar offset: {}",
                 hex::HexString(offsets.game_scene_node.model_state));
+        } else if (name == "m_bDidSmokeEffect") {
+            if (!network_enable || offsets.smoke.did_smoke_effect != 0) {
+                continue;
+            }
+            offsets.smoke.did_smoke_effect = *reinterpret_cast<i32 *>(entry + 0x18);
+            logging::Debug(
+                "smoke did smoke effect netvar offset: {}",
+                hex::HexString(offsets.smoke.did_smoke_effect));
+        } else if (name == "m_vSmokeColor") {
+            if (!network_enable || offsets.smoke.smoke_color != 0) {
+                continue;
+            }
+            offsets.smoke.smoke_color = *reinterpret_cast<i32 *>(entry + 0x18);
+            logging::Debug(
+                "smoke color netvar offset: {}", hex::HexString(offsets.smoke.smoke_color));
         } else if (name == "m_bSpotted") {
             if (offsets.spotted_state.spotted != 0) {
                 continue;
@@ -674,8 +691,7 @@ std::optional<std::string> GetEntityType(const u64 entity) {
     std::string entity_name = process.ReadString(name_pointer);
 
     if (entity_name.compare(0, 7, "weapon_") == 0) {
-        entity_name = entity_name.erase(0, 7);
-        return entity_name;
+        return entity_name.erase(0, 7);
     }
 
     return std::nullopt;
@@ -885,6 +901,7 @@ void VisualInfo() {
 
     // entities
     entity_info.clear();
+    smokes.clear();
     for (u64 i = 64; i <= 1024; i++) {
         // entity is a pawn here
         const std::optional<u64> entity = Player::ClientEntity(i);
@@ -900,6 +917,13 @@ void VisualInfo() {
         const std::optional<std::string> name = GetEntityType(*entity);
         if (!name) {
             continue;
+        }
+
+        if (*name == "smokegrenade_projectile") {
+            const auto smoke = Smoke::Index(i);
+            if (smoke) {
+                smokes.push_back(*smoke);
+            }
         }
 
         const u64 gs_node = process.Read<u64>(*entity + offsets.pawn.game_scene_node);
@@ -940,6 +964,8 @@ void Run() {
     FovChanger();
     NoFlash();
     Rcs();
+    // todo: smokes
+    // Smokes(smokes);
 
     Aimbot();
     Triggerbot();
