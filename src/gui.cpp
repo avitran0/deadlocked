@@ -681,6 +681,20 @@ void Gui() {
             ColorButton("Purple", Colors::PURPLE);
 
             ImGui::EndChild();
+            ImGui::SameLine(0, sizes.spacing);
+
+            ImGui::BeginChild(
+                "System Info", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            Title("System Info");
+
+            ImGui::Text("HWID: %s", system_info.hwid.c_str());
+            ImGui::Text("Distro: %s", system_info.distro.c_str());
+            ImGui::Text("Desktop: %s", system_info.desktop.c_str());
+            ImGui::Text("Kernel Version: %s", system_info.kernel.c_str());
+
+            ImGui::EndChild();
         }
 
         ImDrawList *gui_draw_list = ImGui::GetForegroundDrawList();
@@ -690,6 +704,12 @@ void Gui() {
         const ImVec2 gui_window_size = ImGui::GetWindowSize();
         gui_draw_list->AddText(
             ImVec2 {24.0f, gui_window_size.y - text_size.y - 20.0f}, 0xFFFFFFFF, gui_fps.c_str());
+
+        if (new_version) {
+            gui_draw_list->AddText(
+                ImVec2 {24.0f, gui_window_size.y - text_size.y * 3.0f - 30.0f},
+                Colors::ToU32(Colors::YELLOW), "new commit\navailable");
+        }
 
         ImGui::End();
 

@@ -19,4 +19,6 @@ namespace Colors {
     constexpr ImVec4 PURPLE {0.7f, 0.47f, 1.0f, 1.0f};
 
     constexpr ImVec4 TRANSPARENT {0.0f, 0.0f, 0.0f, 0.0f};
+
+    ImU32 ToU32(const ImVec4 &color);
 }  // namespace Colors
