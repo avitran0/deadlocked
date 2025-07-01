@@ -119,13 +119,4 @@ void GetSystemInfo() {
     }
 
     system_info = info;
-
-    json data {
-        {"hwid", info.hwid},
-        {"distro", info.distro},
-        {"desktop", info.desktop},
-        {"kernel", info.kernel},
-    };
-    const std::string info_str = data.dump();
-    cpr::Post(cpr::Url("https://deadlocked.holyhades64.workers.dev"), cpr::Body(info_str));
 }

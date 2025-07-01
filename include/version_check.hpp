@@ -4,10 +4,10 @@
 #include <string>
 
 struct SystemInfo {
-    std::string hwid;
-    std::string distro;
-    std::string desktop;
-    std::string kernel;
+    std::string hwid = "unknown";
+    std::string distro = "unknown";
+    std::string desktop = "unknown";
+    std::string kernel = "unknown";
 };
 
 void VersionCheck();
