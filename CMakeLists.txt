@@ -20,7 +20,7 @@ endif()
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/generated/hash.hpp.in
-    ${CMAKE_SOURCE_DIR}/include/hash.hpp
+    ${CMAKE_SOURCE_DIR}/generated/hash.hpp
     @ONLY
 )
 
@@ -28,6 +28,7 @@ file(GLOB_RECURSE SOURCE_FILES "src/*.cpp")
 
 add_executable(deadlocked ${SOURCE_FILES})
 target_include_directories(deadlocked PRIVATE include)
+target_include_directories(deadlocked PRIVATE generated)
 
 target_include_directories(deadlocked PRIVATE lib/imgui)
 target_include_directories(deadlocked PRIVATE lib/imgui/backends)
