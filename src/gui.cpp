@@ -17,6 +17,7 @@
 #include <string>
 #include <thread>
 
+#include "SDL3/SDL_events.h"
 #include "colors.hpp"
 #include "config.hpp"
 #include "cs2/cs2.hpp"
@@ -71,8 +72,8 @@ void Gui() {
     SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "x11");
 
     if (!SDL_Init(SDL_INIT_VIDEO)) {
-        logging::Error("sdl3 initialization failed, exiting");
-        exit(1);
+        logging::Error("sdl3 initialization failed: {}", SDL_GetError());
+        return;
     }
 
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
@@ -110,6 +111,8 @@ void Gui() {
             }
         }
     }
+    SDL_free(displays);
+    displays = nullptr;
 
     logging::Info("screen top left corner at: {} x {} px", minX, minY);
     logging::Info("screen resolution: {} x {} px", maxX - minX, maxY - minY);
@@ -134,15 +137,14 @@ void Gui() {
         "deadlocked", static_cast<i32>(width * scale), static_cast<i32>(height * scale),
         SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (!gui_window) {
-        logging::Error("could not create gui window");
-        logging::Error(SDL_GetError());
+        logging::Error("could not create gui window: {}", SDL_GetError());
         return;
     }
     SDL_SetWindowPosition(gui_window, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
     SDL_GLContext gui_gl = SDL_GL_CreateContext(gui_window);
     if (!gui_gl) {
-        logging::Error("failed to initialize opengl context for gui window");
-        logging::Error(SDL_GetError());
+        logging::Error("failed to initialize opengl context for gui window: {}", SDL_GetError());
+        SDL_DestroyWindow(gui_window);
         return;
     }
     SDL_GL_MakeCurrent(gui_window, gui_gl);
@@ -150,8 +152,9 @@ void Gui() {
 
     SDL_Window *temp = SDL_CreateWindow("deadlocked", 1, 1, SDL_WINDOW_BORDERLESS);
     if (!temp) {
-        logging::Error("could not create overlay window");
-        logging::Error(SDL_GetError());
+        logging::Error("could not create overlay window: {}", SDL_GetError());
+        SDL_GL_DestroyContext(gui_gl);
+        SDL_DestroyWindow(gui_window);
         return;
     }
     SDL_SetWindowPosition(temp, minX, minY);
@@ -171,16 +174,22 @@ void Gui() {
         SDL_WINDOW_ALWAYS_ON_TOP | SDL_WINDOW_BORDERLESS | SDL_WINDOW_NOT_FOCUSABLE |
             SDL_WINDOW_OPENGL | SDL_WINDOW_TOOLTIP | SDL_WINDOW_TRANSPARENT);
     if (!overlay) {
-        logging::Error("could not create overlay window");
-        logging::Error(SDL_GetError());
+        logging::Error("could not create overlay window: {}", SDL_GetError());
+        SDL_DestroyWindow(temp);
+        SDL_GL_DestroyContext(gui_gl);
+        SDL_DestroyWindow(gui_window);
         return;
     }
 
     // inherits position from parent window
     SDL_GLContext overlay_gl = SDL_GL_CreateContext(overlay);
     if (!overlay_gl) {
-        logging::Error("failed to initialize opengl context for overlay window");
-        logging::Error(SDL_GetError());
+        logging::Error(
+            "failed to initialize opengl context for overlay window: {}", SDL_GetError());
+        SDL_DestroyWindow(overlay);
+        SDL_DestroyWindow(temp);
+        SDL_GL_DestroyContext(gui_gl);
+        SDL_DestroyWindow(gui_window);
         return;
     }
     SDL_GL_MakeCurrent(overlay, overlay_gl);
@@ -242,8 +251,9 @@ void Gui() {
         SDL_Event event;
         while (SDL_PollEvent(&event)) {
             ImGui_ImplSDL3_ProcessEvent(&event);
-            if (event.type == SDL_EVENT_QUIT) should_close = true;
-            if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) should_close = true;
+            if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
+                should_close = true;
+            }
         }
 
         // gui
