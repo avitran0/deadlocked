@@ -24,7 +24,7 @@ jobs:
       - name: Update apt and install SDL dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libwayland-dev libwayland-egl-backend-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libdrm-dev libgbm-dev libasound2-dev meson
+          sudo apt-get install -y libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxinerama-dev libwayland-dev libwayland-egl-backend-dev libdbus-1-dev libudev-dev libgles2-mesa-dev libdrm-dev libgbm-dev libasound2-dev meson libpsl-dev
 
       - name: Grant execution permission on build script
         run: chmod +x build.sh
