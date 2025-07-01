@@ -412,6 +412,13 @@ void Gui() {
             }
             ImGui::Checkbox("Flash Check", &aim_config.flash_check);
 
+            Spacer();
+            Title("Recoil");
+
+            ImGui::Checkbox("RCS", &aim_config.rcs);
+            ImGui::SetNextItemWidth(sizes.drag_width);
+            ImGui::DragFloat("Smooth", &aim_config.rcs_smooth, 0.02f, 0.0f, 10.0f, "%.1f");
+
             if (!aimbot_global) {
                 if (ImGui::Button("Reset Weapon Settings")) {
                     aim_config = WeaponConfig();
@@ -478,10 +485,6 @@ void Gui() {
                         "The maximum allowed player velocity, in units per second");
                 }
             }
-
-            Spacer();
-            Title("Recoil");
-            ImGui::Checkbox("RCS", &config.aimbot.rcs);
 
             ImGui::EndChild();
         } else if (active_tab == Tab::Players) {

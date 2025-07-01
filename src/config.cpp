@@ -48,11 +48,13 @@ toml::table WeaponConfig::to_toml() const {
         {"start_bullet", start_bullet},
         {"fov", fov},
         {"smooth", smooth},
+        {"rcs_smooth", rcs_smooth},
         {"enabled", enabled},
         {"aim_lock", aim_lock},
         {"visibility_check", visibility_check},
         {"multibone", multibone},
         {"flash_check", flash_check},
+        {"rcs", rcs},
     };
 }
 
@@ -61,11 +63,13 @@ WeaponConfig WeaponConfig::from_toml(const toml::table &table) {
     cfg.start_bullet = table["start_bullet"].value_or(cfg.start_bullet);
     cfg.fov = table["fov"].value_or(cfg.fov);
     cfg.smooth = table["smooth"].value_or(cfg.smooth);
+    cfg.rcs_smooth = table["smooth_rcs"].value_or(cfg.rcs_smooth);
     cfg.enabled = table["enabled"].value_or(cfg.enabled);
     cfg.aim_lock = table["aim_lock"].value_or(cfg.aim_lock);
     cfg.visibility_check = table["visibility_check"].value_or(cfg.visibility_check);
     cfg.multibone = table["multibone"].value_or(cfg.multibone);
     cfg.flash_check = table["flash_check"].value_or(cfg.flash_check);
+    cfg.rcs = table["rcs"].value_or(cfg.rcs);
     return cfg;
 }
 
@@ -78,8 +82,7 @@ toml::table AimbotConfig::to_toml() const {
         {"weapons", weapons_table},
         {"global", global.to_toml()},
         {"hotkey", static_cast<int>(hotkey)},
-        {"fov_circle", fov_circle},
-        {"rcs", rcs}};
+        {"fov_circle", fov_circle}};
 }
 
 AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
@@ -95,7 +98,6 @@ AimbotConfig AimbotConfig::from_toml(const toml::table &table) {
     }
     cfg.hotkey = static_cast<KeyCode>(table["hotkey"].value_or(static_cast<int>(cfg.hotkey)));
     cfg.fov_circle = table["fov_circle"].value_or(cfg.fov_circle);
-    cfg.rcs = table["rcs"].value_or(cfg.rcs);
     return cfg;
 }
 

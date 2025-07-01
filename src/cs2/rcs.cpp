@@ -5,12 +5,14 @@
 glm::vec2 mouse_movement {0.0f};
 
 void Rcs() {
-    if (!config.aimbot.rcs) {
+    const std::optional<Player> local_player = Player::LocalPlayer();
+    if (!local_player) {
         return;
     }
 
-    const std::optional<Player> local_player = Player::LocalPlayer();
-    if (!local_player) {
+    const WeaponConfig &aim_config = config.aimbot.CurrentWeaponConfig(local_player->WeaponName());
+
+    if (!aim_config.rcs) {
         return;
     }
 
@@ -38,6 +40,7 @@ void Rcs() {
     const glm::vec2 delta = mouse_angle - mouse_movement;
 
     mouse_movement += round(delta);
+    mouse_movement /= aim_config.rcs_smooth + 1.0f;
 
     MouseMove(glm::ivec2 {static_cast<i32>(delta.x), static_cast<i32>(delta.y)});
 }

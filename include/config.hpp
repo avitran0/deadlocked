@@ -53,12 +53,15 @@ struct WeaponConfig {
     i32 start_bullet = 2;
     f32 fov = 2.5f;
     f32 smooth = 5.0f;
+    f32 rcs_smooth = 1.0f;
 
     bool enabled = false;
     bool aim_lock = false;
     bool visibility_check = true;
     bool multibone = true;
     bool flash_check = true;
+    
+    bool rcs = false;
 
     toml::table to_toml() const;
     static WeaponConfig from_toml(const toml::table &table);
@@ -160,7 +163,6 @@ struct AimbotConfig {
     KeyCode hotkey = KeyCode::Mouse5;
 
     bool fov_circle = false;
-    bool rcs = false;
 
     toml::table to_toml() const;
     static AimbotConfig from_toml(const toml::table &table);
