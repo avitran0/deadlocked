@@ -6,4 +6,4 @@
 build
 node_modules
 
-generated/hash.hpp
+generated/*.hpp
