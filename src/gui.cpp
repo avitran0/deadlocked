@@ -417,7 +417,7 @@ void Gui() {
 
             ImGui::Checkbox("RCS", &aim_config.rcs);
             ImGui::SetNextItemWidth(sizes.drag_width);
-            ImGui::DragFloat("Smooth", &aim_config.rcs_smooth, 0.02f, 0.0f, 10.0f, "%.1f");
+            ImGui::DragFloat("RCS Smooth", &aim_config.rcs_smooth, 0.02f, 0.0f, 10.0f, "%.1f");
 
             if (!aimbot_global) {
                 if (ImGui::Button("Reset Weapon Settings")) {

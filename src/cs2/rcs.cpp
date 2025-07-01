@@ -37,10 +37,9 @@ void Rcs() {
 
     const glm::vec2 mouse_angle {
         aim_punch.y / sensitivity * 25.0f, -aim_punch.x / sensitivity * 25.0f};
-    const glm::vec2 delta = mouse_angle - mouse_movement;
+    const glm::vec2 delta = (mouse_angle - mouse_movement) / (aim_config.rcs_smooth + 1.0f);
 
     mouse_movement += round(delta);
-    mouse_movement /= aim_config.rcs_smooth + 1.0f;
 
     MouseMove(glm::ivec2 {static_cast<i32>(delta.x), static_cast<i32>(delta.y)});
 }
