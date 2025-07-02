@@ -649,16 +649,26 @@ void Gui() {
 
             ImGui::Checkbox("No Flash", &config.misc.no_flash);
             if (config.misc.no_flash) {
+                ImGui::SetNextItemWidth(sizes.drag_width);
                 ImGui::DragFloat(
                     "Max Flash Alpha", &config.misc.max_flash_alpha, 0.2f, 0.0f, 255.0f, "%.0f");
             }
 
+            ImGui::Checkbox("No Smoke", &config.misc.no_smoke);
+
             ImGui::Checkbox("FOV Changer", &config.misc.fov_changer);
             if (config.misc.fov_changer) {
+                ImGui::SetNextItemWidth(sizes.drag_width);
                 ImGui::DragInt("Desired FOV", &config.misc.desired_fov, 0.2f, 1, 179);
                 if (ImGui::Button("Reset FOV")) {
                     config.misc.desired_fov = DEFAULT_FOV;
                 }
+            }
+
+            ImGui::Checkbox("Smoke Color Override", &config.misc.change_smoke_color);
+            if (config.misc.change_smoke_color) {
+                ImGui::ColorEdit3(
+                    "Smoke Color", &config.misc.smoke_color.x, ImGuiColorEditFlags_NoInputs);
             }
 
             ImGui::EndChild();

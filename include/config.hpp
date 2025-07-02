@@ -60,7 +60,7 @@ struct WeaponConfig {
     bool visibility_check = true;
     bool multibone = true;
     bool flash_check = true;
-    
+
     bool rcs = false;
 
     toml::table to_toml() const;
@@ -221,7 +221,7 @@ struct VisualsConfig {
 };
 
 struct MiscConfig {
-    ImVec4 smoke_color;
+    ImVec4 smoke_color = Colors::BLUE;
     f32 max_flash_alpha = 0.0f;
     i32 desired_fov = DEFAULT_FOV;
 

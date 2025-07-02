@@ -25,9 +25,11 @@ void Smoke::Disable() const {
 
 void Smoke::SetColor() const {
     if (config.misc.change_smoke_color) {
-        process.Write(controller + offsets.smoke.smoke_color, config.misc.smoke_color.x);
-        process.Write(controller + offsets.smoke.smoke_color, config.misc.smoke_color.y);
-        process.Write(controller + offsets.smoke.smoke_color, config.misc.smoke_color.z);
+        process.Write(controller + offsets.smoke.smoke_color, config.misc.smoke_color.x * 255.0f);
+        process.Write(
+            controller + offsets.smoke.smoke_color + 4, config.misc.smoke_color.y * 255.0f);
+        process.Write(
+            controller + offsets.smoke.smoke_color + 8, config.misc.smoke_color.z * 255.0f);
     }
 }
 

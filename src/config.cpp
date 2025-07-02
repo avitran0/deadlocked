@@ -221,18 +221,26 @@ VisualsConfig VisualsConfig::from_toml(const toml::table &table) {
 
 toml::table MiscConfig::to_toml() const {
     return toml::table {
+        {"smoke_color", imvec4_to_array(smoke_color)},
         {"max_flash_alpha", max_flash_alpha},
         {"desired_fov", desired_fov},
         {"no_flash", no_flash},
-        {"fov_changer", fov_changer}};
+        {"fov_changer", fov_changer},
+        {"no_smoke", no_smoke},
+        {"change_smoke_color", change_smoke_color}};
 }
 
 MiscConfig MiscConfig::from_toml(const toml::table &table) {
     MiscConfig cfg;
+    if (const auto arr = table["smoke_color"].as_array()) {
+        cfg.smoke_color = array_to_imvec4(*arr);
+    }
     cfg.max_flash_alpha = table["max_flash_alpha"].value_or(cfg.max_flash_alpha);
     cfg.desired_fov = table["desired_fov"].value_or(cfg.desired_fov);
     cfg.no_flash = table["no_flash"].value_or(cfg.no_flash);
     cfg.fov_changer = table["fov_changer"].value_or(cfg.fov_changer);
+    cfg.no_smoke = table["no_smoke"].value_or(cfg.no_smoke);
+    cfg.change_smoke_color = table["change_smoke_color"].value_or(cfg.change_smoke_color);
     return cfg;
 }
 

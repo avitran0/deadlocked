@@ -690,6 +690,10 @@ std::optional<std::string> GetEntityType(const u64 entity) {
 
     std::string entity_name = process.ReadString(name_pointer);
 
+    if (entity_name.compare(0, 5, "smoke") == 0) {
+        return entity_name;
+    }
+
     if (entity_name.compare(0, 7, "weapon_") == 0) {
         return entity_name.erase(0, 7);
     }
@@ -909,11 +913,6 @@ void VisualInfo() {
             continue;
         }
 
-        // is a held weapon
-        if (EntityHasOwner(*entity)) {
-            continue;
-        }
-
         const std::optional<std::string> name = GetEntityType(*entity);
         if (!name) {
             continue;
@@ -924,6 +923,12 @@ void VisualInfo() {
             if (smoke) {
                 smokes.push_back(*smoke);
             }
+            continue;
+        }
+
+        // is held weapon
+        if (EntityHasOwner(*entity)) {
+            continue;
         }
 
         const u64 gs_node = process.Read<u64>(*entity + offsets.pawn.game_scene_node);
@@ -965,7 +970,7 @@ void Run() {
     NoFlash();
     Rcs();
     // todo: smokes
-    // Smokes(smokes);
+    Smokes(smokes);
 
     Aimbot();
     Triggerbot();
