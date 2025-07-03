@@ -30,13 +30,17 @@ simple cs2 aimbot and esp, for linux only.
   - visibility check
   - flash check
   - scope check
+  - velocity threshold
 - standalone rcs
+  - smoothing
 - misc
   - sniper crosshair
 - unsafe
   - noflash
     - max flash alpha
+  - nosmoke
   - fov changer
+  - smoke color changer
 
 > [!WARNING]
 > the features in the unsafe tab are there for a reason.
