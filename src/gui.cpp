@@ -704,6 +704,22 @@ void Gui() {
             ImGui::SameLine();
             ColorButton("Purple", Colors::PURPLE);
 
+            Spacer();
+            Title("Input Device");
+
+            if (ImGui::BeginCombo("Input Device", active_device.second.c_str())) {
+                for (const auto &[path, name] : input_devices) {
+                    const bool is_selected = path == active_device.first;
+                    if (ImGui::Selectable(name.c_str(), is_selected)) {
+                        ChangeMouseDevice({path, name});
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
             ImGui::EndChild();
             ImGui::SameLine(0, sizes.spacing);
 

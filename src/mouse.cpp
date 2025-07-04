@@ -17,6 +17,8 @@
 
 i32 mouse = -1;
 bool kernel = KernelModuleActive();
+std::vector<std::pair<std::string, std::string>> input_devices;
+std::pair<std::string, std::string> active_device;
 
 std::vector<bool> HexToReversedBinary(const char hex_char) {
     int value = 0;
@@ -82,6 +84,24 @@ std::vector<bool> DecodeCapabilities(const std::string &filename) {
     return binary_out;
 }
 
+void ChangeMouseDevice(const std::pair<std::string, std::string> &device) {
+    mouse = open(device.first.c_str(), O_WRONLY);
+    if (mouse < 0) {
+        logging::Error("could not open mouse");
+        const auto error = errno;
+        if (error == EACCES) {
+            const std::string username = getlogin();
+            logging::Error(
+                "user is not in input group. please execute sudo usermod -aG input {}", username);
+        } else {
+            logging::Error("error code: " + std::to_string(error));
+        }
+        std::exit(1);
+    }
+    logging::Info("input device: {} ({})", device.second, device.first);
+    active_device = device;
+}
+
 void MouseInit() {
     if (KernelModuleActive()) {
         mouse = open("/dev/stealthmem", O_RDWR);
@@ -92,6 +112,7 @@ void MouseInit() {
         return;
     }
 
+    input_devices.clear();
     for (const auto &entry : std::filesystem::directory_iterator("/dev/input")) {
         if (!entry.is_character_file()) {
             continue;
@@ -124,28 +145,15 @@ void MouseInit() {
         std::getline(name_file, device_name);
         name_file.close();
 
-        mouse = open(entry.path().c_str(), O_WRONLY);
-        if (mouse < 0) {
-            logging::Error("could not open mouse");
-            const auto error = errno;
-            if (error == EACCES) {
-                const std::string username = getlogin();
-                logging::Error(
-                    "user is not in input group. please execute sudo usermod -aG input {}",
-                    username);
-            } else {
-                logging::Error("error code: " + std::to_string(error));
-            }
-            std::exit(1);
-        }
-
-        logging::Info("found mouse: {} ({})", device_name, event_name);
-        return;
+        input_devices.push_back({entry.path(), device_name});
     }
 
-    mouse = open("/dev/null", O_WRONLY);
-    logging::Warning("no mouse device was found");
-    std::exit(1);
+    if (input_devices.empty()) {
+        mouse = open("/dev/null", O_WRONLY);
+        logging::Warning("no mouse device was found");
+        std::exit(1);
+    }
+    ChangeMouseDevice(input_devices[0]);
 }
 
 void MouseQuit() {
