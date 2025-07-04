@@ -13,10 +13,10 @@ class Bomb {
   public:
     u64 entity;
 
-    std::optional<u64> GetEntity() const;
+    static std::optional<Bomb> Get();
     bool IsPlanted() const;
     bool IsBeingDefused() const;
     BombSite GetBombSite() const;
-    f32 BlowTime() const;
+    f32 TimeToExplosion() const;
     glm::vec3 Position() const;
 };

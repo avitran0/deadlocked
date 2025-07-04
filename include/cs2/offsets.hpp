@@ -26,6 +26,7 @@ struct DirectOffsets {
     u64 sdl_window = 0;
     u64 game_types = 0;
     u64 planted_c4 = 0;
+    u64 global_vars = 0;
 };
 
 struct ConvarOffsets {

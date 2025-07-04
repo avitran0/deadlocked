@@ -7,6 +7,7 @@
 #include <thread>
 
 #include "config.hpp"
+#include "cs2/bomb.hpp"
 #include "cs2/constants.hpp"
 #include "cs2/features.hpp"
 #include "cs2/player.hpp"
@@ -244,11 +245,23 @@ std::optional<Offsets> FindOffsets() {
         offsets.library.client);
     if (!planted_c4) {
         logging::Error("could not find planted c4 offset");
-        // todo: verify this works
-        // return std::nullopt;
+        return std::nullopt;
     }
-    offsets.direct.planted_c4 = process.GetRelativeAddress(*planted_c4, 0x00, 0x07);
+    offsets.direct.planted_c4 = process.GetRelativeAddress(*planted_c4, 0x00, 0x0C);
     logging::Debug("planted c4 offset at: {}", hex::HexString(offsets.direct.planted_c4));
+
+    const std::optional<u64> global_vars = process.ScanPattern(
+        {0x8D, 0x00, 0x00, 0x00, 0x00, 0x00, 0x48, 0x89, 0x35, 0x00, 0x00, 0x00, 0x00, 0x48, 0x89,
+         0x00, 0x00, 0xC3},
+        {true, false, false, false, false, false, true, true, true, false, false, false, false,
+         true, true, false, false, true},
+        18, offsets.library.client);
+    if (!global_vars) {
+        logging::Error("could not find global vars offset");
+        return std::nullopt;
+    }
+    offsets.direct.global_vars = process.GetRelativeAddress(*global_vars, 0x09, 0x0D);
+    logging::Debug("global vars offset at: {}", hex::HexString(offsets.direct.global_vars));
 
     const std::optional<u64> sdl_window_address =
         process.GetModuleExport(offsets.library.sdl, "SDL_GetKeyboardFocus");
@@ -906,6 +919,28 @@ void VisualInfo() {
     // entities
     entity_info.clear();
     smokes.clear();
+
+    // add bomb
+    const auto bomb = Bomb::Get();
+    if (bomb) {
+        const bool planted = bomb->IsPlanted();
+        const f32 timer = bomb->TimeToExplosion();
+        if (planted && timer > 0.0f) {
+            misc_info.bomb_planted = true;
+            misc_info.bomb_timer = timer;
+            misc_info.bomb_being_defused = bomb->IsBeingDefused();
+            entity_info.push_back({.name = "c4", .position = bomb->Position()});
+        } else {
+            misc_info.bomb_planted = false;
+            misc_info.bomb_timer = 0.0f;
+            misc_info.bomb_being_defused = false;
+        }
+    } else {
+        misc_info.bomb_planted = false;
+        misc_info.bomb_timer = 0.0f;
+        misc_info.bomb_being_defused = false;
+    }
+
     for (u64 i = 64; i <= 1024; i++) {
         // entity is a pawn here
         const std::optional<u64> entity = Player::ClientEntity(i);

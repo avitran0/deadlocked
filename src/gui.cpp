@@ -582,6 +582,7 @@ void Gui() {
             ImGui::Checkbox("Spectator List", &config.visuals.spectator_list);
 
             ImGui::Checkbox("Show Dropped Weapons", &config.visuals.dropped_weapons);
+            ImGui::Checkbox("Bomb Timer", &config.visuals.bomb_timer);
             ImGui::Checkbox("Sniper Crosshair", &config.visuals.sniper_crosshair);
 
             ImGui::SetNextItemWidth(sizes.combo_width);
@@ -783,6 +784,10 @@ void Gui() {
         }
         if (config.visuals.enabled) {
             vinfo_lock.lock();
+            f32 font_size = config.visuals.font_size * scale;
+            if (font_size > 20.0f * scale) {
+                font_size = 20.0f * scale;
+            }
             f32 spectator_offset = 4.0f + 20.0f * scale;
             for (const std::string &player : misc_info.spectators) {
                 OutlineText(
@@ -832,10 +837,6 @@ void Gui() {
                 const f32 box_height = bottom.y - top.y;
                 const f32 box_width = box_height / 2.0f;
                 const f32 half_width = box_width / 2.0f;
-                f32 font_size = config.visuals.font_size * scale;
-                if (font_size > 20.0f * scale) {
-                    font_size = 20.0f * scale;
-                }
                 ImFont *font = overlay_io.Fonts->Fonts[0];
 
                 const ImVec2 bottom_left {bottom.x - half_width, bottom.y};
@@ -965,7 +966,35 @@ void Gui() {
                     OutlineText(
                         overlay_draw_list, ImVec2 {screen_position->x, screen_position->y},
                         0xFFFFFFFF, name.c_str());
+                    if (misc_info.bomb_planted && name == "c4") {
+                        char buf[8] {0};
+                        std::snprintf(buf, 7, "%.1f", misc_info.bomb_timer);
+                        OutlineText(
+                            overlay_draw_list, {screen_position->x, screen_position->y + font_size},
+                            0xFFFFFFFF, buf);
+
+                        if (misc_info.bomb_being_defused) {
+                            OutlineText(
+                                overlay_draw_list,
+                                {screen_position->x, screen_position->y + font_size * 2.0f},
+                                0xFFFFFFFF, "defusing");
+                        }
+                    }
                 }
+            }
+
+            // bomb timer
+            if (config.visuals.bomb_timer && misc_info.bomb_planted) {
+                const f32 width = window_size.z;
+                // usually 40 seconds to boom
+                constexpr f32 blow_time = 40.0f;
+                const f32 time_frac =
+                    std::max(std::min(misc_info.bomb_timer / blow_time, 1.0f), 0.0f);
+                const f32 time_width = time_frac * width;
+                const auto color = HealthColor(time_frac * 100.0f);
+                overlay_draw_list->AddRectFilled(
+                    {window_size.x, window_size.y + window_size.w - 4.0f},
+                    {window_size.x + time_width, window_size.y + window_size.w}, color);
             }
 
             // fov circle
@@ -1000,36 +1029,36 @@ void Gui() {
                     ImVec2 {center.x, center.y + crosshair_size}, color, config.visuals.line_width);
             }
 
-            vinfo_lock.unlock();
-        }
-
-        if (misc_info.triggerbot_active && misc_info.in_game) {
-            const ImVec2 text_size = ImGui::CalcTextSize("Trigger Enabled");
-            ImVec2 tb_position {};
-            const f32 offset = 4.0f * scale;
-            const ImVec2 inset = config.triggerbot.indicator_inset;
-            switch (config.triggerbot.indicator_position) {
-                case Position::TopLeft:
-                    tb_position = {
-                        window_size.x + offset + inset.x, window_size.y + offset * inset.y};
-                    break;
-                case Position::TopRight:
-                    tb_position = {
-                        window_size.x + window_size.z - text_size.x - offset - inset.x,
-                        window_size.y + offset + inset.y};
-                    break;
-                case Position::BottomLeft:
-                    tb_position = {
-                        window_size.x + offset + inset.x,
-                        window_size.y + window_size.w - text_size.y - offset - inset.y};
-                    break;
-                case Position::BottomRight:
-                    tb_position = {
-                        window_size.x + window_size.z - text_size.x - offset - inset.x,
-                        window_size.y + window_size.w - text_size.y - offset - inset.y};
-                    break;
+            if (misc_info.triggerbot_active && misc_info.in_game) {
+                const ImVec2 text_size = ImGui::CalcTextSize("Trigger Enabled");
+                ImVec2 tb_position {};
+                const f32 offset = 4.0f * scale;
+                const ImVec2 inset = config.triggerbot.indicator_inset;
+                switch (config.triggerbot.indicator_position) {
+                    case Position::TopLeft:
+                        tb_position = {
+                            window_size.x + offset + inset.x, window_size.y + offset * inset.y};
+                        break;
+                    case Position::TopRight:
+                        tb_position = {
+                            window_size.x + window_size.z - text_size.x - offset - inset.x,
+                            window_size.y + offset + inset.y};
+                        break;
+                    case Position::BottomLeft:
+                        tb_position = {
+                            window_size.x + offset + inset.x,
+                            window_size.y + window_size.w - text_size.y - offset - inset.y};
+                        break;
+                    case Position::BottomRight:
+                        tb_position = {
+                            window_size.x + window_size.z - text_size.x - offset - inset.x,
+                            window_size.y + window_size.w - text_size.y - offset - inset.y};
+                        break;
+                }
+                OutlineText(overlay_draw_list, tb_position, 0xFFFFFFFF, "Trigger Enabled");
             }
-            OutlineText(overlay_draw_list, tb_position, 0xFFFFFFFF, "Trigger Enabled");
+
+            vinfo_lock.unlock();
         }
 
         ImGui::End();

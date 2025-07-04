@@ -32,7 +32,10 @@ struct MiscInfo {
     std::string held_weapon;
     std::string map_name;
     f32 gui_scale = -1.0f;
+    f32 bomb_timer;
     bool in_game;
     bool is_ffa;
     bool triggerbot_active;
+    bool bomb_planted;
+    bool bomb_being_defused;
 };
