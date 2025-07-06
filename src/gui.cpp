@@ -516,6 +516,98 @@ void Gui() {
 
             Title("Preview");
 
+            // ESP Preview Code
+            ImDrawList *preview_draw_list = ImGui::GetWindowDrawList();
+            const ImVec2 preview_pos = ImGui::GetCursorScreenPos();
+            const ImVec2 preview_size = ImGui::GetContentRegionAvail();
+
+            // Sample player data
+            const char *sample_name = "not you";
+            const char *sample_weapon = "AK-47";
+            const float sample_health = 75.0f;
+            const float sample_armor = 50.0f;
+            const bool sample_has_helmet = true;
+            const bool sample_has_defuser = true;
+            const bool sample_has_bomb = true;
+
+            // Draw a sample box for the preview
+            const ImVec2 box_top_left = ImVec2(preview_pos.x + 50, preview_pos.y + 50);
+            const ImVec2 box_bottom_right = ImVec2(preview_pos.x + 150, preview_pos.y + 150);
+            const ImVec2 box_center = ImVec2((box_top_left.x + box_bottom_right.x) / 2, (box_top_left.y + box_bottom_right.y) / 2);
+
+            const f32 box_height = box_bottom_right.y - box_top_left.y;
+            const f32 box_width = box_bottom_right.x - box_top_left.x;
+            const f32 quarter_height = box_height / 4.0f;
+            const f32 quarter_width = box_width / 4.0f;
+
+            // Draw box with corners
+            if (config.visuals.draw_box != DrawStyle::None) {
+                ImU32 box_color = config.visuals.draw_box == DrawStyle::Color
+                                    ? IM_COL32(config.visuals.box_color.x * 255, config.visuals.box_color.y * 255, config.visuals.box_color.z * 255, 255)
+                                    : IM_COL32(255, 255, 255, 255);
+
+                // Top-left corner
+                preview_draw_list->AddLine(box_top_left, ImVec2(box_top_left.x + quarter_width, box_top_left.y), box_color, 2.0f);
+                preview_draw_list->AddLine(box_top_left, ImVec2(box_top_left.x, box_top_left.y + quarter_height), box_color, 2.0f);
+
+                // Top-right corner
+                preview_draw_list->AddLine(ImVec2(box_bottom_right.x - quarter_width, box_top_left.y), ImVec2(box_bottom_right.x, box_top_left.y), box_color, 2.0f);
+                preview_draw_list->AddLine(ImVec2(box_bottom_right.x, box_top_left.y), ImVec2(box_bottom_right.x, box_top_left.y + quarter_height), box_color, 2.0f);
+
+                // Bottom-left corner
+                preview_draw_list->AddLine(ImVec2(box_top_left.x, box_bottom_right.y - quarter_height), ImVec2(box_top_left.x, box_bottom_right.y), box_color, 2.0f);
+                preview_draw_list->AddLine(ImVec2(box_top_left.x, box_bottom_right.y), ImVec2(box_top_left.x + quarter_width, box_bottom_right.y), box_color, 2.0f);
+
+                // Bottom-right corner
+                preview_draw_list->AddLine(ImVec2(box_bottom_right.x - quarter_width, box_bottom_right.y), ImVec2(box_bottom_right.x, box_bottom_right.y), box_color, 2.0f);
+                preview_draw_list->AddLine(ImVec2(box_bottom_right.x, box_bottom_right.y - quarter_height), ImVec2(box_bottom_right.x, box_bottom_right.y), box_color, 2.0f);
+            }
+
+            // Draw sample health bar
+            if (config.visuals.draw_health) {
+                const ImVec2 health_bottom = ImVec2(box_top_left.x - 4.0f, box_bottom_right.y);
+                const ImVec2 health_top = ImVec2(box_top_left.x - 4.0f, box_top_left.y + (box_bottom_right.y - box_top_left.y) * (1.0f - sample_health / 100.0f));
+                preview_draw_list->AddLine(health_bottom, health_top, IM_COL32(0, 255, 0, 255), 2.0f);
+            }
+
+            // Draw sample armor bar
+            if (config.visuals.draw_armor) {
+                const ImVec2 armor_bottom = ImVec2(box_top_left.x - 8.0f, box_bottom_right.y);
+                const ImVec2 armor_top = ImVec2(box_top_left.x - 8.0f, box_top_left.y + (box_bottom_right.y - box_top_left.y) * (1.0f - sample_armor / 100.0f));
+                preview_draw_list->AddLine(armor_bottom, armor_top, IM_COL32(0, 0, 255, 255), 2.0f);
+            }
+
+            // Draw sample name
+            if (config.visuals.draw_name) {
+                const ImVec2 name_pos = ImVec2(box_top_left.x + 20.0f, box_top_left.y - 20.0f);
+                preview_draw_list->AddText(name_pos, IM_COL32(255, 255, 255, 255), sample_name);
+            }
+
+            // Draw sample weapon name
+            if (config.visuals.draw_weapon) {
+                const ImVec2 weapon_pos = ImVec2(box_center.x - 20.0f, box_bottom_right.y + 10.0f);
+                preview_draw_list->AddText(weapon_pos, IM_COL32(255, 255, 255, 255), sample_weapon);
+            }
+
+            // Draw sample tags
+            if (config.visuals.draw_tags) {
+                float tag_offset = 0.0f;
+                if (sample_has_helmet) {
+                    const ImVec2 tag_pos = ImVec2(box_center.x + 60.0f, box_bottom_right.y - 95.0f + tag_offset);
+                    preview_draw_list->AddText(tag_pos, IM_COL32(255, 255, 255, 255), "helmet");
+                    tag_offset += 20.0f;
+                }
+                if (sample_has_defuser) {
+                    const ImVec2 tag_pos = ImVec2(box_center.x + 60.0f, box_bottom_right.y - 95.0f + tag_offset);
+                    preview_draw_list->AddText(tag_pos, IM_COL32(255, 255, 255, 255), "defuser");
+                    tag_offset += 20.0f;
+                }
+                if (sample_has_bomb) {
+                    const ImVec2 tag_pos = ImVec2(box_center.x + 60.0f, box_bottom_right.y - 95.0f + tag_offset);
+                    preview_draw_list->AddText(tag_pos, IM_COL32(255, 255, 255, 255), "bomb");
+                }
+            }
+
             ImGui::EndChild();
             ImGui::SameLine(0, sizes.spacing);
 
