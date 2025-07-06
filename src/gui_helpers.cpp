@@ -72,6 +72,16 @@ void Title(const char *title) {
     ImGui::PopStyleColor(2);
 }
 
+void BeginTitle() {
+    ImGui::PushStyleColor(ImGuiCol_Text, Colors::SUBTEXT);
+    ImGui::PushStyleColor(ImGuiCol_Separator, Colors::SUBTEXT);
+}
+
+void EndTitle() {
+    ImGui::SeparatorEx(ImGuiSeparatorFlags_Horizontal, 2.0f);
+    ImGui::PopStyleColor(2);
+}
+
 bool SidebarButton(const char *text, const ImVec2 &size, const bool active) {
     ImGui::PushStyleColor(ImGuiCol_Button, Colors::TRANSPARENT);
     if (active) {

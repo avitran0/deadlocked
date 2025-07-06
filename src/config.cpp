@@ -1,11 +1,9 @@
 #include "config.hpp"
 
-#include "mithril/logging.hpp"
+#include <filesystem>
 
-const char *DrawStyleName(DrawStyle style) {
-    constexpr const char *names[] = {"None", "Color", "Health"};
-    return names[static_cast<i32>(style)];
-}
+#include "globals.hpp"
+#include "mithril/logging.hpp"
 
 toml::array imvec4_to_array(const ImVec4 &vec) {
     toml::array arr;
@@ -274,4 +272,76 @@ Config Config::from_toml(const toml::table &table) {
         cfg.accent_color = array_to_imvec4(*arr);
     }
     return cfg;
+}
+
+std::filesystem::path ConfigPath() {
+    const auto exe = std::filesystem::canonical("/proc/self/exe");
+    const auto path = exe.parent_path() / "configs";
+    if (!std::filesystem::exists(path)) {
+        std::filesystem::create_directory(path);
+    }
+    return path;
+}
+
+std::vector<std::string> ListConfigs() {
+    const auto path = ConfigPath();
+    std::vector<std::string> configs;
+    configs.reserve(8);
+    for (const auto &entry : std::filesystem::directory_iterator(path)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+        configs.push_back(entry.path().filename());
+    }
+    if (configs.empty()) {
+        SaveConfig("deadlocked.toml");
+        configs.push_back("deadlocked.toml");
+    }
+    return configs;
+}
+
+void SaveConfig(const std::string &filename) {
+    // save config in binary format
+    const auto path = ConfigPath() / filename;
+    std::ofstream file(path);
+    if (!file.good()) {
+        logging::Warning("config file invalid, cannot save");
+        return;
+    }
+
+    file << config.to_toml();
+    current_config = filename;
+}
+
+Config LoadConfig(const std::string &filename) {
+    const auto path = ConfigPath() / filename;
+    std::ifstream file(path);
+    if (!file.good()) {
+        logging::Warning("config file invalid, loading defaults");
+        return {};
+    }
+
+    try {
+        const auto data = toml::parse(file);
+        current_config = filename;
+        return Config::from_toml(*data.as_table());
+    } catch (toml::parse_error &) {
+        logging::Warning("config file invalid, loading defaults");
+        return {};
+    }
+}
+
+void ResetConfig() {
+    // default initialized
+    config = Config();
+    SaveConfig(current_config);
+}
+
+void DeleteConfig(const std::string &filename) {
+    const auto path = ConfigPath() / filename;
+    if (std::filesystem::exists(path)) {
+        std::filesystem::remove(path);
+        available_configs = ListConfigs();
+        LoadConfig(available_configs.at(0));
+    }
 }

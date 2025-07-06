@@ -36,6 +36,7 @@ enum class Tab {
     Players,
     Hud,
     Unsafe,
+    Config,
     Misc,
 };
 
@@ -235,6 +236,8 @@ void Gui() {
     const sizes sizes(scale, ImGui::GetStyle().ItemSpacing.x * 2.0f);
     bool aimbot_global = true;
     std::string aimbot_current_weapon = "ak47";
+    char new_config_name[128] {0};
+    f32 save_time = -20.0f;
 
     bool should_close = false;
     auto save_timer = std::chrono::steady_clock::now();
@@ -254,6 +257,10 @@ void Gui() {
             if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
                 should_close = true;
             }
+        }
+
+        if (ImGui::IsKeyPressed(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_S)) {
+            SaveConfig(current_config);
         }
 
         // gui
@@ -298,6 +305,11 @@ void Gui() {
                 ICON_MD_ERROR_OUTLINE " Unsafe", sizes.sidebar_button_size,
                 active_tab == Tab::Unsafe)) {
             active_tab = Tab::Unsafe;
+        }
+        if (SidebarButton(
+                ICON_MD_ARROW_BACK " Config", sizes.sidebar_button_size,
+                active_tab == Tab::Config)) {
+            active_tab = Tab::Config;
         }
         if (SidebarButton(
                 ICON_MD_APPS " Misc", sizes.sidebar_button_size, active_tab == Tab::Misc)) {
@@ -673,16 +685,94 @@ void Gui() {
             }
 
             ImGui::EndChild();
+        } else if (active_tab == Tab::Config) {
+            ImGui::BeginChild(
+                "Config", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
+                ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+            BeginTitle();
+            ImGui::Text("Config (%s)", current_config.c_str());
+            EndTitle();
+
+            ImGui::Text("New Config Name");
+            // ImGui::SetNextItemWidth(sizes.drag_width * 2.0f);
+            ImGui::InputText("##NewConfigName", new_config_name, 128);
+            ImGui::SameLine();
+            if (ImGui::Button(ICON_MD_ADD) && new_config_name[0] != '\0') {
+                SaveConfig(current_config);
+                config = Config();
+                const std::string new_name = new_config_name;
+                SaveConfig(new_name);
+                available_configs = ListConfigs();
+                std::fill_n(new_config_name, 128, 0);
+            }
+
+            if (ImGui::BeginListBox("##AvailableConfigs")) {
+                for (const auto &conf : available_configs) {
+                    const bool is_selected = conf == current_config;
+                    if (ImGui::Selectable(conf.c_str(), is_selected)) {
+                        SaveConfig(current_config);
+                        LoadConfig(conf);
+                    }
+                    if (is_selected) {
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndListBox();
+            }
+
+            if (ImGui::Button("Save")) {
+                SaveConfig(current_config);
+                ImGui::OpenPopup("Saved");
+                save_time = ImGui::GetTime();
+            }
+
+            if (ImGui::Button("Reset Config")) {
+                ResetConfig();
+            }
+
+            if (ImGui::Button("Delete Config")) {
+                ImGui::OpenPopup("Delete Config?");
+            }
+
+            if (ImGui::BeginPopupModal(
+                    "Delete Config?", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+                ImGui::Text("The config cannot be recovered.");
+                if (ImGui::Button("Yes")) {
+                    DeleteConfig(current_config);
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                ImGui::Spacing();
+                ImGui::SameLine();
+                if (ImGui::Button("No")) {
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            const f32 delta = ImGui::GetTime() - save_time;
+            if (delta < 2.0f) {
+                f32 offset = 60;
+                if (delta < 0.2f) {
+                    offset = (delta / 0.2f) * 60.0f;
+                }
+                if (delta > 1.8f && delta < 2.0f) {
+                    offset = (1.0f - (delta - 1.8f) / 0.2f) * 60.0f;
+                }
+                ImVec2 pos {gui_vp_size.x - 250.0f, gui_vp_size.y - offset};
+                ImGui::GetForegroundDrawList()->AddText(
+                    pos, 0xFFFFFFFF, ICON_MD_CHECK " Config Saved");
+            }
+
+            ImGui::EndChild();
+
         } else if (active_tab == Tab::Misc) {
             ImGui::BeginChild(
                 "Misc", col_size, ImGuiChildFlags_AlwaysUseWindowPadding,
                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
             Title("Misc");
-
-            if (ImGui::Button("Reset Config")) {
-                ResetConfig();
-            }
 
             if (ImGui::Button("Report Issue")) {
                 std::system("xdg-open https://github.com/avitran0/deadlocked");
@@ -1091,12 +1181,6 @@ void Gui() {
         SDL_GL_SwapWindow(overlay);
 
         const auto end_time = std::chrono::steady_clock::now();
-
-        if (end_time - save_timer > save_interval) {
-            SaveConfig();
-            save_timer = end_time;
-        }
-
         const auto us =
             std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time);
         const auto frame_time =

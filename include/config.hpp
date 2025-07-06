@@ -5,6 +5,7 @@
 #include <chrono>
 #include <mithril/types.hpp>
 #include <unordered_map>
+#include <vector>
 
 #include "colors.hpp"
 #include "key_code.hpp"
@@ -254,6 +255,8 @@ struct Flags {
     bool no_visuals = false;
 };
 
-void SaveConfig();
-Config LoadConfig();
+std::vector<std::string> ListConfigs();
+void SaveConfig(const std::string &filename);
+Config LoadConfig(const std::string &filename);
 void ResetConfig();
+void DeleteConfig(const std::string &filename);

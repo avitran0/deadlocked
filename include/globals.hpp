@@ -1,12 +1,16 @@
 #pragma once
 
 #include <mutex>
+#include <string>
+#include <vector>
 
 #include "config.hpp"
 #include "cs2/info.hpp"
 #include "version_check.hpp"
 
 extern std::mutex config_lock;
+extern std::string current_config;
+extern std::vector<std::string> available_configs;
 extern Config config;
 
 extern std::mutex vinfo_lock;
