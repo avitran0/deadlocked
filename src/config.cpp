@@ -294,6 +294,7 @@ std::vector<std::string> ListConfigs() {
         configs.push_back(entry.path().filename());
     }
     if (configs.empty()) {
+        config = Config();
         SaveConfig("deadlocked.toml");
         configs.push_back("deadlocked.toml");
     }
