@@ -712,7 +712,7 @@ void Gui() {
                     const bool is_selected = conf == current_config;
                     if (ImGui::Selectable(conf.c_str(), is_selected)) {
                         SaveConfig(current_config);
-                        LoadConfig(conf);
+                        config = LoadConfig(conf);
                     }
                     if (is_selected) {
                         ImGui::SetItemDefaultFocus();
