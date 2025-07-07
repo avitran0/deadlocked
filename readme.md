@@ -24,6 +24,7 @@ simple cs2 aimbot and esp, for linux only.
   - weapon name
   - player tags (helmet, defuser, bomb)
   - dropped weapons
+  - bomb timer
 - triggerbot
   - min/max delay
   - hotkey
