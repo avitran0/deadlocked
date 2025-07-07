@@ -5,12 +5,12 @@ set -e
 BUILD_TYPE=${1:-Release}
 
 if [[ "$BUILD_TYPE" != "Release" && "$BUILD_TYPE" != "Debug" ]]; then
-    echo "Invalid build type: $BUILD_TYPE"
-    echo "Usage: $0 [Release|Debug]"
+    echo "invalid build type: $BUILD_TYPE"
+    echo "usage: $0 [Release|Debug]"
     exit 1
 fi
 
-echo "Building in $BUILD_TYPE mode"
+echo "building in $BUILD_TYPE mode"
 
 if command -v ccache &>/dev/null; then
     CCACHE_LAUNCHER_OPTS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"

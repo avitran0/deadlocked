@@ -64,6 +64,7 @@ if possible, do not use the precompiled releases. they might be out of date.
 
 ## running
 
+- update (optional): `./update.sh`
 - execute the run script: `./run.sh`
 
 ## flags
