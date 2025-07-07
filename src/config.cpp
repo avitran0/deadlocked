@@ -329,6 +329,10 @@ Config LoadConfig(const std::string &filename) {
     try {
         const auto data = toml::parse(file);
         current_config = filename;
+
+        logging::Info("config loaded: {}", std::string(path));
+
+        
         return Config::from_toml(*data.as_table());
     } catch (toml::parse_error &) {
         logging::Warning("config file invalid, loading defaults");
