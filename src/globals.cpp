@@ -9,7 +9,7 @@
 std::mutex config_lock;
 std::string current_config = "deadlocked.toml";
 std::vector<std::string> available_configs = ListConfigs();
-Config config;
+Config config = LoadConfig(current_config);
 
 std::mutex vinfo_lock;
 std::vector<PlayerInfo> player_info {32};
