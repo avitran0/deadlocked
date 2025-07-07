@@ -315,6 +315,10 @@ void SaveConfig(const std::string &filename) {
 
 Config LoadConfig(const std::string &filename) {
     const auto path = ConfigPath() / filename;
+    if (!std::filesystem::exists(path)) {
+        logging::Warning("config file invalid, loading defaults");
+        return {};
+    }
     std::ifstream file(path);
     if (!file.good()) {
         logging::Warning("config file invalid, loading defaults");
