@@ -317,12 +317,12 @@ Config LoadConfig(const std::string &filename) {
     const auto path = ConfigPath() / filename;
     if (!std::filesystem::exists(path)) {
         logging::Warning("config file invalid, loading defaults");
-        return {};
+        return Config();
     }
     std::ifstream file(path);
     if (!file.good()) {
         logging::Warning("config file invalid, loading defaults");
-        return {};
+        return Config();
     }
 
     try {
@@ -331,7 +331,7 @@ Config LoadConfig(const std::string &filename) {
         return Config::from_toml(*data.as_table());
     } catch (toml::parse_error &) {
         logging::Warning("config file invalid, loading defaults");
-        return {};
+        return Config();
     }
 }
 

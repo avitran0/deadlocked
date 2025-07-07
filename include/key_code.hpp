@@ -126,6 +126,7 @@ struct EnumEntry {
 };
 
 const std::map<KeyCode, const char *> key_code_names = {
+    {KeyCode::KeyNone, "None"},
     {KeyCode::Key0, "0"},
     {KeyCode::Key1, "1"},
     {KeyCode::Key2, "2"},
