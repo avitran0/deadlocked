@@ -5,15 +5,11 @@
 #include "globals.hpp"
 #include "gui.hpp"
 #include "mouse.hpp"
-#include "version_check.hpp"
 
 int main(const int argc, const char *argv[]) {
     signal(SIGILL, stacktrace::SignalHandler);
     signal(SIGABRT, stacktrace::SignalHandler);
     signal(SIGSEGV, stacktrace::SignalHandler);
-
-    VersionCheck();
-    GetSystemInfo();
 
     for (int i = 0; i < argc; i++) {
         const std::string arg {argv[i]};

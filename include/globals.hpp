@@ -6,7 +6,6 @@
 
 #include "config.hpp"
 #include "cs2/info.hpp"
-#include "version_check.hpp"
 
 extern std::mutex config_lock;
 extern std::string current_config;
@@ -21,5 +20,3 @@ extern glm::mat4 view_matrix;
 extern glm::vec4 window_size;
 extern MiscInfo misc_info;
 extern Flags flags;
-extern bool new_version;
-extern SystemInfo system_info;

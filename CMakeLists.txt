@@ -7,28 +7,10 @@ if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(FATAL_ERROR "this only works on linux.")
 endif()
 
-execute_process(
-    COMMAND git rev-parse HEAD
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-if(NOT GIT_COMMIT_HASH)
-    set(GIT_COMMIT_HASH "unknown")
-endif()
-
-configure_file(
-    ${CMAKE_SOURCE_DIR}/generated/hash.hpp.in
-    ${CMAKE_SOURCE_DIR}/generated/hash.hpp
-    @ONLY
-)
-
 file(GLOB_RECURSE SOURCE_FILES "src/*.cpp")
 
 add_executable(deadlocked ${SOURCE_FILES})
 target_include_directories(deadlocked PRIVATE include)
-target_include_directories(deadlocked PRIVATE generated)
 
 target_include_directories(deadlocked PRIVATE lib/imgui)
 target_include_directories(deadlocked PRIVATE lib/imgui/backends)
@@ -45,12 +27,10 @@ set(SDL_INSTALL_DOCS OFF CACHE BOOL "disable sdl docs" FORCE)
 # required for curl?
 find_package(ICU REQUIRED COMPONENTS uc i18n data)
 
-add_subdirectory(lib/cpr)
 add_subdirectory(lib/glm)
 add_subdirectory(lib/sdl)
 add_subdirectory(lib/mithril)
 
-target_link_libraries(deadlocked PRIVATE cpr::cpr)
 target_link_libraries(deadlocked PRIVATE ICU::uc ICU::i18n ICU::data)
 target_link_libraries(deadlocked PRIVATE glm::glm)
 target_link_libraries(deadlocked PRIVATE OpenGL)

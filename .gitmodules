@@ -13,6 +13,3 @@
 [submodule "mithril"]
 	path = lib/mithril
 	url = https://github.com/avitran0/mithril
-[submodule "lib/cpr"]
-	path = lib/cpr
-	url = https://github.com/libcpr/cpr
