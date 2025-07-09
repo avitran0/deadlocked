@@ -20,9 +20,12 @@ set(IMGUI_SOURCE_FILES lib/imgui/imgui.cpp lib/imgui/imgui_demo.cpp lib/imgui/im
 set_source_files_properties(${IMGUI_SOURCE_FILES} PROPERTIES COMPILE_FLAGS $<$<CONFIG:Debug>:-g0>)
 target_sources(deadlocked PRIVATE ${IMGUI_SOURCE_FILES})
 
-set(SDL_TESTS OFF CACHE BOOL "disable sdl tests" FORCE)
-set(SDL_EXAMPLES OFF CACHE BOOL "disable sdl examples" FORCE)
-set(SDL_INSTALL_DOCS OFF CACHE BOOL "disable sdl docs" FORCE)
+set(BUILD_SHARED_LIBS OFF)
+set(SDL_STATIC ON)
+set(SDL_SHARED OFF)
+set(SDL_TESTS OFF)
+set(SDL_EXAMPLES OFF)
+set(SDL_INSTALL_DOCS OFF)
 
 add_subdirectory(lib/glm)
 add_subdirectory(lib/sdl)
