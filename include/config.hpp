@@ -11,7 +11,7 @@
 #include "key_code.hpp"
 #include "toml.hpp"
 
-#define VERSION "v6.1.0"
+#define VERSION "v6.2.0"
 
 constexpr std::chrono::seconds save_interval {1};
 
