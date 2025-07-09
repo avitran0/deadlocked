@@ -24,14 +24,10 @@ set(SDL_TESTS OFF CACHE BOOL "disable sdl tests" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "disable sdl examples" FORCE)
 set(SDL_INSTALL_DOCS OFF CACHE BOOL "disable sdl docs" FORCE)
 
-# required for curl?
-find_package(ICU REQUIRED COMPONENTS uc i18n data)
-
 add_subdirectory(lib/glm)
 add_subdirectory(lib/sdl)
 add_subdirectory(lib/mithril)
 
-target_link_libraries(deadlocked PRIVATE ICU::uc ICU::i18n ICU::data)
 target_link_libraries(deadlocked PRIVATE glm::glm)
 target_link_libraries(deadlocked PRIVATE OpenGL)
 target_link_libraries(deadlocked PRIVATE SDL3::SDL3)
