@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.28)
-project(deadlocked CXX)
+cmake_minimum_required(VERSION 3.30)
+project(deadlocked LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -12,14 +12,6 @@ file(GLOB_RECURSE SOURCE_FILES "src/*.cpp")
 add_executable(deadlocked ${SOURCE_FILES})
 target_include_directories(deadlocked PRIVATE include)
 
-target_include_directories(deadlocked PRIVATE lib/imgui)
-target_include_directories(deadlocked PRIVATE lib/imgui/backends)
-set(IMGUI_SOURCE_FILES lib/imgui/imgui.cpp lib/imgui/imgui_demo.cpp lib/imgui/imgui_draw.cpp
-    lib/imgui/imgui_tables.cpp lib/imgui/imgui_widgets.cpp
-    lib/imgui/backends/imgui_impl_sdl3.cpp lib/imgui/backends/imgui_impl_opengl3.cpp)
-set_source_files_properties(${IMGUI_SOURCE_FILES} PROPERTIES COMPILE_FLAGS $<$<CONFIG:Debug>:-g0>)
-target_sources(deadlocked PRIVATE ${IMGUI_SOURCE_FILES})
-
 set(BUILD_SHARED_LIBS OFF)
 set(SDL_STATIC ON)
 set(SDL_SHARED OFF)
@@ -27,14 +19,10 @@ set(SDL_TESTS OFF)
 set(SDL_EXAMPLES OFF)
 set(SDL_INSTALL_DOCS OFF)
 
-add_subdirectory(lib/glm)
-add_subdirectory(lib/sdl)
-add_subdirectory(lib/mithril)
+add_subdirectory(lib)
 
-target_link_libraries(deadlocked PRIVATE glm::glm)
-target_link_libraries(deadlocked PRIVATE OpenGL)
-target_link_libraries(deadlocked PRIVATE SDL3::SDL3)
-target_link_libraries(deadlocked PRIVATE mithril)
+target_link_libraries(deadlocked PRIVATE imgui glm::glm
+                        OpenGL SDL3::SDL3 mithril lua)
 
 # valgrind/callgrind does not work with native, but with skylake it does
 target_compile_options(deadlocked PRIVATE "-march=native")

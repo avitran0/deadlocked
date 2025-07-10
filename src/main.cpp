@@ -1,10 +1,10 @@
 #include <csignal>
-#include <mithril/logging.hpp>
-#include <mithril/stacktrace.hpp>
 
 #include "globals.hpp"
 #include "gui.hpp"
+#include "logging.hpp"
 #include "mouse.hpp"
+#include "stacktrace.hpp"
 
 int main(const int argc, const char *argv[]) {
     signal(SIGILL, stacktrace::SignalHandler);
