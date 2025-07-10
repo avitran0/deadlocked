@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 extern "C" {
 #include <lauxlib.h>
 }
@@ -10,6 +12,20 @@ extern "C" {
 
 #include "key_code.hpp"
 #include "types.hpp"
+
+struct Vec2 {
+    f32 x, y;
+
+    Vec2 FromGlm(const glm::vec2 &vec);
+    glm::vec2 ToGlm();
+};
+
+struct Vec3 {
+    f32 x, y, z;
+
+    Vec3 FromGlm(const glm::vec3 &vec);
+    glm::vec3 ToGlm();
+};
 
 struct Script {
     lua_State *state;
