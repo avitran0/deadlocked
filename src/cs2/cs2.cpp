@@ -1,7 +1,9 @@
 #include "cs2/cs2.hpp"
 
+#include <atomic>
 #include <mithril/hex.hpp>
 #include <mithril/logging.hpp>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <thread>
@@ -25,6 +27,26 @@ std::vector<Smoke> smokes {};
 
 void CS2() {
     logging::Info("game thread started");
+
+    std::atomic_bool run_cheats {true};
+
+    auto cheat_loop = [&](auto &&feature) {
+        while (run_cheats && !flags.should_quit) {
+            if (IsValid()) {
+                std::lock_guard<std::mutex> lock(config_lock);
+                feature();
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+    };
+
+    std::thread fov_thread([&]() { cheat_loop(FovChanger); });
+    std::thread no_flash_thread([&]() { cheat_loop(NoFlash); });
+    std::thread rcs_thread([&]() { cheat_loop(Rcs); });
+    std::thread smoke_thread([&]() { cheat_loop([&]() { Smokes(smokes); }); });
+    std::thread aimbot_thread([&]() { cheat_loop(Aimbot); });
+    std::thread triggerbot_thread([&]() { cheat_loop(Triggerbot); });
+
     while (true) {
         const auto clock = std::chrono::steady_clock::now();
 
@@ -33,9 +55,8 @@ void CS2() {
         }
 
         if (IsValid()) {
-            config_lock.lock();
+            std::lock_guard<std::mutex> lock(config_lock);
             Run();
-            config_lock.unlock();
         } else {
             Setup();
         }
@@ -53,16 +74,28 @@ void CS2() {
         } else {
             // if it was just a 5 second sleep, it would wait 5 seconds before closing the gui
             // window
+            bool exit_loop = false;
             for (i32 i = 0; i < 100; i++) {
-                config_lock.lock();
+                std::lock_guard<std::mutex> lock(config_lock);
                 if (flags.should_quit) {
-                    return;
+                    exit_loop = true;
+                    break;
                 }
-                config_lock.unlock();
                 std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            }
+            if (exit_loop) {
+                break;
             }
         }
     }
+
+    run_cheats = false;
+    fov_thread.join();
+    no_flash_thread.join();
+    rcs_thread.join();
+    smoke_thread.join();
+    aimbot_thread.join();
+    triggerbot_thread.join();
 }
 
 bool IsValid() {
@@ -995,15 +1028,5 @@ void Run() {
     FindTarget();
     if (!Player::LocalPlayer().has_value()) {
         ClearVisualInfo();
-        return;
     }
-
-    FovChanger();
-    NoFlash();
-    Rcs();
-    // todo: smokes
-    Smokes(smokes);
-
-    Aimbot();
-    Triggerbot();
 }
