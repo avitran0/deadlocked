@@ -56,7 +56,8 @@ simple cs2 aimbot and esp, for linux only.
 
 - add your user to the `input` group: `sudo usermod -aG input $(whoami)`
 - restart your machine (this will **_not_** work without a restart!)
-- clone the repository: `git clone --recursive https://github.com/avitran0/deadlocked`
+- download the repo as a .zip file
+- put the file in a safe place, unzip
 - install rust from `https://rustup.rs/`
 
 ## running
