@@ -80,6 +80,7 @@ pub struct AimbotConfig {
     pub fov: f32,
     pub smooth: f32,
     pub bones: Vec<Bones>,
+    pub targeting_mode: TargetingMode,
 }
 
 impl Default for AimbotConfig {
@@ -101,6 +102,7 @@ impl Default for AimbotConfig {
                 Bones::Spine1,
                 Bones::Hip,
             ],
+            targeting_mode: TargetingMode::Fov,
         }
     }
 }
@@ -126,6 +128,12 @@ impl Default for RcsConfig {
 pub enum TriggerbotMode {
     Hold,
     Toggle,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
+pub enum TargetingMode {
+    Fov,
+    Distance,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

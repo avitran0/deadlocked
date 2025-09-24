@@ -108,7 +108,7 @@ impl Game for CS2 {
 
         self.triggerbot_shoot(mouse);
 
-        self.find_target();
+        self.find_target(config);
 
         if self.is_button_down(&config.aim.hotkey) {
             self.aimbot(config, mouse);

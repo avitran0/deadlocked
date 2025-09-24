@@ -11,7 +11,7 @@ use crate::{
     bvh::{Aabb, Triangle},
     color::Colors,
     config::{
-        AimbotConfig, BoxMode, CONFIG_PATH, Config, DrawMode, TriggerbotMode, VERSION,
+        AimbotConfig, BoxMode, CONFIG_PATH, Config, DrawMode, TargetingMode, TriggerbotMode, VERSION,
         WeaponConfig, available_configs, delete_config, parse_config, write_config,
     },
     constants::cs2,
@@ -252,6 +252,20 @@ impl App {
                 }
                 ui.label("Start Bullet");
             });
+
+            egui::ComboBox::new("targeting_mode", "Targeting Mode")
+                .selected_text(format!("{:?}", self.weapon_config().aimbot.targeting_mode))
+                .show_ui(ui, |ui| {
+                    for mode in TargetingMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.weapon_config().aimbot.targeting_mode, mode, text)
+                            .clicked()
+                        {
+                            self.send_config();
+                        }
+                    }
+                });
         });
 
         ui.collapsing("Checks", |ui| {
