@@ -9,6 +9,7 @@ use crate::{
     math::angles_to_fov,
     mouse::Mouse,
 };
+use strum::IntoEnumIterator;
 
 #[derive(Debug, Default)]
 pub struct Triggerbot {
@@ -22,14 +23,14 @@ pub struct Triggerbot {
 impl CS2 {
     pub fn triggerbot(&mut self, config: &Config) {
         let hotkey = config.aim.triggerbot_hotkey;
-        let config = self.triggerbot_config(config);
+        let triggerbot_config = self.triggerbot_config(config);
 
-        if !config.enabled || self.trigger.next_shot.is_some() {
+        if !triggerbot_config.enabled || self.trigger.next_shot.is_some() {
             return;
         }
 
         let button_state = self.is_button_down(&hotkey);
-        if config.mode == TriggerbotMode::Hold && !button_state {
+        if triggerbot_config.mode == TriggerbotMode::Hold && !button_state {
             return;
         } else {
             if button_state && !self.trigger.previous_button_state {
@@ -45,31 +46,68 @@ impl CS2 {
             return;
         };
 
-        if config.flash_check && local_player.is_flashed(self) {
+        if triggerbot_config.flash_check && local_player.is_flashed(self) {
             return;
         }
 
-        if config.scope_check
+        if triggerbot_config.scope_check
             && local_player.weapon_class(self) == WeaponClass::Sniper
             && !local_player.is_scoped(self)
         {
             return;
         }
 
-        if config.velocity_check && local_player.velocity(self).length() > config.velocity_threshold
+        if triggerbot_config.velocity_check && local_player.velocity(self).length() > triggerbot_config.velocity_threshold
         {
             return;
         }
 
-        let Some(player) = local_player.crosshair_entity(self) else {
+        let player = if let Some(crosshair_player) = local_player.crosshair_entity(self) {
+            crosshair_player
+        } else if !triggerbot_config.smoke_check {
+            let view_angles = local_player.view_angles(self);
+            let mut best_player: Option<Player> = None;
+            let mut best_fov = 1.5;
+            
+            for player in &self.players {
+                if !self.is_ffa() && player.team(self) == local_player.team(self) {
+                    continue;
+                }
+                
+                if !player.is_valid(self) {
+                    continue;
+                }
+                
+                for bone in Bones::iter() {
+                    let bone_pos = player.bone_position(self, bone.u64());
+                    let angle = self.angle_to_target(&local_player, &bone_pos, &Vec2::ZERO);
+                    let fov = angles_to_fov(&view_angles, &angle);
+                    
+                    if fov < best_fov {
+                        best_fov = fov;
+                        best_player = Some(*player);
+                    }
+                }
+            }
+            
+            if let Some(player) = best_player {
+                player
+            } else {
+                return;
+            }
+        } else {
             return;
         };
+
+        if !player.visible(self, &local_player) {
+            return;
+        }
 
         if !self.is_ffa() && player.team(self) == local_player.team(self) {
             return;
         }
 
-        if config.head_only {
+        if triggerbot_config.head_only {
             let head = player.bone_position(self, Bones::Head.u64());
 
             let target_angle = self.angle_to_target(&local_player, &head, &Vec2::ZERO);
@@ -84,15 +122,15 @@ impl CS2 {
             }
         }
 
-        let mean = (*config.delay.start() + *config.delay.end()) as f32 / 2.0;
-        let std_dev = (*config.delay.end() - *config.delay.start()) as f32 / 2.0;
+        let mean = (*triggerbot_config.delay.start() + *triggerbot_config.delay.end()) as f32 / 2.0;
+        let std_dev = (*triggerbot_config.delay.end() - *triggerbot_config.delay.start()) as f32 / 2.0;
 
         let normal = rand_distr::Normal::new(mean, std_dev).unwrap();
         use rand_distr::Distribution as _;
         let delay = normal.sample(&mut rng()).max(0.0) as u64;
 
         self.trigger.next_shot = Some(Instant::now() + Duration::from_millis(delay));
-        self.trigger.additional_shots_remaining = config.additional_shots;
+        self.trigger.additional_shots_remaining = triggerbot_config.additional_shots;
     }
 
     pub fn triggerbot_shoot(&mut self, mouse: &mut Mouse) {
