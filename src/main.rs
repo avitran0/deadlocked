@@ -13,6 +13,7 @@ mod bvh;
 mod color;
 mod config;
 mod constants;
+mod crash;
 mod cs2;
 mod data;
 mod drag_range;
@@ -42,6 +43,7 @@ fn main() {
         .init();
 
     let args: Vec<String> = std::env::args().collect();
+    crash::install_crash_handler();
 
     // this runs as x11 for now, because wayland decorations for winit are not good
     // and don't support disabling the maximize button
@@ -62,7 +64,10 @@ fn main() {
     if force_reparse {
         log::info!("reparsing map data");
     }
-    std::thread::spawn(move || parse_maps(bvh, force_reparse));
+    std::thread::spawn(move || {
+        crash::install_crash_handler();
+        parse_maps(bvh, force_reparse);
+    });
 
     let (tx, rx) = unbounded();
     let (tx_gui, rx_gui) = bounded(16);
@@ -72,16 +77,21 @@ fn main() {
     let data_game = data.clone();
     let data_radar = data.clone();
 
-    std::thread::spawn(move || router::router(rx, tx_gui, tx_game, tx_radar));
+    std::thread::spawn(move || {
+        crash::install_crash_handler();
+        router::router(rx, tx_gui, tx_game, tx_radar);
+    });
 
     let tx_game = tx.clone();
     std::thread::spawn(move || {
+        crash::install_crash_handler();
         game::GameManager::new(tx_game, rx_game, data_game, bvh_game).run();
     });
     log::info!("started game thread");
 
     let tx_radar = tx.clone();
     std::thread::spawn(move || {
+        crash::install_crash_handler();
         radar::Radar::new(tx_radar, rx_radar, data_radar).run();
     });
 

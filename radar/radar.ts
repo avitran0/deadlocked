@@ -29,7 +29,7 @@ ws.on("connection", (ws, req) => {
             const kind: string = data["kind"];
 
             if (kind == "connect_server") {
-                connect_server(ws);
+                connect_server(ws, data);
             } else if (kind == "update_data") {
                 update_data(data);
             } else if (kind == "get_data") {
@@ -38,7 +38,7 @@ ws.on("connection", (ws, req) => {
                 register_viewer(ws, data);
             }
         } catch (error) {
-            console.error("Error parsing message:", error);
+            console.error("error parsing message:", error);
         }
     });
 
@@ -47,7 +47,7 @@ ws.on("connection", (ws, req) => {
     });
 
     ws.on("error", (error) => {
-        console.error(`WebSocket error from ${(ws as any)._remoteAddress}:`, error);
+        console.error(`websocket error from ${(ws as any)._remoteAddress}:`, error);
         cleanup_connection(ws);
     });
 });
@@ -82,15 +82,15 @@ function cleanup_connection(ws: WebSocket) {
     }
 }
 
-function connect_server(ws: WebSocket) {
-    const uuid = v4();
+function connect_server(ws: WebSocket, data: any) {
+    const uuid = data["uuid"];
     games[uuid] = { data: {}, last_update: Date.now() };
     gameServers[uuid] = ws;
 
-    const message = { kind: "uuid", uuid: uuid };
+    const message = { kind: "accept" };
     ws.send(JSON.stringify(message));
 
-    console.info(`Game server connected with UUID: ${uuid}`);
+    console.info(`game server connected with uuid: ${uuid}`);
 }
 
 function register_viewer(ws: WebSocket, data: any) {
@@ -98,8 +98,8 @@ function register_viewer(ws: WebSocket, data: any) {
     const clientId = data["client_id"] || `${(ws as any)._remoteAddress}_${Date.now()}`;
 
     if (!gameUuid || !(gameUuid in games)) {
-        console.warn(`Viewer tried to register for non-existent game: ${gameUuid}`);
-        ws.close(4004, "Game not found");
+        console.warn(`viewer tried to register for non-existent game: ${gameUuid}`);
+        ws.close(404, "game not found");
         return;
     }
 
@@ -114,10 +114,10 @@ function register_viewer(ws: WebSocket, data: any) {
         ws: ws,
         gameUuid: gameUuid,
         lastSeen: Date.now(),
-        clientId: clientId
+        clientId: clientId,
     };
 
-    console.log(`Viewer registered: ${clientId} for game ${gameUuid}`);
+    console.log(`viewer registered for game ${gameUuid}`);
     broadcastViewerCount(gameUuid);
 }
 
@@ -139,7 +139,7 @@ function get_data(ws: WebSocket, data: any) {
         const message = JSON.stringify(games[uuid].data);
         ws.send(message);
     } else {
-        console.log(`UUID ${uuid} not found in games`);
+        console.log(`uuid ${uuid} not found`);
         ws.send(JSON.stringify({}));
     }
 }
@@ -149,27 +149,27 @@ function broadcastViewerCount(gameUuid: string) {
 
     const message = JSON.stringify({
         kind: "viewer_count",
-        count: viewerCount
+        count: viewerCount,
     });
 
-    const gameViewers = Object.values(viewers).filter(viewer =>
-    viewer.gameUuid === gameUuid && viewer.ws.readyState === WebSocket.OPEN
+    const gameViewers = Object.values(viewers).filter(
+        (viewer) => viewer.gameUuid === gameUuid && viewer.ws.readyState === WebSocket.OPEN
     );
 
-    console.log(`Broadcasting viewer count ${viewerCount} to ${gameViewers.length} viewers for game ${gameUuid}`);
+    // console.log(`broadcasting viewer count ${viewerCount} to ${gameViewers.length} viewers for game ${gameUuid}`);
 
-    gameViewers.forEach(viewer => {
+    gameViewers.forEach((viewer) => {
         try {
             viewer.ws.send(message);
         } catch (error) {
-            console.error("Error sending viewer count:", error);
+            console.error("error sending viewer count: ", error);
         }
     });
 }
 
 function getViewerCount(gameUuid: string): number {
-    return Object.values(viewers).filter(viewer =>
-    viewer.gameUuid === gameUuid && viewer.ws.readyState === WebSocket.OPEN
+    return Object.values(viewers).filter(
+        (viewer) => viewer.gameUuid === gameUuid && viewer.ws.readyState === WebSocket.OPEN
     ).length;
 }
 
@@ -206,7 +206,7 @@ setInterval(() => {
     }
 
     if (cleanedGames > 0 || cleanedViewers > 0) {
-        console.log(`Cleaned ${cleanedGames} games and ${cleanedViewers} viewers`);
+        console.log(`cleaned ${cleanedGames} games viewers`);
     }
 }, 10000);
 
@@ -229,5 +229,5 @@ setInterval(() => {
 }, 60000);
 
 server.listen(PORT, () => {
-    console.info(`Server listening on port ${PORT}`);
+    console.info(`server listening on port ${PORT}`);
 });

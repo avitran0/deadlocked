@@ -5,6 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use arboard::Clipboard;
 use crossbeam::channel::{Receiver, Sender};
 use egui::{FontData, FontDefinitions, Stroke, Style};
 use egui_glow::glow;
@@ -37,6 +38,7 @@ pub struct App {
     pub overlay_window: Option<WindowContext>,
     pub overlay_gl: Option<Arc<glow::Context>>,
     pub overlay_glow: Option<egui_glow::EguiGlow>,
+    pub clipboard: Clipboard,
     next_frame_time: Instant,
 
     pub tx: Sender<Envelope>,
@@ -81,6 +83,8 @@ impl App {
             overlay_window: None,
             overlay_gl: None,
             overlay_glow: None,
+
+            clipboard: Clipboard::new().unwrap(),
             next_frame_time: Instant::now() + FRAME_DURATION,
 
             tx,

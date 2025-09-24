@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{config::Config, mouse::DeviceStatus};
 
@@ -22,7 +23,7 @@ impl Display for GameStatus {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RadarStatus {
     Disconnected,
-    Connected(String),
+    Connected(Uuid),
 }
 
 impl Display for RadarStatus {

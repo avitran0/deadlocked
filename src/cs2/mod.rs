@@ -13,8 +13,8 @@ use crate::{
     config::{AimbotConfig, Config, RcsConfig, TriggerbotConfig, TriggerbotMode},
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
-        bones::Bones, offsets::Offsets, planted_c4::PlantedC4, smoke::Smoke, target::Target,
-        triggerbot::Triggerbot, wallhack::Wallhack, weapon::Weapon,
+        bones::Bones, esp_toggle::EspToggle, offsets::Offsets, planted_c4::PlantedC4, smoke::Smoke,
+        target::Target, triggerbot::Triggerbot, wallhack::Wallhack, weapon::Weapon,
     },
     data::{Data, PlayerData},
     game::Game,
@@ -27,6 +27,7 @@ use crate::{
 
 mod aimbot;
 pub mod bones;
+mod esp_toggle;
 mod fov_changer;
 mod no_flash;
 mod offsets;

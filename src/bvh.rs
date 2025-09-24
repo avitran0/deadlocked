@@ -1,4 +1,7 @@
-use std::fs::File;
+use std::{
+    fs::File,
+    io::{BufReader, BufWriter},
+};
 
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
@@ -150,11 +153,14 @@ impl Bvh {
     }
 
     pub fn save(&self, file: &mut File) {
-        bincode::serde::encode_into_std_write(self, file, bincode::config::standard()).unwrap();
+        let mut writer = BufWriter::new(file);
+        bincode::serde::encode_into_std_write(self, &mut writer, bincode::config::standard())
+            .unwrap();
     }
 
     pub fn load(file: &mut File) -> Option<Self> {
-        bincode::serde::decode_from_std_read(file, bincode::config::standard()).ok()
+        let mut reader = BufReader::new(file);
+        bincode::serde::decode_from_std_read(&mut reader, bincode::config::standard()).ok()
     }
 
     pub fn insert(&mut self, triangle: Triangle) -> usize {
