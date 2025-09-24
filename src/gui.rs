@@ -368,6 +368,20 @@ impl App {
             {
                 self.send_config();
             }
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.weapon_config().triggerbot.additional_shots)
+                            .range(0..=10)
+                            .speed(1.0),
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Additional Shots");
+            });
         });
 
         ui.collapsing("Checks\u{200b}", |ui| {

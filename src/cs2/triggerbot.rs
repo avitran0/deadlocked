@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use glam::Vec2;
-use rand::rng;
+use rand::{rng, Rng};
 
 use crate::{
     config::{Config, TriggerbotMode},
@@ -15,6 +15,8 @@ pub struct Triggerbot {
     next_shot: Option<Instant>,
     previous_button_state: bool,
     pub(crate) active: bool,
+    additional_shots_remaining: u32,
+    additional_shot_delay: Option<Instant>,
 }
 
 impl CS2 {
@@ -26,7 +28,6 @@ impl CS2 {
             return;
         }
 
-        // button state
         let button_state = self.is_button_down(&hotkey);
         if config.mode == TriggerbotMode::Hold && !button_state {
             return;
@@ -91,6 +92,7 @@ impl CS2 {
         let delay = normal.sample(&mut rng()).max(0.0) as u64;
 
         self.trigger.next_shot = Some(Instant::now() + Duration::from_millis(delay));
+        self.trigger.additional_shots_remaining = config.additional_shots;
     }
 
     pub fn triggerbot_shoot(&mut self, mouse: &mut Mouse) {
@@ -100,6 +102,27 @@ impl CS2 {
             mouse.left_press();
             mouse.left_release();
             self.trigger.next_shot = None;
+            
+            if self.trigger.additional_shots_remaining > 0 {
+                let additional_delay = 50 + (rand::rng().random::<u64>() % 100);
+                self.trigger.additional_shot_delay = Some(Instant::now() + Duration::from_millis(additional_delay));
+            }
+        }
+        
+        if let Some(additional_shot_time) = self.trigger.additional_shot_delay
+            && Instant::now() >= additional_shot_time
+            && self.trigger.additional_shots_remaining > 0
+        {
+            mouse.left_press();
+            mouse.left_release();
+            self.trigger.additional_shots_remaining -= 1;
+            
+            if self.trigger.additional_shots_remaining > 0 {
+                let next_delay = 40 + (rand::rng().random::<u64>() % 80);
+                self.trigger.additional_shot_delay = Some(Instant::now() + Duration::from_millis(next_delay));
+            } else {
+                self.trigger.additional_shot_delay = None;
+            }
         }
     }
 }
