@@ -14,6 +14,7 @@ pub struct Data {
     pub friendlies: Vec<PlayerData>,
     pub local_player: PlayerData,
     pub weapons: Vec<(Weapon, Vec3)>,
+    pub dropped_c4: Vec<Vec3>,
     pub bomb: BombData,
     pub map_name: String,
     pub view_matrix: Mat4,

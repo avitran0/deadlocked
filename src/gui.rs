@@ -690,6 +690,13 @@ impl App {
             }
 
             if ui
+                .checkbox(&mut self.config.hud.dropped_c4, "Dropped C4")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if ui
                 .checkbox(&mut self.config.hud.spectator_list, "Spectator List")
                 .changed()
             {
@@ -1157,6 +1164,22 @@ impl App {
                     pos,
                     Align2::CENTER_CENTER,
                     None,
+                );
+            }
+        }
+
+        if self.config.hud.dropped_c4 {
+            let icon_font = egui::FontId::new(self.config.hud.font_size * 3.0, egui::FontFamily::Monospace);
+            for c4_position in &data.dropped_c4 {
+                let Some(pos) = world_to_screen(c4_position, data) else {
+                    continue;
+                };
+                painter.text(
+                    pos,
+                    Align2::CENTER_CENTER,
+                    Weapon::C4.to_icon(),
+                    icon_font.clone(),
+                    self.apply_alpha(Color32::RED),
                 );
             }
         }

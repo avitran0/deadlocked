@@ -196,9 +196,16 @@ impl Game for CS2 {
         data.friendlies.push(local_player_data);
 
         data.weapons.clear();
+        data.dropped_c4.clear();
         for entity in &self.entities {
-            if let Entity::Weapon(weapon, position) = entity {
-                data.weapons.push((weapon.clone(), *position));
+            match entity {
+                Entity::Weapon(weapon, position) => {
+                    data.weapons.push((weapon.clone(), *position));
+                }
+                Entity::C4(position) => {
+                    data.dropped_c4.push(*position);
+                }
+                _ => {}
             }
         }
 
@@ -484,10 +491,14 @@ impl CS2 {
                 return None;
             }
 
-            let weapon = Weapon::from_handle(entity, self);
-
             let position = Player::entity(entity).position(self);
-            Some(Entity::Weapon(weapon, position))
+            
+            if name == "weapon_c4" {
+                Some(Entity::C4(position))
+            } else {
+                let weapon = Weapon::from_handle(entity, self);
+                Some(Entity::Weapon(weapon, position))
+            }
         } else if name.starts_with("smoke") {
             Some(Entity::Smoke(Smoke::new(entity)))
         } else {
@@ -554,4 +565,5 @@ impl CS2 {
 pub enum Entity {
     Weapon(Weapon, Vec3),
     Smoke(Smoke),
+    C4(Vec3),
 }
