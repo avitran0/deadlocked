@@ -207,6 +207,7 @@ pub enum BoxMode {
     Full,
 }
 
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerConfig {
     pub enabled: bool,
@@ -223,6 +224,7 @@ pub struct PlayerConfig {
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
+    pub wallhack_hotkey: KeyCode,
 }
 
 impl Default for PlayerConfig {
@@ -242,6 +244,7 @@ impl Default for PlayerConfig {
             player_name: true,
             weapon_icon: true,
             tags: true,
+            wallhack_hotkey: KeyCode::Key0,
         }
     }
 }

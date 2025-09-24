@@ -14,7 +14,7 @@ use crate::{
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
         bones::Bones, offsets::Offsets, planted_c4::PlantedC4, smoke::Smoke, target::Target,
-        triggerbot::Triggerbot, weapon::Weapon,
+        triggerbot::Triggerbot, wallhack::Wallhack, weapon::Weapon,
     },
     data::{Data, PlayerData},
     game::Game,
@@ -36,6 +36,7 @@ mod rcs;
 mod smoke;
 mod target;
 mod triggerbot;
+mod wallhack;
 pub mod weapon;
 pub mod weapon_class;
 
@@ -50,6 +51,7 @@ pub struct CS2 {
     entities: Vec<Entity>,
     recoil: Recoil,
     trigger: Triggerbot,
+    wallhack: Wallhack,
     weapon: Weapon,
 }
 
@@ -102,6 +104,7 @@ impl Game for CS2 {
 
         self.no_flash(config);
         self.fov_changer(config);
+        self.wallhack(config);
 
         self.rcs(config, mouse);
         self.triggerbot(config);
@@ -208,6 +211,7 @@ impl Game for CS2 {
         } else {
             false
         };
+        data.wallhack_active = self.wallhack_enabled(config);
 
         data.view_matrix = self.process.read::<Mat4>(self.offsets.direct.view_matrix);
 
@@ -234,6 +238,7 @@ impl CS2 {
             entities: Vec::with_capacity(128),
             recoil: Recoil::default(),
             trigger: Triggerbot::default(),
+            wallhack: Wallhack::default(),
             weapon: Weapon::default(),
         }
     }
