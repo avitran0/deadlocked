@@ -164,7 +164,7 @@ impl Game for CS2 {
                 color: player.color(self),
                 rotation: player.rotation(self),
             };
-            if !self.is_ffa() && player.team(self) == local_team {
+            if !self.is_ffa() && player.team(self) == local_team && !config.player.show_teammates_as_enemies {
                 data.friendlies.push(player_data);
             } else {
                 data.players.push(player_data);

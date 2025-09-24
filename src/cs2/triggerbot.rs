@@ -70,7 +70,7 @@ impl CS2 {
             let mut best_fov = 1.5;
             
             for player in &self.players {
-                if !self.is_ffa() && player.team(self) == local_player.team(self) {
+                if !self.is_ffa() && player.team(self) == local_player.team(self) && !config.player.show_teammates_as_enemies {
                     continue;
                 }
                 
@@ -103,7 +103,7 @@ impl CS2 {
             return;
         }
 
-        if !self.is_ffa() && player.team(self) == local_player.team(self) {
+        if !self.is_ffa() && player.team(self) == local_player.team(self) && !config.player.show_teammates_as_enemies {
             return;
         }
 

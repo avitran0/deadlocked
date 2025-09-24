@@ -227,6 +227,7 @@ pub struct PlayerConfig {
     pub weapon_icon: bool,
     pub tags: bool,
     pub wallhack_hotkey: KeyCode,
+    pub show_teammates_as_enemies: bool,
 }
 
 impl Default for PlayerConfig {
@@ -247,6 +248,7 @@ impl Default for PlayerConfig {
             weapon_icon: true,
             tags: true,
             wallhack_hotkey: KeyCode::Key0,
+            show_teammates_as_enemies: false,
         }
     }
 }

@@ -658,6 +658,13 @@ impl App {
             {
                 self.send_config();
             }
+
+            if ui
+                .checkbox(&mut self.config.player.show_teammates_as_enemies, "Show Teammates as Enemies")
+                .changed()
+            {
+                self.send_config();
+            }
         });
     }
 

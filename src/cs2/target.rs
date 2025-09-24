@@ -70,7 +70,7 @@ impl CS2 {
         }
         
         for player in &self.players {
-            if !ffa && team == player.team(self) {
+            if !ffa && team == player.team(self) && !config.player.show_teammates_as_enemies {
                 continue;
             }
 
