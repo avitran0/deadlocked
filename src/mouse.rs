@@ -7,6 +7,8 @@ use std::{
 
 use glam::{IVec2, Vec2};
 
+use crate::keyboard::VirtualKeyboard;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum DeviceStatus {
     Working(String),
@@ -50,6 +52,7 @@ const EV_REL: u16 = 0x02;
 const SYN_REPORT: u16 = 0x00;
 const AXIS_X: u16 = 0x00;
 const AXIS_Y: u16 = 0x01;
+const REL_WHEEL: u16 = 0x08;
 const BTN_LEFT: u16 = 0x110;
 
 #[derive(Debug, Clone)]
@@ -64,6 +67,7 @@ impl MouseDevice {
         let file = OpenOptions::new().write(true).open(&self.path)?;
         Ok(Mouse {
             file,
+            keyboard: None,
             status: DeviceStatus::Working(self.name.clone()),
         })
     }
@@ -79,6 +83,7 @@ impl MouseDevice {
                 let file = OpenOptions::new().write(true).open("/dev/null").unwrap();
                 Mouse {
                     file,
+                    keyboard: None,
                     status: DeviceStatus::PermissionsRequired,
                 }
             }
@@ -88,19 +93,26 @@ impl MouseDevice {
 
 pub struct Mouse {
     file: File,
+    keyboard: Option<VirtualKeyboard>,
     pub status: DeviceStatus,
 }
+
 
 impl Mouse {
     pub fn open() -> Self {
         let devices = discover_mice();
+        let keyboard = VirtualKeyboard::new();
+        
         if let Some(device) = devices.first() {
-            device.try_open()
+            let mut mouse = device.try_open();
+            mouse.keyboard = keyboard;
+            mouse
         } else {
             let file = OpenOptions::new().write(true).open("/dev/null").unwrap();
             log::warn!("no mouse found");
             Mouse {
                 file,
+                keyboard,
                 status: DeviceStatus::NotFound,
             }
         }
@@ -151,6 +163,31 @@ impl Mouse {
         self.key(0);
     }
 
+    pub fn scroll_wheel(&mut self, value: i32) {
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+        let time = Timeval {
+            seconds: now.as_secs(),
+            microseconds: now.subsec_micros() as u64,
+        };
+
+        let wheel = InputEvent {
+            time,
+            event_type: EV_REL,
+            code: REL_WHEEL,
+            value,
+        };
+
+        let syn = InputEvent {
+            time,
+            event_type: EV_SYN,
+            code: SYN_REPORT,
+            value: 0,
+        };
+
+        self.file.write_all(&wheel.bytes()).unwrap();
+        self.file.write_all(&syn.bytes()).unwrap();
+    }
+
     fn key(&mut self, pressed: i32) {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let time = Timeval {
@@ -178,6 +215,30 @@ impl Mouse {
 
     pub fn valid(&mut self) -> bool {
         self.file.write_all(&SYN.bytes()).is_ok()
+    }
+
+    pub fn press_a(&mut self) {
+        if let Some(ref mut kbd) = self.keyboard {
+            kbd.press_a();
+        }
+    }
+
+    pub fn release_a(&mut self) {
+        if let Some(ref mut kbd) = self.keyboard {
+            kbd.release_a();
+        }
+    }
+
+    pub fn press_d(&mut self) {
+        if let Some(ref mut kbd) = self.keyboard {
+            kbd.press_d();
+        }
+    }
+
+    pub fn release_d(&mut self) {
+        if let Some(ref mut kbd) = self.keyboard {
+            kbd.release_d();
+        }
     }
 }
 

@@ -316,6 +316,12 @@ impl Player {
             != 0
     }
 
+    pub fn is_on_ground(&self, cs2: &CS2) -> bool {
+        const FL_ONGROUND: u32 = 1 << 0;
+        let flags: u32 = cs2.process.read(self.pawn + cs2.offsets.pawn.flags);
+        (flags & FL_ONGROUND) != 0
+    }
+
     pub fn color(&self, cs2: &CS2) -> i32 {
         cs2.process
             .read(self.controller + cs2.offsets.controller.color)

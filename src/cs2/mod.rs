@@ -6,6 +6,7 @@ use std::{
 };
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
+use bhop::Bhop;
 use player::Player;
 use rcs::Recoil;
 
@@ -27,6 +28,7 @@ use crate::{
 };
 
 mod aimbot;
+mod bhop;
 pub mod bones;
 mod esp_toggle;
 mod fov_changer;
@@ -56,6 +58,7 @@ pub struct CS2 {
     trigger: Triggerbot,
     wallhack: EspToggle,
     weapon: Weapon,
+    bhop_state: Bhop,
 }
 
 impl Game for CS2 {
@@ -108,6 +111,7 @@ impl Game for CS2 {
         self.no_flash(config);
         self.fov_changer(config);
         self.esp_toggle(config);
+        self.bhop(config, mouse);
 
         self.rcs(config, mouse);
         self.triggerbot(config);
@@ -260,6 +264,7 @@ impl CS2 {
             trigger: Triggerbot::default(),
             wallhack: EspToggle::default(),
             weapon: Weapon::default(),
+            bhop_state: Bhop::default(),
         }
     }
 
@@ -441,6 +446,7 @@ impl CS2 {
         offsets.pawn.flash_alpha = client.get("C_CSPlayerPawnBase", "m_flFlashMaxAlpha")?;
         offsets.pawn.flash_duration = client.get("C_CSPlayerPawnBase", "m_flFlashDuration")?;
         offsets.pawn.deathmatch_immunity = client.get("C_CSPlayerPawn", "m_bGunGameImmunity")?;
+        offsets.pawn.flags = client.get("C_BaseEntity", "m_fFlags")?;
 
         offsets.pawn.camera_services = client.get("C_BasePlayerPawn", "m_pCameraServices")?;
         offsets.pawn.item_services = client.get("C_BasePlayerPawn", "m_pItemServices")?;

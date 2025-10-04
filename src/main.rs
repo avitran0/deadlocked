@@ -22,6 +22,7 @@ mod gui;
 mod key_codes;
 mod math;
 mod message;
+mod keyboard;
 mod mouse;
 mod parser;
 mod process;

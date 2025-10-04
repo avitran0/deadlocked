@@ -64,6 +64,7 @@ pub struct PawnOffsets {
     pub flash_alpha: u64,         // f32 (m_flFlashMaxAlpha)
     pub flash_duration: u64,      // f32 (m_flFlashDuration)
     pub deathmatch_immunity: u64, // bool (m_bGunGameImmunity)
+    pub flags: u64,               // u32 (m_fFlags)
     pub camera_services: u64,     // Pointer -> CameraServices (m_pCameraServices)
     pub item_services: u64,       // Pointer -> ItemServices (m_pItemServices)
     pub weapon_services: u64,     // Pointer -> WeaponSercies (m_pWeaponServices)

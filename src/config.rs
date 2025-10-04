@@ -299,6 +299,25 @@ impl Default for RadarConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BhopConfig {
+    pub enabled: bool,
+    pub hotkey: KeyCode,
+    pub strafe_helper: bool,
+    pub strafe_hotkey: KeyCode,
+}
+
+impl Default for BhopConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            hotkey: KeyCode::Space,
+            strafe_helper: false,
+            strafe_hotkey: KeyCode::LeftAlt,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UnsafeConfig {
     pub no_flash: bool,
     pub max_flash_alpha: f32,
@@ -307,6 +326,7 @@ pub struct UnsafeConfig {
     pub no_smoke: bool,
     pub change_smoke_color: bool,
     pub smoke_color: Color32,
+    pub bhop: BhopConfig,
 }
 
 impl Default for UnsafeConfig {
@@ -319,6 +339,7 @@ impl Default for UnsafeConfig {
             no_smoke: false,
             change_smoke_color: false,
             smoke_color: Color32::RED,
+            bhop: BhopConfig::default(),
         }
     }
 }

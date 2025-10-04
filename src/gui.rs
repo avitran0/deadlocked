@@ -888,6 +888,52 @@ impl App {
     }
 
     fn unsafe_left(&mut self, ui: &mut Ui) {
+        collapsing_open(ui, "Bhop", |ui| {
+            if ui
+                .checkbox(&mut self.config.misc.bhop.enabled, "Enable Bhop")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            egui::ComboBox::new("bhop_hotkey", "Bhop Hotkey")
+                .selected_text(format!("{:?}", self.config.misc.bhop.hotkey))
+                .show_ui(ui, |ui| {
+                    for key_code in KeyCode::iter() {
+                        let text = format!("{:?}", &key_code);
+                        if ui
+                            .selectable_value(&mut self.config.misc.bhop.hotkey, key_code, text)
+                            .clicked()
+                        {
+                            self.send_config();
+                        }
+                    }
+                });
+
+            ui.separator();
+
+            if ui
+                .checkbox(&mut self.config.misc.bhop.strafe_helper, "Enable Strafe Helper")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            egui::ComboBox::new("strafe_hotkey", "Strafe Hotkey")
+                .selected_text(format!("{:?}", self.config.misc.bhop.strafe_hotkey))
+                .show_ui(ui, |ui| {
+                    for key_code in KeyCode::iter() {
+                        let text = format!("{:?}", &key_code);
+                        if ui
+                            .selectable_value(&mut self.config.misc.bhop.strafe_hotkey, key_code, text)
+                            .clicked()
+                        {
+                            self.send_config();
+                        }
+                    }
+                });
+        });
+
         collapsing_open(ui, "No Flash", |ui| {
             if ui
                 .checkbox(&mut self.config.misc.no_flash, "No Flash")
