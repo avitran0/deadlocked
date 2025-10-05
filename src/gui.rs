@@ -932,6 +932,15 @@ impl App {
                         }
                     }
                 });
+
+            ui.separator();
+
+            if ui
+                .checkbox(&mut self.config.misc.bhop.show_speed, "Show Speed")
+                .changed()
+            {
+                self.send_config();
+            }
         });
 
         collapsing_open(ui, "No Flash", |ui| {
@@ -1269,6 +1278,19 @@ impl App {
                     pos2(data.window_size.x * fraction, data.window_size.y),
                 ],
                 Stroke::new(self.config.hud.line_width * 3.0, color),
+            );
+        }
+
+        // Speed display
+        if self.config.misc.bhop.show_speed && data.in_game {
+            let speed_text = format!("{:.0}", data.local_speed);
+            let pos = pos2(data.window_size.x / 2.0, 50.0);
+            self.text(
+                &painter,
+                speed_text,
+                pos,
+                Align2::CENTER_CENTER,
+                Some(Color32::WHITE),
             );
         }
 

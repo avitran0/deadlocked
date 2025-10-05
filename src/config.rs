@@ -304,6 +304,7 @@ pub struct BhopConfig {
     pub hotkey: KeyCode,
     pub strafe_helper: bool,
     pub strafe_hotkey: KeyCode,
+    pub show_speed: bool,
 }
 
 impl Default for BhopConfig {
@@ -313,6 +314,7 @@ impl Default for BhopConfig {
             hotkey: KeyCode::Space,
             strafe_helper: false,
             strafe_hotkey: KeyCode::LeftAlt,
+            show_speed: false,
         }
     }
 }
