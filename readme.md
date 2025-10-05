@@ -37,6 +37,8 @@ simple cs2 aimbot and esp, for linux only.
 - misc
   - sniper crosshair
 - unsafe
+  - bhop (auto-jump)
+  - strafe helper (auto A/D based on mouse movement)
   - no flash
     - max flash alpha
   - fov changer
@@ -58,6 +60,12 @@ simple cs2 aimbot and esp, for linux only.
 - restart your machine (this will **_not_** work without a restart!)
 - clone the repository: `git clone --recursive https://github.com/avitran0/deadlocked`
 - install rust from `https://rustup.rs/`
+
+### optional: for bhop/strafe helper features
+
+if the bhop/strafe doesn't work, you may need to load the uinput kernel module:
+- `sudo modprobe uinput`
+- to load it automatically on boot: `echo "uinput" | sudo tee /etc/modules-load.d/uinput.conf`
 
 ## running
 
@@ -106,3 +114,10 @@ you window manager does not support positioning or resizing the window.
 ### the overlay is not on top of other windows
 
 your window manager does not support always on top windows.
+
+### the strafe helper/auto-strafe is not working
+
+make sure you've loaded the uinput kernel module: `sudo modprobe uinput`
+check if the virtual keyboard was created by looking for this log message when starting:
+`[INFO] created virtual keyboard device`
+if you see warnings about uinput, ensure your user is in the `input` group and the uinput module is loaded.

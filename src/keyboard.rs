@@ -143,7 +143,6 @@ impl Drop for VirtualKeyboard {
 }
 
 fn create_virtual_keyboard() -> Option<File> {
-    // Try to open /dev/uinput
     let uinput_file = OpenOptions::new()
         .read(true)
         .write(true)
@@ -161,25 +160,21 @@ fn create_virtual_keyboard() -> Option<File> {
     let fd = file.as_raw_fd();
 
     unsafe {
-        // Enable SYN events (required!)
         if ui_set_evbit(fd, EV_SYN as i32).is_err() {
             log::warn!("failed to set EV_SYN");
             return None;
         }
 
-        // Enable key events
         if ui_set_evbit(fd, EV_KEY as i32).is_err() {
             log::warn!("failed to set EV_KEY");
             return None;
         }
 
-        // Enable specific keys (A and D)
         if ui_set_keybit(fd, KEY_A as i32).is_err() || ui_set_keybit(fd, KEY_D as i32).is_err() {
             log::warn!("failed to set key bits");
             return None;
         }
 
-        // Setup device
         let mut setup = UinputSetup {
             id: InputId {
                 bustype: BUS_USB,
@@ -195,22 +190,19 @@ fn create_virtual_keyboard() -> Option<File> {
         let copy_len = name_bytes.len().min(UINPUT_MAX_NAME_SIZE - 1);
         setup.name[..copy_len].copy_from_slice(&name_bytes[..copy_len]);
 
-        // Use UI_DEV_SETUP ioctl (modern API)
         if ui_dev_setup(fd, &setup).is_err() {
             log::warn!("failed to setup uinput device");
             return None;
         }
 
-        // Create the device
         if ui_dev_create(fd, 0).is_err() {
             log::warn!("failed to create uinput device");
             return None;
         }
     }
 
-    // Give the system time to recognize the device
     std::thread::sleep(std::time::Duration::from_millis(100));
 
-    log::info!("created virtual keyboard device for strafe helper");
+    log::info!("created virtual keyboard device");
     Some(file)
 }

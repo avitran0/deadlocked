@@ -220,7 +220,6 @@ impl Game for CS2 {
         data.is_ffa = self.is_ffa();
         data.map_name = self.current_map();
         
-        // Calculate local player speed (2D horizontal speed)
         let velocity = local_player.velocity(self);
         data.local_speed = (velocity.x * velocity.x + velocity.y * velocity.y).sqrt();
         data.triggerbot_active = if self.triggerbot_config(config).mode == TriggerbotMode::Toggle {
