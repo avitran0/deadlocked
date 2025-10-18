@@ -14,7 +14,7 @@ use crate::{
     color::Colors,
     config::{
         AimbotConfig, BoxMode, CONFIG_PATH, Config, DrawMode, TargetingMode, TriggerbotMode,
-        VERSION, WeaponConfig, available_configs, delete_config, parse_config, write_config,
+        VERSION, WeaponConfig, available_configs, delete_config, parse_config, write_config, BombMode,
     },
     constants::cs2,
     cs2::{
@@ -752,12 +752,39 @@ impl App {
 
     fn hud_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "HUD", |ui| {
-            if ui
+            /*if ui
                 .checkbox(&mut self.config.hud.bomb_timer, "Bomb Timer")
                 .changed()
             {
                 self.send_config();
-            }
+            }*/
+            egui::ComboBox::new("bomb_mode", "Bomb")
+            .selected_text(format!("{:?}", self.config.hud.bomb_mode))
+            .show_ui(ui, |ui| {
+                for mode in BombMode::iter() {
+                    let text = format!("{:?}", &mode);
+                    if ui
+                        .selectable_value(&mut self.config.hud.bomb_mode, mode, text)
+                        .clicked()
+                        {
+                            self.send_config();
+                        }
+                }
+            });
+
+            egui::ComboBox::new("defuse_mode", "Defuser")
+            .selected_text(format!("{:?}", self.config.hud.defuse_mode))
+            .show_ui(ui, |ui| {
+                for mode in BombMode::iter() {
+                    let text = format!("{:?}", &mode);
+                    if ui
+                        .selectable_value(&mut self.config.hud.defuse_mode, mode, text)
+                        .clicked()
+                        {
+                            self.send_config();
+                        }
+                }
+            });
 
             if ui
                 .checkbox(&mut self.config.hud.fov_circle, "FOV Circle")
@@ -1249,35 +1276,63 @@ impl App {
             }
         }
 
-        if self.config.hud.bomb_timer && data.bomb.planted {
-            if let Some(pos) = world_to_screen(&data.bomb.position, data) {
-                self.text(
-                    &painter,
-                    format!("{:.3}", data.bomb.timer),
-                        pos,
-                        Align2::CENTER_CENTER,
-                        None,
-                );
-                if data.bomb.being_defused {
-                    self.text(
-                        &painter,
-                        format!("defusing {:.3}", data.bomb.defuse_remain_time),
-                            pos2(pos.x, pos.y + self.config.hud.font_size),
-                              Align2::CENTER_CENTER,
-                              None,
-                    );
+        if self.config.hud.bomb_mode != BombMode::None {
+            if self.config.hud.bomb_mode == BombMode::Timer || self.config.hud.bomb_mode == BombMode::Both {
+                if data.bomb.planted {
+                    if let Some(pos) = world_to_screen(&data.bomb.position, data) {
+                        self.text(
+                            &painter,
+                            format!("{:.3}", data.bomb.timer),
+                                pos,
+                                Align2::CENTER_CENTER,
+                                None,
+                        );
+                    }
                 }
             }
 
-            let fraction = (data.bomb.timer / 40.0).clamp(0.0, 1.0);
-            let color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
-            painter.line(
-                vec![
-                    pos2(0.0, data.window_size.y),
-                    pos2(data.window_size.x * fraction, data.window_size.y),
-                ],
-                Stroke::new(self.config.hud.line_width * 3.0, color),
-            );
+            if self.config.hud.bomb_mode == BombMode::Bar || self.config.hud.bomb_mode == BombMode::Both {
+                if data.bomb.planted {
+                    let fraction = (data.bomb.timer / 40.0).clamp(0.0, 1.0);
+                    let color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    painter.line(
+                        vec![
+                            pos2((data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0), data.window_size.y),
+                            pos2((data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0), data.window_size.y),
+                        ],
+                        Stroke::new(self.config.hud.line_width * 3.0, color),
+                    );
+                }
+            }
+        }
+
+        if self.config.hud.defuse_mode != BombMode::None {
+            if self.config.hud.defuse_mode == BombMode::Timer || self.config.hud.defuse_mode == BombMode::Both {
+                if data.bomb.planted && data.bomb.being_defused {
+                    if let Some(pos) = world_to_screen(&data.bomb.position, data) {
+                        self.text(
+                            &painter,
+                            format!("defusing {:.3}", data.bomb.defuse_remain_time),
+                                pos2(pos.x, pos.y + self.config.hud.font_size),
+                                Align2::CENTER_CENTER,
+                                None,
+                        );
+                    }
+                }
+            }
+            if self.config.hud.defuse_mode == BombMode::Bar || self.config.hud.defuse_mode == BombMode::Both {
+                if data.bomb.planted && data.bomb.being_defused {
+                    let fraction = (data.bomb.defuse_remain_time / 10.0).clamp(0.0, 1.0);
+                    let color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    painter.line(
+                        vec![
+                            pos2((data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0), 0.0),
+                                pos2((data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0), 0.0),
+                        ],
+                        Stroke::new(self.config.hud.line_width * 3.0, color),
+                    );
+                }
+            }
         }
 
         // fov circle

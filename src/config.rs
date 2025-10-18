@@ -213,6 +213,14 @@ pub enum BoxMode {
     Full,
 }
 
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum BombMode {
+    None,
+    Timer,
+    Bar,
+    Both,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
@@ -258,7 +266,8 @@ impl Default for PlayerConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HudConfig {
-    pub bomb_timer: bool,
+    pub bomb_mode: BombMode,
+    pub defuse_mode: BombMode,
     pub fov_circle: bool,
     pub sniper_crosshair: bool,
     pub crosshair_color: Color32,
@@ -281,7 +290,8 @@ pub struct HudConfig {
 impl Default for HudConfig {
     fn default() -> Self {
         Self {
-            bomb_timer: true,
+            bomb_mode: BombMode::Both,
+            defuse_mode: BombMode::Both,
             fov_circle: false,
             sniper_crosshair: true,
             crosshair_color: Color32::WHITE,
