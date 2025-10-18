@@ -17,6 +17,7 @@ impl Colors {
     pub const TEAL: Color32 = Color32::from_rgb(80, 200, 200);
     pub const BLUE: Color32 = Color32::from_rgb(100, 150, 240);
     pub const PURPLE: Color32 = Color32::from_rgb(180, 120, 240);
+    pub const LIGHT_BLUE: Color32 = Color32::from_rgb(0,128,255);
 
     pub const ACCENT_COLORS: [(&str, Color32); 7] = [
         ("Red", Self::RED),

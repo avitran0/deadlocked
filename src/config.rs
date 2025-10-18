@@ -271,7 +271,7 @@ impl Default for PlayerConfig {
             tags: true,
             helmet: HelmetMode::Icon,
             armor_colour: Color32::BLUE,
-            armor_nohelm_colour: Color32::CYAN,
+            armor_nohelm_colour: Color32::LIGHT_BLUE,
         }
     }
 }

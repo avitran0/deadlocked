@@ -538,11 +538,13 @@ impl App {
                         self.config.player.armor_colour = color;
                         self.send_config();
                     }
-                    if let Some(color) =
-                        self.color_picker(ui, &self.config.player.armor_nohelm_colour, "Armor Bar (No Helmet)")
-                    {
-                        self.config.player.armor_nohelm_colour = color;
-                        self.send_config();
+                    if self.config.player.helmet == HelmetMode::Armor {
+                        if let Some(color) =
+                            self.color_picker(ui, &self.config.player.armor_nohelm_colour, "Armor Bar (No Helmet)")
+                        {
+                            self.config.player.armor_nohelm_colour = color;
+                            self.send_config();
+                        }
                     }
 
                     ui.horizontal(|ui| {
