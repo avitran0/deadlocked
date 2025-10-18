@@ -772,7 +772,7 @@ impl App {
                 }
             });
 
-            egui::ComboBox::new("defuse_mode", "Defuser")
+            egui::ComboBox::new("defuse_mode", "Defuse")
             .selected_text(format!("{:?}", self.config.hud.defuse_mode))
             .show_ui(ui, |ui| {
                 for mode in BombMode::iter() {
