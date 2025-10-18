@@ -221,6 +221,13 @@ pub enum BombMode {
     Both,
 }
 
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum HelmetMode {
+    None,
+    Icon,
+    Armor,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
@@ -239,6 +246,9 @@ pub struct PlayerConfig {
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
+    pub helmet: HelmetMode,
+    pub armor_colour: Color32,
+    pub armor_nohelm_colour: Color32,
 }
 
 impl Default for PlayerConfig {
@@ -259,6 +269,9 @@ impl Default for PlayerConfig {
             player_name: true,
             weapon_icon: true,
             tags: true,
+            helmet: HelmetMode::Icon,
+            armor_colour: Color32::BLUE,
+            armor_nohelm_colour: Color32::CYAN,
         }
     }
 }

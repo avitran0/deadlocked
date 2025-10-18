@@ -14,7 +14,8 @@ use crate::{
     color::Colors,
     config::{
         AimbotConfig, BoxMode, CONFIG_PATH, Config, DrawMode, TargetingMode, TriggerbotMode,
-        VERSION, WeaponConfig, available_configs, delete_config, parse_config, write_config, BombMode,
+        VERSION, WeaponConfig, available_configs, delete_config, parse_config, write_config,
+        BombMode, HelmetMode,
     },
     constants::cs2,
     cs2::{
@@ -531,6 +532,18 @@ impl App {
                         self.config.player.skeleton_color = color;
                         self.send_config();
                     }
+                    if let Some(color) =
+                        self.color_picker(ui, &self.config.player.armor_colour, "Armor Bar")
+                    {
+                        self.config.player.armor_colour = color;
+                        self.send_config();
+                    }
+                    if let Some(color) =
+                        self.color_picker(ui, &self.config.player.armor_nohelm_colour, "Armor Bar (No Helmet)")
+                    {
+                        self.config.player.armor_nohelm_colour = color;
+                        self.send_config();
+                    }
 
                     ui.horizontal(|ui| {
                         if ui
@@ -660,6 +673,19 @@ impl App {
             {
                 self.send_config();
             }
+            egui::ComboBox::new("helmet", "Helmet")
+            .selected_text(format!("{:?}", self.config.player.helmet))
+            .show_ui(ui, |ui| {
+                for mode in HelmetMode::iter() {
+                    let text = format!("{:?}", &mode);
+                    if ui
+                        .selectable_value(&mut self.config.player.helmet, mode, text)
+                        .clicked()
+                        {
+                            self.send_config();
+                        }
+                }
+            });
         });
     }
 
@@ -752,12 +778,6 @@ impl App {
 
     fn hud_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "HUD", |ui| {
-            /*if ui
-                .checkbox(&mut self.config.hud.bomb_timer, "Bomb Timer")
-                .changed()
-            {
-                self.send_config();
-            }*/
             egui::ComboBox::new("bomb_mode", "Bomb")
             .selected_text(format!("{:?}", self.config.hud.bomb_mode))
             .show_ui(ui, |ui| {
@@ -1572,7 +1592,13 @@ impl App {
                     pos2(x, bl.y),
                     pos2(x, bl.y - (delta * player.armor as f32 / 100.0)),
                 ],
-                Stroke::new(self.config.hud.line_width, self.apply_alpha(Color32::BLUE)),
+                if !player.has_helmet && self.config.player.helmet == HelmetMode::Armor{
+                    Stroke::new(self.config.hud.line_width, self.apply_alpha(self.config.player.armor_nohelm_colour))
+                } else {
+                    Stroke::new(self.config.hud.line_width, self.apply_alpha(self.config.player.armor_colour))
+
+                }
+
             );
         }
 
@@ -1601,7 +1627,7 @@ impl App {
             offset += font_size;
         }
 
-        if self.config.player.tags && player.has_helmet {
+        if self.config.player.helmet == HelmetMode::Icon && player.has_helmet {
             painter.text(
                 pos2(tr.x + ew, tr.y + offset),
                 Align2::LEFT_TOP,
