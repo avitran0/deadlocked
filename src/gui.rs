@@ -1509,7 +1509,7 @@ impl App {
                     if let Some(pos) = world_to_screen(&data.bomb.position, data) {
                         self.text(
                             &painter,
-                            format!("defusing {:.3}", data.bomb.defuse_remain_time),
+                            format!("{:.3}", data.bomb.defuse_remain_time),
                                 pos2(pos.x, pos.y + self.config.hud.font_size),
                                 Align2::CENTER_CENTER,
                                 None,
@@ -1528,18 +1528,35 @@ impl App {
                     }
                     let mut p1 = 0.0; let mut p2 = 0.0;
                     let mut p3 = 0.0; let mut p4 = 0.0;
-                    if self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
-                        p3 = data.window_size.y;
-                        p4 = data.window_size.y;
-                    } else if self.config.hud.defuse_timer_location == BarLocationMode::Top {
-                        p3 = 0.0;
-                        p4 = 0.0;
-                    } else if self.config.hud.defuse_timer_location == BarLocationMode::Left {
-                        p1 = 0.0;
-                        p2 = 0.0;
-                    } else { //right
-                        p1 = data.window_size.x;
-                        p2 = data.window_size.x;
+                    if (self.config.hud.bomb_mode == BombMode::Bar || self.config.hud.bomb_mode == BombMode::Both) &&
+                    (self.config.hud.defuse_timer_location == self.config.hud.bomb_timer_location) {
+                        if self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
+                            p3 = data.window_size.y-(self.config.hud.line_width * 2.25);
+                            p4 = data.window_size.y-(self.config.hud.line_width * 2.25);
+                        } else if self.config.hud.defuse_timer_location == BarLocationMode::Top {
+                            p3 = self.config.hud.line_width * 2.25;
+                            p4 = self.config.hud.line_width * 2.25;
+                        } else if self.config.hud.defuse_timer_location == BarLocationMode::Left {
+                            p1 = self.config.hud.line_width * 2.25;
+                            p2 = self.config.hud.line_width * 2.25;
+                        } else { //right
+                            p1 = data.window_size.x-(self.config.hud.line_width * 2.25);
+                            p2 = data.window_size.x-(self.config.hud.line_width * 2.25);
+                        }
+                    } else {
+                        if self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
+                            p3 = data.window_size.y;
+                            p4 = data.window_size.y;
+                        } else if self.config.hud.defuse_timer_location == BarLocationMode::Top {
+                            p3 = 0.0;
+                            p4 = 0.0;
+                        } else if self.config.hud.defuse_timer_location == BarLocationMode::Left {
+                            p1 = 0.0;
+                            p2 = 0.0;
+                        } else { //right
+                            p1 = data.window_size.x;
+                            p2 = data.window_size.x;
+                        }
                     } if self.config.hud.defuse_timer_location == BarLocationMode::Top || self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
                         if self.config.hud.defuse_timer_end_h == HoriBarMode::Centre {
                             p1 = (data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0);
@@ -1563,14 +1580,7 @@ impl App {
                             p4 = data.window_size.y;
                         }
                     }
-                    painter.line(
-                        vec![
-                            pos2(p1, p3),
-                            pos2(p2, p4),
-                        ],
-                        Stroke::new(self.config.hud.line_width * 3.0, color),
-                    );
-
+                    painter.line(vec![pos2(p1, p3), pos2(p2, p4),], Stroke::new(self.config.hud.line_width * 1.5, color));
                 }
             }
         }
