@@ -228,6 +228,28 @@ pub enum HelmetMode {
     Armor,
 }
 
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum HoriBarMode {
+    Left,
+    Centre,
+    Right,
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum VertiBarMode {
+    Top,
+    Centre,
+    Bottom,
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum BarLocationMode {
+    Top,
+    Right,
+    Bottom,
+    Left,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
@@ -281,6 +303,16 @@ impl Default for PlayerConfig {
 pub struct HudConfig {
     pub bomb_mode: BombMode,
     pub defuse_mode: BombMode,
+    pub bomb_timer_location: BarLocationMode,
+    pub defuse_timer_location: BarLocationMode,
+    pub bomb_timer_end_h: HoriBarMode,
+    pub defuse_timer_end_h: HoriBarMode,
+    pub bomb_timer_end_v: VertiBarMode,
+    pub defuse_timer_end_v: VertiBarMode,
+    pub bomb_bar_colour: Color32,
+    pub defuse_bar_colour: Color32,
+    pub defuse_gradiant: bool,
+    pub bomb_gradiant: bool,
     pub fov_circle: bool,
     pub sniper_crosshair: bool,
     pub crosshair_color: Color32,
@@ -305,6 +337,16 @@ impl Default for HudConfig {
         Self {
             bomb_mode: BombMode::Both,
             defuse_mode: BombMode::Both,
+            bomb_timer_location: BarLocationMode::Bottom,
+            defuse_timer_location: BarLocationMode::Top,
+            bomb_timer_end_h: HoriBarMode::Centre,
+            defuse_timer_end_h: HoriBarMode::Centre,
+            bomb_timer_end_v: VertiBarMode::Bottom,
+            defuse_timer_end_v: VertiBarMode::Bottom,
+            bomb_bar_colour: Color32::RED,
+            defuse_bar_colour: Color32::BLUE,
+            bomb_gradiant: true,
+            defuse_gradiant: true,
             fov_circle: false,
             sniper_crosshair: true,
             crosshair_color: Color32::WHITE,

@@ -15,7 +15,7 @@ use crate::{
     config::{
         AimbotConfig, BoxMode, CONFIG_PATH, Config, DrawMode, TargetingMode, TriggerbotMode,
         VERSION, WeaponConfig, available_configs, delete_config, parse_config, write_config,
-        BombMode, HelmetMode,
+        BombMode, HelmetMode, HoriBarMode, VertiBarMode, BarLocationMode,
     },
     constants::cs2,
     cs2::{
@@ -532,11 +532,21 @@ impl App {
                         self.config.player.skeleton_color = color;
                         self.send_config();
                     }
-                    if let Some(color) =
-                        self.color_picker(ui, &self.config.player.armor_colour, "Armor Bar")
-                    {
-                        self.config.player.armor_colour = color;
-                        self.send_config();
+                    if self.config.player.helmet == HelmetMode::Armor {
+                        if let Some(color) =
+                            self.color_picker(ui, &self.config.player.armor_colour, "Armor Bar (Has Helmet)")
+                        {
+                            self.config.player.armor_colour = color;
+                            self.send_config();
+                        }
+                    } else {
+                        if let Some(color) =
+                            self.color_picker(ui, &self.config.player.armor_colour, "Armor Bar")
+                            {
+                                self.config.player.armor_colour = color;
+                                self.send_config();
+                            }
+
                     }
                     if self.config.player.helmet == HelmetMode::Armor {
                         if let Some(color) =
@@ -717,6 +727,24 @@ impl App {
                         self.config.hud.crosshair_color = color;
                         self.send_config();
                     }
+
+                    if !self.config.hud.bomb_gradiant {
+                        if let Some(color) =
+                        self.color_picker(ui, &self.config.hud.bomb_bar_colour, "Bomb Bar Colour")
+                        {
+                            self.config.hud.bomb_bar_colour = color;
+                            self.send_config();
+                        }
+                    }
+                    if !self.config.hud.defuse_gradiant  {
+                        if let Some(color) =
+                        self.color_picker(ui, &self.config.hud.defuse_bar_colour, "Defuse Bar Colour")
+                        {
+                            self.config.hud.defuse_bar_colour = color;
+                            self.send_config();
+                        }
+                    }
+
                 });
             });
 
@@ -807,7 +835,22 @@ impl App {
                         }
                 }
             });
-
+            if self.config.hud.bomb_mode == BombMode::Timer || self.config.hud.bomb_mode == BombMode::Both {
+                if ui
+                .checkbox(&mut self.config.hud.bomb_gradiant, "Bomb Bar Grandiant")
+                .changed()
+                {
+                    self.send_config();
+                }
+            }
+            if self.config.hud.defuse_mode == BombMode::Timer || self.config.hud.defuse_mode == BombMode::Both {
+                if ui
+                .checkbox(&mut self.config.hud.defuse_gradiant, "Defuse Bar Gradiant")
+                .changed()
+                {
+                    self.send_config();
+                }
+            }
             if ui
                 .checkbox(&mut self.config.hud.fov_circle, "FOV Circle")
                 .changed()
@@ -876,6 +919,96 @@ impl App {
                 }
                 ui.label("Font Size");
             });
+            if self.config.hud.bomb_mode == BombMode::Timer || self.config.hud.bomb_mode == BombMode::Both {
+                egui::ComboBox::new("bomb_timer_location", "Bomb timer location")
+                .selected_text(format!("{:?}", self.config.hud.bomb_timer_location))
+                .show_ui(ui, |ui| {
+                    for mode in BarLocationMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.bomb_timer_location, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            }
+            if (self.config.hud.bomb_mode == BombMode::Timer || self.config.hud.bomb_mode == BombMode::Both) &&
+            (self.config.hud.bomb_timer_location == BarLocationMode::Top || self.config.hud.bomb_timer_location == BarLocationMode::Bottom) {
+                egui::ComboBox::new("bomb_timer_end_h", "Bomb timer end")
+                .selected_text(format!("{:?}", self.config.hud.bomb_timer_end_h))
+                .show_ui(ui, |ui| {
+                    for mode in HoriBarMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.bomb_timer_end_h, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            } else if self.config.hud.bomb_mode == BombMode::Timer || self.config.hud.bomb_mode == BombMode::Both {
+                egui::ComboBox::new("bomb_timer_end_v", "Bomb timer end")
+                .selected_text(format!("{:?}", self.config.hud.bomb_timer_end_v))
+                .show_ui(ui, |ui| {
+                    for mode in VertiBarMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.bomb_timer_end_v, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            }
+            if self.config.hud.defuse_mode == BombMode::Timer || self.config.hud.defuse_mode == BombMode::Both {
+                egui::ComboBox::new("defuse_timer_location", "Defuse timer location")
+                .selected_text(format!("{:?}", self.config.hud.defuse_timer_location))
+                .show_ui(ui, |ui| {
+                    for mode in BarLocationMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.defuse_timer_location, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            }
+            if (self.config.hud.defuse_mode == BombMode::Timer || self.config.hud.defuse_mode == BombMode::Both) &&
+            (self.config.hud.defuse_timer_location == BarLocationMode::Top || self.config.hud.defuse_timer_location == BarLocationMode::Bottom) {
+                egui::ComboBox::new("defuse_timer_end_h", "Defuse timer end")
+                .selected_text(format!("{:?}", self.config.hud.defuse_timer_end_h))
+                .show_ui(ui, |ui| {
+                    for mode in HoriBarMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.defuse_timer_end_h, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            } else if self.config.hud.defuse_mode == BombMode::Timer || self.config.hud.defuse_mode == BombMode::Both {
+                egui::ComboBox::new("defuse_timer_end_v", "Defuse timer end")
+                .selected_text(format!("{:?}", self.config.hud.defuse_timer_end_v))
+                .show_ui(ui, |ui| {
+                    for mode in VertiBarMode::iter() {
+                        let text = format!("{:?}", &mode);
+                        if ui
+                            .selectable_value(&mut self.config.hud.defuse_timer_end_v, mode, text)
+                            .clicked()
+                            {
+                                self.send_config();
+                            }
+                    }
+                });
+            }
         });
 
         ui.collapsing("Advanced", |ui| {
@@ -1316,11 +1449,53 @@ impl App {
             if self.config.hud.bomb_mode == BombMode::Bar || self.config.hud.bomb_mode == BombMode::Both {
                 if data.bomb.planted {
                     let fraction = (data.bomb.timer / 40.0).clamp(0.0, 1.0);
-                    let color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    let color;
+                    if self.config.hud.bomb_gradiant {
+                        color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    } else {
+                        color = self.apply_alpha(self.config.hud.bomb_bar_colour);
+                    }
+                    let mut p1 = 0.0; let mut p2 = 0.0;
+                    let mut p3 = 0.0; let mut p4 = 0.0;
+                    if self.config.hud.bomb_timer_location == BarLocationMode::Bottom {
+                        p3 = data.window_size.y;
+                        p4 = data.window_size.y;
+                    } else if self.config.hud.bomb_timer_location == BarLocationMode::Top {
+                        p3 = 0.0;
+                        p4 = 0.0;
+                    } else if self.config.hud.bomb_timer_location == BarLocationMode::Left {
+                        p1 = 0.0;
+                        p2 = 0.0;
+                    } else { //right
+                        p1 = data.window_size.x;
+                        p2 = data.window_size.x;
+                    } if self.config.hud.bomb_timer_location == BarLocationMode::Top || self.config.hud.bomb_timer_location == BarLocationMode::Bottom {
+                        if self.config.hud.bomb_timer_end_h == HoriBarMode::Centre {
+                            p1 = (data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0);
+                            p2 = (data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0);
+                        } else if self.config.hud.bomb_timer_end_h == HoriBarMode::Left {
+                            p1 = 0.0;
+                            p2 = data.window_size.x*fraction;
+                        } else {//right
+                            p1 = data.window_size.x-(data.window_size.x*fraction);
+                            p2 = data.window_size.x;
+                        }
+                    } else { //left or right
+                        if self.config.hud.bomb_timer_end_v == VertiBarMode::Centre {
+                            p3 = (data.window_size.y/2.0)-((data.window_size.y * fraction)/2.0);
+                            p4 = (data.window_size.y/2.0)+((data.window_size.y * fraction)/2.0);
+                        } else if self.config.hud.bomb_timer_end_v == VertiBarMode::Top {
+                            p3 = 0.0;
+                            p4 = data.window_size.y*fraction;
+                        } else { //bottom
+                            p3 = data.window_size.y-(data.window_size.y*fraction);
+                            p4 = data.window_size.y;
+                        }
+                    }
                     painter.line(
                         vec![
-                            pos2((data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0), data.window_size.y),
-                            pos2((data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0), data.window_size.y),
+                            pos2(p1, p3),
+                            pos2(p2, p4),
                         ],
                         Stroke::new(self.config.hud.line_width * 3.0, color),
                     );
@@ -1345,14 +1520,57 @@ impl App {
             if self.config.hud.defuse_mode == BombMode::Bar || self.config.hud.defuse_mode == BombMode::Both {
                 if data.bomb.planted && data.bomb.being_defused {
                     let fraction = (data.bomb.defuse_remain_time / 10.0).clamp(0.0, 1.0);
-                    let color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    let color;
+                    if self.config.hud.defuse_gradiant {
+                        color = self.apply_alpha(self.health_color((fraction * 100.0) as i32));
+                    } else {
+                        color = self.apply_alpha(self.config.hud.defuse_bar_colour);
+                    }
+                    let mut p1 = 0.0; let mut p2 = 0.0;
+                    let mut p3 = 0.0; let mut p4 = 0.0;
+                    if self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
+                        p3 = data.window_size.y;
+                        p4 = data.window_size.y;
+                    } else if self.config.hud.defuse_timer_location == BarLocationMode::Top {
+                        p3 = 0.0;
+                        p4 = 0.0;
+                    } else if self.config.hud.defuse_timer_location == BarLocationMode::Left {
+                        p1 = 0.0;
+                        p2 = 0.0;
+                    } else { //right
+                        p1 = data.window_size.x;
+                        p2 = data.window_size.x;
+                    } if self.config.hud.defuse_timer_location == BarLocationMode::Top || self.config.hud.defuse_timer_location == BarLocationMode::Bottom {
+                        if self.config.hud.defuse_timer_end_h == HoriBarMode::Centre {
+                            p1 = (data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0);
+                            p2 = (data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0);
+                        } else if self.config.hud.defuse_timer_end_h == HoriBarMode::Left {
+                            p1 = 0.0;
+                            p2 = data.window_size.x*fraction;
+                        } else {//right
+                            p1 = data.window_size.x-(data.window_size.x*fraction);
+                            p2 = data.window_size.x;
+                        }
+                    } else { //left or right
+                        if self.config.hud.defuse_timer_end_v == VertiBarMode::Centre {
+                            p3 = (data.window_size.y/2.0)-((data.window_size.y * fraction)/2.0);
+                            p4 = (data.window_size.y/2.0)+((data.window_size.y * fraction)/2.0);
+                        } else if self.config.hud.bomb_timer_end_v == VertiBarMode::Top {
+                            p3 = 0.0;
+                            p4 = data.window_size.y*fraction;
+                        } else { //bottom
+                            p3 = data.window_size.y-(data.window_size.y*fraction);
+                            p4 = data.window_size.y;
+                        }
+                    }
                     painter.line(
                         vec![
-                            pos2((data.window_size.x/2.0)-((data.window_size.x * fraction)/2.0), 0.0),
-                                pos2((data.window_size.x/2.0)+((data.window_size.x * fraction)/2.0), 0.0),
+                            pos2(p1, p3),
+                            pos2(p2, p4),
                         ],
                         Stroke::new(self.config.hud.line_width * 3.0, color),
                     );
+
                 }
             }
         }
@@ -1598,9 +1816,7 @@ impl App {
                     Stroke::new(self.config.hud.line_width, self.apply_alpha(self.config.player.armor_nohelm_colour))
                 } else {
                     Stroke::new(self.config.hud.line_width, self.apply_alpha(self.config.player.armor_colour))
-
                 }
-
             );
         }
 
