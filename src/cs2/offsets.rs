@@ -135,11 +135,11 @@ pub struct WeaponOffsets {
 
 #[derive(Debug, Default)]
 pub struct PlantedC4Offsets {
-    pub is_ticking: u64,    // bool (m_bBombTicking)
-    pub blow_time: u64,     // f32 (m_flC4Blow)
-    pub being_defused: u64, // bool (m_bBeingDefused)
-    pub is_defused: u64,    // bool (m_bBombDefused)
-    pub has_exploded: u64,  // bool (m_bHasExploded)
+    pub is_ticking: u64,       // bool (m_bBombTicking)
+    pub blow_time: u64,        // f32 (m_flC4Blow)
+    pub being_defused: u64,    // bool (m_bBeingDefused)
+    pub is_defused: u64,       // bool (m_bBombDefused)
+    pub has_exploded: u64,     // bool (m_bHasExploded)
     pub defuse_time_left: u64, // u64 (m_flDefuseCountDown)
 }
 

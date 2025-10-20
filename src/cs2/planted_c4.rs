@@ -54,7 +54,9 @@ impl PlantedC4 {
     }
 
     pub fn time_to_defuse(&self, cs2: &CS2) -> f32 {
-        let defuse_time_left: f32 = cs2.process.read(self.handle + cs2.offsets.planted_c4.defuse_time_left);
+        let defuse_time_left: f32 = cs2
+            .process
+            .read(self.handle + cs2.offsets.planted_c4.defuse_time_left);
         defuse_time_left - cs2.current_time()
     }
 }

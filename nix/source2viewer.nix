@@ -1,5 +1,8 @@
-{ fetchFromGitHub, buildDotnetModule, dotnetCorePackages }:
-
+{
+  fetchFromGitHub,
+  buildDotnetModule,
+  dotnetCorePackages,
+}:
 # Builds ValveResourceFormat CLI from source
 buildDotnetModule {
   pname = "ValveResourceFormat";

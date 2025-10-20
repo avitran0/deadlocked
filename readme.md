@@ -90,9 +90,14 @@ After reboot:
 ```bash
 git clone --recursive https://github.com/avitran0/deadlocked
 cd deadlocked
-nix flake update
-nix develop
+direnv allow
 cargo run --release
+```
+
+If maps parsing fails, run (it will use Source2Viewer provided by nix direnv instead of one in resources):
+
+```bash
+cargo run --release -- --local-s2v
 ```
 
 Everything is configured in `flake.nix` and `nix/shell.nix`.
@@ -116,7 +121,7 @@ cargo run --release
 
 ### Where are my configs saved?
 
-Configs are saved in `$XDG_CONFIG_HOME` if set (usually `$HOME/.config`). Otherwise they're saved alongside the executable.
+Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherwise they're saved alongside the executable.
 
 ### How do I configure the radar?
 

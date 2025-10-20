@@ -61,9 +61,10 @@ fn main() {
     let bvh_gui = bvh.clone();
 
     let force_reparse = args.iter().any(|arg| arg == "--force-reparse");
+    let use_system_binary = args.iter().any(|arg| arg == "--local-s2v");
     std::thread::spawn(move || {
         crash::install_crash_handler();
-        parse_maps(bvh, force_reparse);
+        parse_maps(bvh, force_reparse, use_system_binary);
     });
 
     let (tx, rx) = unbounded();

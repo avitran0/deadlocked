@@ -22,16 +22,24 @@ impl Smoke {
     }
 
     pub fn disable(&self, cs2: &CS2) {
-        cs2.process
-            .write(self.controller + cs2.offsets.smoke.did_smoke_effect, true);
+        let disabled = cs2
+            .process
+            .read::<u8>(self.controller + cs2.offsets.smoke.did_smoke_effect)
+            != 0;
+        if !disabled {
+            cs2.process
+                .write(self.controller + cs2.offsets.smoke.did_smoke_effect, true);
+        }
     }
 
     pub fn color(&self, cs2: &CS2, color: &Color32) {
         let offset = self.controller + cs2.offsets.smoke.smoke_color;
+        let current_color: [f32; 3] = cs2.process.read(offset);
         let color = Rgba::from(*color);
-        cs2.process.write(offset, color.r() * 255.0);
-        cs2.process.write(offset + 0x04, color.g() * 255.0);
-        cs2.process.write(offset + 0x08, color.b() * 255.0);
+        let wanted_color = [color.r() * 255.0, color.g() * 255.0, color.b() * 255.0];
+        if current_color != wanted_color {
+            cs2.process.write(offset, wanted_color);
+        }
     }
 }
 
