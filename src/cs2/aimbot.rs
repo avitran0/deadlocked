@@ -105,7 +105,7 @@ impl CS2 {
             return;
         }
 
-        if config.humanization > 0.0 {
+        if config.humanization >= 1.0 {
             use rand::Rng;
             let now = std::time::Instant::now();
             
