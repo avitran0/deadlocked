@@ -105,24 +105,7 @@ impl CS2 {
             return;
         }
 
-        if config.humanization >= 1.0 {
-            use rand::Rng;
-            let now = std::time::Instant::now();
-            
-            if self.target.target_acquired_time.is_none() {
-                self.target.target_acquired_time = Some(now);
-                let mut rng = rand::rng();
-                self.target.reaction_delay = rng.random_range(0.15..0.30);
-            }
-            
-            if let Some(acquired_time) = self.target.target_acquired_time {
-                let elapsed = now.duration_since(acquired_time).as_secs_f32();
-                if elapsed < self.target.reaction_delay {
-                    return;
-                }
-            }
-        }
-
+        // TODO: add human reaction time delay (150-300ms) when target comes into line of sight
         let target_angle = {
             let mut smallest_fov = 360.0;
             let mut smallest_angle = glam::Vec2::ZERO;

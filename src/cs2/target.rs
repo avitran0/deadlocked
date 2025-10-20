@@ -23,8 +23,6 @@ pub struct Target {
     pub adjustment_interval: f32,
     pub aim_progress: f32,
     pub initial_distance: f32,
-    pub target_acquired_time: Option<Instant>,
-    pub reaction_delay: f32,
 }
 
 impl Default for Target {
@@ -41,8 +39,6 @@ impl Default for Target {
             adjustment_interval: 0.016,
             aim_progress: 0.0,
             initial_distance: 0.0,
-            target_acquired_time: None,
-            reaction_delay: 0.0,
         }
     }
 }
@@ -128,19 +124,10 @@ impl CS2 {
                 best_fov = fov;
                 best_distance = distance;
 
-                let is_new_target = self.target.player.map_or(true, |current| {
-                    current.pawn != player.pawn
-                });
-
                 self.target.player = Some(*player);
                 self.target.angle = angle;
                 self.target.distance = distance;
                 self.target.bone_index = Bones::Head.u64();
-                
-                if is_new_target {
-                    self.target.target_acquired_time = None;
-                    self.target.reaction_delay = 0.0;
-                }
             }
         }
 
