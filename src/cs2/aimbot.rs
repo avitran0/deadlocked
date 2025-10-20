@@ -133,13 +133,39 @@ impl CS2 {
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
+        let smooth_value = if config.humanization > 0.0 {
+            config.humanization
+        } else {
+            config.smooth
+        };
+
         let mut mouse_angles = vec2(
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
-        ) / (config.smooth + 1.0).clamp(1.0, 10.0);
+        ) / (smooth_value + 1.0).clamp(1.0, 10.0);
 
         if config.humanization > 0.0 {
             mouse_angles = self.humanize_aim(mouse_angles.x, mouse_angles.y, config.humanization);
+        }
+
+        let current_distance = mouse_angles.length();
+        if self.target.initial_distance == 0.0 || current_distance > self.target.initial_distance {
+            self.target.initial_distance = current_distance;
+            self.target.aim_progress = 0.0;
+        }
+
+        if self.target.initial_distance > 0.0 {
+            let progress = 1.0 - (current_distance / self.target.initial_distance).clamp(0.0, 1.0);
+            self.target.aim_progress = progress;
+
+            let ease_factor = if progress < 0.5 {
+                2.0 * progress * progress
+            } else {
+                1.0 - (-2.0 * progress + 2.0).powi(2) / 2.0
+            };
+
+            let velocity_multiplier = (ease_factor * 4.0).clamp(0.1, 1.0);
+            mouse_angles *= velocity_multiplier;
         }
 
         mouse.move_rel(&mouse_angles);

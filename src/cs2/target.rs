@@ -21,6 +21,8 @@ pub struct Target {
     pub previous_target: Vec2,
     pub last_adjustment_time: Option<Instant>,
     pub adjustment_interval: f32,
+    pub aim_progress: f32,
+    pub initial_distance: f32,
 }
 
 impl Default for Target {
@@ -35,6 +37,8 @@ impl Default for Target {
             previous_target: Vec2::ZERO,
             last_adjustment_time: None,
             adjustment_interval: 0.016,
+            aim_progress: 0.0,
+            initial_distance: 0.0,
         }
     }
 }
