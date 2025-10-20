@@ -247,21 +247,6 @@ impl App {
             ui.horizontal(|ui| {
                 if ui
                     .add(
-                        DragValue::new(&mut self.weapon_config().aimbot.smooth)
-                            .range(0.0..=10.0)
-                            .speed(0.02)
-                            .max_decimals(1),
-                    )
-                    .changed()
-                {
-                    self.send_config();
-                }
-                ui.label("Smooth");
-            });
-
-            ui.horizontal(|ui| {
-                if ui
-                    .add(
                         DragValue::new(&mut self.weapon_config().aimbot.humanization)
                             .range(0.0..=10.0)
                             .speed(0.1)

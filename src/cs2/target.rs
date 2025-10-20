@@ -129,7 +129,7 @@ impl CS2 {
                 best_distance = distance;
 
                 let is_new_target = self.target.player.map_or(true, |current| {
-                    current.controller_entity_index != player.controller_entity_index
+                    current.pawn != player.pawn
                 });
 
                 self.target.player = Some(*player);
