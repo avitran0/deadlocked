@@ -252,6 +252,12 @@ impl App {
                             .speed(0.1)
                             .max_decimals(1),
                     )
+                    .on_hover_text(
+                        "0 = no humanization at all\n\
+                        <5 = more performant but can look a bit weird\n\
+                        5-8 = best sweet spot (recommended)\n\
+                        >8 = paranoid mode"
+                    )
                     .changed()
                 {
                     self.send_config();
