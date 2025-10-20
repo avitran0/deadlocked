@@ -13,7 +13,7 @@ impl CS2 {
     fn humanize_aim(&mut self, target_x: f32, target_y: f32, humanization_strength: f32) -> glam::Vec2 {
         use rand::Rng;
         
-        let humanization_amount = (humanization_strength * 2.0) / 10.0;
+        let humanization_amount = (humanization_strength * 2.0) / 50.0;
         
         if humanization_amount <= 0.0 {
             self.target.previous_target = vec2(target_x, target_y);
