@@ -17,6 +17,7 @@ pub struct Target {
     pub bone_index: u64,
     pub local_pawn_index: u64,
     pub previous_aim_punch: Vec2,
+    pub previous_target: Vec2,
 }
 
 impl Target {

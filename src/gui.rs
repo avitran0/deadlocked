@@ -262,6 +262,21 @@ impl App {
             ui.horizontal(|ui| {
                 if ui
                     .add(
+                        DragValue::new(&mut self.weapon_config().aimbot.humanization)
+                            .range(0.0..=10.0)
+                            .speed(0.1)
+                            .max_decimals(1),
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Humanization");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
                         DragValue::new(&mut self.weapon_config().aimbot.start_bullet)
                             .range(0..=10)
                             .speed(0.05),

@@ -9,6 +9,51 @@ use crate::{
 use super::{CS2, player::Player};
 
 impl CS2 {
+    fn humanize_aim(&mut self, target_x: f32, target_y: f32, humanization_strength: f32) -> glam::Vec2 {
+        use rand::Rng;
+        
+        let humanization_amount = (humanization_strength * 2.0) / 100.0;
+        
+        if humanization_amount <= 0.0 {
+            self.target.previous_target = vec2(target_x, target_y);
+            return vec2(target_x, target_y);
+        }
+        
+        let mut rng = rand::rng();
+        
+        let movement_distance = (target_x * target_x + target_y * target_y).sqrt();
+        
+        let micro_scale = (movement_distance * 0.25).min(8.0) * humanization_amount;
+        let micro_jitter_x = rng.random_range(-10.0..10.0) * micro_scale;
+        let micro_jitter_y = rng.random_range(-10.0..10.0) * micro_scale;
+        
+        let jitter_scale = (movement_distance * 0.15).min(12.0) * humanization_amount;
+        let jitter_x = rng.random_range(-10.0..10.0) * jitter_scale;
+        let jitter_y = rng.random_range(-10.0..10.0) * jitter_scale;
+        
+        let perp_scale = 0.35 * rng.random_range(-10.0..10.0) * humanization_amount;
+        let perp_x = -target_y * perp_scale;
+        let perp_y = target_x * perp_scale;
+        
+        let base_smooth_factor = rng.random_range(0.4..10.0);
+        let smooth_factor = 1.0 - ((1.0 - base_smooth_factor) * humanization_amount);
+        let smoothed_x = target_x * smooth_factor + self.target.previous_target.x * (1.0 - smooth_factor);
+        let smoothed_y = target_y * smooth_factor + self.target.previous_target.y * (1.0 - smooth_factor);
+        
+        let (final_smoothed_x, final_smoothed_y) = if rng.random_range(0.0..1.0) < 0.15 * humanization_amount {
+            (self.target.previous_target.x, self.target.previous_target.y)
+        } else {
+            (smoothed_x, smoothed_y)
+        };
+        
+        let humanized_x = final_smoothed_x + micro_jitter_x + jitter_x + perp_x;
+        let humanized_y = final_smoothed_y + micro_jitter_y + jitter_y + perp_y;
+        
+        self.target.previous_target = vec2(target_x, target_y);
+        
+        vec2(humanized_x, humanized_y)
+    }
+
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
         let config = self.aimbot_config(config);
 
@@ -68,10 +113,14 @@ impl CS2 {
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
-        let mouse_angles = vec2(
+        let mut mouse_angles = vec2(
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
         ) / (config.smooth + 1.0).clamp(1.0, 10.0);
+
+        if config.humanization > 0.0 {
+            mouse_angles = self.humanize_aim(mouse_angles.x, mouse_angles.y, config.humanization);
+        }
 
         mouse.move_rel(&mouse_angles);
     }
