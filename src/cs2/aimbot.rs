@@ -40,16 +40,16 @@ impl CS2 {
         let movement_distance = (target_x * target_x + target_y * target_y).sqrt();
         
         let noise_variance = rng.random_range(0.7..1.3);
-        let micro_scale = (movement_distance * 0.25).min(8.0) * humanization_amount * noise_variance;
+        let micro_scale = (movement_distance * 0.15).min(5.0) * humanization_amount * noise_variance;
         let micro_jitter_x = rng.random_range(-10.0..10.0) * micro_scale;
         let micro_jitter_y = rng.random_range(-10.0..10.0) * micro_scale;
         
         let jitter_variance = rng.random_range(0.6..1.4);
-        let jitter_scale = (movement_distance * 0.15).min(12.0) * humanization_amount * jitter_variance;
+        let jitter_scale = (movement_distance * 0.08).min(8.0) * humanization_amount * jitter_variance;
         let jitter_x = rng.random_range(-10.0..10.0) * jitter_scale;
         let jitter_y = rng.random_range(-10.0..10.0) * jitter_scale;
         
-        let perp_scale = 0.35 * rng.random_range(-10.0..10.0) * humanization_amount;
+        let perp_scale = 0.2 * rng.random_range(-10.0..10.0) * humanization_amount;
         let perp_x = -target_y * perp_scale;
         let perp_y = target_x * perp_scale;
         
@@ -148,24 +148,28 @@ impl CS2 {
             mouse_angles = self.humanize_aim(mouse_angles.x, mouse_angles.y, config.humanization);
         }
 
-        let current_distance = mouse_angles.length();
-        if self.target.initial_distance == 0.0 || current_distance > self.target.initial_distance {
-            self.target.initial_distance = current_distance;
-            self.target.aim_progress = 0.0;
-        }
+        if config.humanization >= 3.0 {
+            let current_distance = mouse_angles.length();
+            if self.target.initial_distance == 0.0 || current_distance > self.target.initial_distance {
+                self.target.initial_distance = current_distance;
+                self.target.aim_progress = 0.0;
+            }
 
-        if self.target.initial_distance > 0.0 {
-            let progress = 1.0 - (current_distance / self.target.initial_distance).clamp(0.0, 1.0);
-            self.target.aim_progress = progress;
+            if self.target.initial_distance > 0.0 {
+                let progress = 1.0 - (current_distance / self.target.initial_distance).clamp(0.0, 1.0);
+                self.target.aim_progress = progress;
 
-            let ease_factor = if progress < 0.5 {
-                2.0 * progress * progress
-            } else {
-                1.0 - (-2.0 * progress + 2.0).powi(2) / 2.0
-            };
+                let ease_factor = if progress < 0.5 {
+                    2.0 * progress * progress
+                } else {
+                    1.0 - (-2.0 * progress + 2.0).powi(2) / 2.0
+                };
 
-            let velocity_multiplier = (ease_factor * 4.0).clamp(0.1, 1.0);
-            mouse_angles *= velocity_multiplier;
+                let humanization_scale = ((config.humanization - 3.0) / 7.0).clamp(0.0, 1.0);
+                let min_velocity = 0.5 + (0.4 * (1.0 - humanization_scale));
+                let velocity_multiplier = (ease_factor * 2.0 + (1.0 - humanization_scale)).clamp(min_velocity, 1.0);
+                mouse_angles *= velocity_multiplier;
+            }
         }
 
         mouse.move_rel(&mouse_angles);
