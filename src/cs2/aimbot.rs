@@ -20,6 +20,10 @@ impl CS2 {
             return vec2(target_x, target_y);
         }
 
+        if humanization_amount < 0.05 {
+            return vec2(target_x, target_y);
+        }
+
         let now = Instant::now();
         let time_since_last = self.target.last_adjustment_time
             .map(|t| now.duration_since(t).as_secs_f32())
@@ -27,8 +31,12 @@ impl CS2 {
         
         let mut rng = rand::rng();
         
-        let temporal_variance = rng.random_range(0.8..1.2);
-        let should_adjust = time_since_last >= (self.target.adjustment_interval * temporal_variance);
+        let should_adjust = if humanization_amount < 0.1 {
+            true
+        } else {
+            let temporal_variance = rng.random_range(0.8..1.2);
+            time_since_last >= (self.target.adjustment_interval * temporal_variance)
+        };
         
         if !should_adjust {
             return self.target.previous_target;
@@ -39,19 +47,22 @@ impl CS2 {
         
         let movement_distance = (target_x * target_x + target_y * target_y).sqrt();
         
+        let jitter_range_scale = (humanization_amount * 10.0).min(10.0);
+        
         let noise_variance = rng.random_range(0.7..1.3);
         let micro_scale = (movement_distance * 0.15).min(5.0) * humanization_amount * noise_variance;
-        let micro_jitter_x = rng.random_range(-10.0..10.0) * micro_scale;
-        let micro_jitter_y = rng.random_range(-10.0..10.0) * micro_scale;
+        let micro_jitter_x = rng.random_range(-jitter_range_scale..jitter_range_scale) * micro_scale;
+        let micro_jitter_y = rng.random_range(-jitter_range_scale..jitter_range_scale) * micro_scale;
         
         let jitter_variance = rng.random_range(0.6..1.4);
         let jitter_scale = (movement_distance * 0.08).min(8.0) * humanization_amount * jitter_variance;
-        let jitter_x = rng.random_range(-10.0..10.0) * jitter_scale;
-        let jitter_y = rng.random_range(-10.0..10.0) * jitter_scale;
+        let jitter_x = rng.random_range(-jitter_range_scale..jitter_range_scale) * jitter_scale;
+        let jitter_y = rng.random_range(-jitter_range_scale..jitter_range_scale) * jitter_scale;
         
-        let perp_scale = 0.2 * rng.random_range(-10.0..10.0) * humanization_amount;
-        let perp_x = -target_y * perp_scale;
-        let perp_y = target_x * perp_scale;
+        let perp_scale = 0.2 * humanization_amount;
+        let perp_random = rng.random_range(-1.0..1.0);
+        let perp_x = -target_y * perp_scale * perp_random;
+        let perp_y = target_x * perp_scale * perp_random;
         
         let smooth_variance = rng.random_range(0.3..1.2);
         let base_smooth_factor = rng.random_range(0.4..10.0) * smooth_variance;
@@ -92,6 +103,24 @@ impl CS2 {
 
         if config.visibility_check && !target.visible(self, &local_player) {
             return;
+        }
+
+        if config.humanization > 0.0 {
+            use rand::Rng;
+            let now = std::time::Instant::now();
+            
+            if self.target.target_acquired_time.is_none() {
+                self.target.target_acquired_time = Some(now);
+                let mut rng = rand::rng();
+                self.target.reaction_delay = rng.random_range(0.15..0.30);
+            }
+            
+            if let Some(acquired_time) = self.target.target_acquired_time {
+                let elapsed = now.duration_since(acquired_time).as_secs_f32();
+                if elapsed < self.target.reaction_delay {
+                    return;
+                }
+            }
         }
 
         let target_angle = {
