@@ -1,4 +1,5 @@
 use glam::vec2;
+use std::time::Instant;
 
 use crate::{
     config::Config,
@@ -12,22 +13,39 @@ impl CS2 {
     fn humanize_aim(&mut self, target_x: f32, target_y: f32, humanization_strength: f32) -> glam::Vec2 {
         use rand::Rng;
         
-        let humanization_amount = (humanization_strength * 2.0) / 100.0;
+        let humanization_amount = (humanization_strength * 2.0) / 10.0;
         
         if humanization_amount <= 0.0 {
             self.target.previous_target = vec2(target_x, target_y);
             return vec2(target_x, target_y);
         }
+
+        let now = Instant::now();
+        let time_since_last = self.target.last_adjustment_time
+            .map(|t| now.duration_since(t).as_secs_f32())
+            .unwrap_or(0.016);
         
         let mut rng = rand::rng();
         
+        let temporal_variance = rng.random_range(0.8..1.2);
+        let should_adjust = time_since_last >= (self.target.adjustment_interval * temporal_variance);
+        
+        if !should_adjust {
+            return self.target.previous_target;
+        }
+        
+        self.target.last_adjustment_time = Some(now);
+        self.target.adjustment_interval = rng.random_range(0.012..0.025);
+        
         let movement_distance = (target_x * target_x + target_y * target_y).sqrt();
         
-        let micro_scale = (movement_distance * 0.25).min(8.0) * humanization_amount;
+        let noise_variance = rng.random_range(0.7..1.3);
+        let micro_scale = (movement_distance * 0.25).min(8.0) * humanization_amount * noise_variance;
         let micro_jitter_x = rng.random_range(-10.0..10.0) * micro_scale;
         let micro_jitter_y = rng.random_range(-10.0..10.0) * micro_scale;
         
-        let jitter_scale = (movement_distance * 0.15).min(12.0) * humanization_amount;
+        let jitter_variance = rng.random_range(0.6..1.4);
+        let jitter_scale = (movement_distance * 0.15).min(12.0) * humanization_amount * jitter_variance;
         let jitter_x = rng.random_range(-10.0..10.0) * jitter_scale;
         let jitter_y = rng.random_range(-10.0..10.0) * jitter_scale;
         
@@ -35,12 +53,14 @@ impl CS2 {
         let perp_x = -target_y * perp_scale;
         let perp_y = target_x * perp_scale;
         
-        let base_smooth_factor = rng.random_range(0.4..10.0);
+        let smooth_variance = rng.random_range(0.3..1.2);
+        let base_smooth_factor = rng.random_range(0.4..10.0) * smooth_variance;
         let smooth_factor = 1.0 - ((1.0 - base_smooth_factor) * humanization_amount);
         let smoothed_x = target_x * smooth_factor + self.target.previous_target.x * (1.0 - smooth_factor);
         let smoothed_y = target_y * smooth_factor + self.target.previous_target.y * (1.0 - smooth_factor);
         
-        let (final_smoothed_x, final_smoothed_y) = if rng.random_range(0.0..1.0) < 0.15 * humanization_amount {
+        let hesitation_threshold = 0.15 * humanization_amount * rng.random_range(0.5..1.5);
+        let (final_smoothed_x, final_smoothed_y) = if rng.random_range(0.0..1.0) < hesitation_threshold {
             (self.target.previous_target.x, self.target.previous_target.y)
         } else {
             (smoothed_x, smoothed_y)

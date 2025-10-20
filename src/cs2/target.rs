@@ -1,5 +1,6 @@
 use glam::Vec2;
 use strum::IntoEnumIterator;
+use std::time::Instant;
 
 use crate::{
     config::{Config, TargetingMode},
@@ -9,7 +10,7 @@ use crate::{
 
 use super::{CS2, bones::Bones, player::Player, weapon_class::WeaponClass};
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Target {
     pub player: Option<Player>,
     pub angle: Vec2,
@@ -18,6 +19,24 @@ pub struct Target {
     pub local_pawn_index: u64,
     pub previous_aim_punch: Vec2,
     pub previous_target: Vec2,
+    pub last_adjustment_time: Option<Instant>,
+    pub adjustment_interval: f32,
+}
+
+impl Default for Target {
+    fn default() -> Self {
+        Self {
+            player: None,
+            angle: Vec2::ZERO,
+            distance: 0.0,
+            bone_index: 0,
+            local_pawn_index: 0,
+            previous_aim_punch: Vec2::ZERO,
+            previous_target: Vec2::ZERO,
+            last_adjustment_time: None,
+            adjustment_interval: 0.016,
+        }
+    }
 }
 
 impl Target {
