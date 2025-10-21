@@ -10,7 +10,7 @@ use crate::{
 
 use super::{CS2, bones::Bones, player::Player, weapon_class::WeaponClass};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Target {
     pub player: Option<Player>,
     pub angle: Vec2,
@@ -25,27 +25,16 @@ pub struct Target {
     pub initial_distance: f32,
 }
 
-impl Default for Target {
-    fn default() -> Self {
+impl Target {
+    pub fn new() -> Self {
         Self {
-            player: None,
-            angle: Vec2::ZERO,
-            distance: 0.0,
-            bone_index: 0,
-            local_pawn_index: 0,
-            previous_aim_punch: Vec2::ZERO,
-            previous_target: Vec2::ZERO,
-            last_adjustment_time: None,
             adjustment_interval: 0.016,
-            aim_progress: 0.0,
-            initial_distance: 0.0,
+            ..Default::default()
         }
     }
-}
 
-impl Target {
     pub fn reset(&mut self) {
-        *self = Target::default();
+        *self = Self::new();
     }
 }
 

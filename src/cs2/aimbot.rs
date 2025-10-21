@@ -1,5 +1,7 @@
-use glam::vec2;
+use glam::{vec2, Vec2};
 use std::time::Instant;
+use rand::rngs::SmallRng;
+use rand::{Rng, SeedableRng};
 
 use crate::{
     config::Config,
@@ -10,18 +12,17 @@ use crate::{
 use super::{CS2, player::Player};
 
 impl CS2 {
-    fn humanize_aim(&mut self, target_x: f32, target_y: f32, humanization_strength: f32) -> glam::Vec2 {
-        use rand::Rng;
+    fn humanize_aim(&mut self, target: Vec2, humanization_strength: f32) -> Vec2 {
         
         let humanization_amount = (humanization_strength * 2.0) / 50.0;
         
         if humanization_amount <= 0.0 {
-            self.target.previous_target = vec2(target_x, target_y);
-            return vec2(target_x, target_y);
+            self.target.previous_target = target;
+            return target;
         }
 
         if humanization_amount < 0.05 {
-            return vec2(target_x, target_y);
+            return target;
         }
 
         let now = Instant::now();
@@ -29,7 +30,7 @@ impl CS2 {
             .map(|t| now.duration_since(t).as_secs_f32())
             .unwrap_or(0.016);
         
-        let mut rng = rand::rng();
+        let mut rng = SmallRng::from_rng(&mut rand::rng());
         
         let should_adjust = if humanization_amount < 0.1 {
             true
@@ -45,44 +46,45 @@ impl CS2 {
         self.target.last_adjustment_time = Some(now);
         self.target.adjustment_interval = rng.random_range(0.012..0.025);
         
-        let movement_distance = (target_x * target_x + target_y * target_y).sqrt();
+        let movement_distance = target.length();
         
         let jitter_range_scale = (humanization_amount * 10.0).min(10.0);
         
         let noise_variance = rng.random_range(0.7..1.3);
         let micro_scale = (movement_distance * 0.15).min(5.0) * humanization_amount * noise_variance;
-        let micro_jitter_x = rng.random_range(-jitter_range_scale..jitter_range_scale) * micro_scale;
-        let micro_jitter_y = rng.random_range(-jitter_range_scale..jitter_range_scale) * micro_scale;
+        let micro_jitter = Vec2::new(
+            rng.random_range(-jitter_range_scale..jitter_range_scale),
+            rng.random_range(-jitter_range_scale..jitter_range_scale),
+        ) * micro_scale;
         
         let jitter_variance = rng.random_range(0.6..1.4);
         let jitter_scale = (movement_distance * 0.08).min(8.0) * humanization_amount * jitter_variance;
-        let jitter_x = rng.random_range(-jitter_range_scale..jitter_range_scale) * jitter_scale;
-        let jitter_y = rng.random_range(-jitter_range_scale..jitter_range_scale) * jitter_scale;
+        let jitter = Vec2::new(
+            rng.random_range(-jitter_range_scale..jitter_range_scale),
+            rng.random_range(-jitter_range_scale..jitter_range_scale),
+        ) * jitter_scale;
         
         let perp_scale = 0.2 * humanization_amount;
         let perp_random = rng.random_range(-1.0..1.0);
-        let perp_x = -target_y * perp_scale * perp_random;
-        let perp_y = target_x * perp_scale * perp_random;
+        let perp = Vec2::new(-target.y, target.x) * perp_scale * perp_random;
         
         let smooth_variance = rng.random_range(0.3..1.2);
         let base_smooth_factor = rng.random_range(0.4..10.0) * smooth_variance;
         let smooth_factor = 1.0 - ((1.0 - base_smooth_factor) * humanization_amount);
-        let smoothed_x = target_x * smooth_factor + self.target.previous_target.x * (1.0 - smooth_factor);
-        let smoothed_y = target_y * smooth_factor + self.target.previous_target.y * (1.0 - smooth_factor);
+        let smoothed = target * smooth_factor + self.target.previous_target * (1.0 - smooth_factor);
         
         let hesitation_threshold = 0.15 * humanization_amount * rng.random_range(0.5..1.5);
-        let (final_smoothed_x, final_smoothed_y) = if rng.random_range(0.0..1.0) < hesitation_threshold {
-            (self.target.previous_target.x, self.target.previous_target.y)
+        let final_smoothed = if rng.random_range(0.0..1.0) < hesitation_threshold {
+            self.target.previous_target
         } else {
-            (smoothed_x, smoothed_y)
+            smoothed
         };
         
-        let humanized_x = final_smoothed_x + micro_jitter_x + jitter_x + perp_x;
-        let humanized_y = final_smoothed_y + micro_jitter_y + jitter_y + perp_y;
+        let humanized = final_smoothed + micro_jitter + jitter + perp;
         
-        self.target.previous_target = vec2(target_x, target_y);
+        self.target.previous_target = target;
         
-        vec2(humanized_x, humanized_y)
+        humanized
     }
 
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
@@ -106,9 +108,12 @@ impl CS2 {
         }
 
         // TODO: add human reaction time delay (150-300ms) when target comes into line of sight
+        // should use time tracking like triggerbot (no blocking waits in main loop)
+        // would replace start_bullet setting for better UX on single-shot weapons
+
         let target_angle = {
             let mut smallest_fov = 360.0;
-            let mut smallest_angle = glam::Vec2::ZERO;
+            let mut smallest_angle = Vec2::ZERO;
             for bone in &config.bones {
                 let bone_pos = target.bone_position(self, bone.u64());
                 let angle =
@@ -157,7 +162,7 @@ impl CS2 {
         ) / (smooth_value + 1.0).clamp(1.0, 10.0);
 
         if config.humanization > 0.0 {
-            mouse_angles = self.humanize_aim(mouse_angles.x, mouse_angles.y, config.humanization);
+            mouse_angles = self.humanize_aim(mouse_angles, config.humanization);
         }
 
         if config.humanization >= 3.0 {
