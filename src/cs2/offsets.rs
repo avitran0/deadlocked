@@ -1,154 +1,232 @@
-#[derive(Debug, Default)]
-pub struct LibraryOffsets {
-    pub client: u64,
-    pub engine: u64,
-    pub tier0: u64,
-    pub input: u64,
-    pub sdl: u64,
-    pub schema: u64,
+// ------------------------------------------------------------------
+// 0-deps, zero-cost, compile-time checked offset tables
+// ------------------------------------------------------------------
+#![allow(non_camel_case_types)]
+
+/// Builds a plain-old-data struct plus its Default impl from a single
+/// declarative list.  Memory layout stays identical
+/// code; we only remove the boiler-plate.
+macro_rules! offsets {
+    (
+        $(#[$outer:meta])*
+        $vis:vis struct $Name:ident {
+            $($field:ident : $ty:ty = $val:expr, $doc:literal),+ $(,)?
+        }
+    ) => {
+        #[derive(Copy, Clone, Debug)]
+        #[repr(C)]
+        $(#[$outer])*
+        $vis struct $Name {
+            $(#[doc = $doc] pub $field: $ty),+
+        }
+
+        impl Default for $Name {
+            #[inline]
+            fn default() -> Self {
+                Self { $($field: $val),+ }
+            }
+        }
+    };
 }
 
-#[derive(Debug, Default)]
-pub struct InterfaceOffsets {
-    pub resource: u64,
-    pub entity: u64,
-    pub cvar: u64,
-    pub input: u64,
+// ------------------------------------------------------------------
+//  Library & interface blocks
+// ------------------------------------------------------------------
+offsets! {
+    #[derive(Default)]
+    pub struct LibraryOffsets {
+        client: u64 = 0, "client.dll base address"
+        engine: u64 = 0, "engine.dll base address"
+        tier0:  u64 = 0, "tier0.dll base address"
+        input:  u64 = 0, "inputsystem.dll base address"
+        sdl:    u64 = 0, "SDL3.dll base address"
+        schema: u64 = 0, "schemasystem.dll base address"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct DirectOffsets {
-    pub local_player: u64,
-    pub button_state: u64,
-    pub view_matrix: u64,
-    pub sdl_window: u64,
-    pub planted_c4: u64,
-    pub global_vars: u64,
+offsets! {
+    pub struct InterfaceOffsets {
+        resource: u64 = 0, "CCSPlayerResource"
+        entity:   u64 = 0, "CGameEntitySystem"
+        cvar:     u64 = 0, "ICvar"
+        input:    u64 = 0, "IInputSystem"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct ConvarOffsets {
-    pub ffa: u64,
-    pub sensitivity: u64,
+// ------------------------------------------------------------------
+//  World / global offsets
+// ------------------------------------------------------------------
+offsets! {
+    pub struct DirectOffsets {
+        local_player: u64 = 0, "LocalPlayer controller pointer"
+        button_state: u64 = 0, "Global button state"
+        view_matrix:  u64 = 0, "View-matrix array"
+        sdl_window:   u64 = 0, "SDL_Window *"
+        planted_c4:   u64 = 0, "C_PlantedC4 entity list"
+        global_vars:  u64 = 0, "CGlobalVarsBase"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct PlayerControllerOffsets {
-    pub steam_id: u64,     // u64 (m_steamID)
-    pub name: u64,         // Pointer -> String (m_iszPlayerName)
-    pub pawn: u64,         // Handle -> Pawn (m_hPawn)
-    pub desired_fov: u64,  // u32 (m_iDesiredFOV)
-    pub owner_entity: u64, // i32 (h_pOwnerEntity)
-    pub color: u64,        // i32 (m_iCompTeammateColor)
+offsets! {
+    pub struct ConvarOffsets {
+        ffa:         u64 = 0, "mp_teammates_are_enemies"
+        sensitivity: u64 = 0, "sensitivity"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct PawnOffsets {
-    pub health: u64,              // i32 (m_iHealth)
-    pub armor: u64,               // i32 (m_ArmorValue)
-    pub team: u64,                // i32 (m_iTeamNum)
-    pub life_state: u64,          // i32 (m_lifeState)
-    pub weapon: u64,              // Pointer -> WeaponBase (m_pClippingWeapon)
-    pub fov_multiplier: u64,      // f32 (m_flFOVSensitivityAdjust)
-    pub game_scene_node: u64,     // Pointer -> GameSceneNode (m_pGameSceneNode)
-    pub eye_offset: u64,          // Vec3 (m_vecViewOffset)
-    pub eye_angles: u64,          // Vec3 (m_angEyeAngles)
-    pub velocity: u64,            // Vec3 (m_vecAbsVelocity)
-    pub aim_punch_cache: u64,     // Vector<Vec3> (m_aimPunchCache)
-    pub shots_fired: u64,         // i32 (m_iShotsFired)
-    pub view_angles: u64,         // Vec2 (v_angle)
-    pub spotted_state: u64,       // SpottedState (m_entitySpottedState)
-    pub crosshair_entity: u64,    // EntityIndex (m_iIDEntIndex)
-    pub is_scoped: u64,           // bool (m_bIsScoped)
-    pub flash_alpha: u64,         // f32 (m_flFlashMaxAlpha)
-    pub flash_duration: u64,      // f32 (m_flFlashDuration)
-    pub deathmatch_immunity: u64, // bool (m_bGunGameImmunity)
-    pub camera_services: u64,     // Pointer -> CameraServices (m_pCameraServices)
-    pub item_services: u64,       // Pointer -> ItemServices (m_pItemServices)
-    pub weapon_services: u64,     // Pointer -> WeaponSercies (m_pWeaponServices)
-    pub observer_services: u64,   // Pointer -> ObserverServices (m_pObserverServices)
+// ------------------------------------------------------------------
+//  Player controller
+// ------------------------------------------------------------------
+offsets! {
+    pub struct PlayerControllerOffsets {
+        steam_id:     u64 = 0, "m_steamID"
+        name:         u64 = 0, "m_iszPlayerName"
+        pawn:         u64 = 0, "m_hPawn"
+        desired_fov:  u64 = 0, "m_iDesiredFOV"
+        owner_entity: u64 = 0, "m_hOwnerEntity"
+        color:        u64 = 0, "m_iCompTeammateColor"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct GameSceneNodeOffsets {
-    pub dormant: u64,     // bool (m_bDormant)
-    pub origin: u64,      // Vec3 (m_vecAbsOrigin)
-    pub model_state: u64, // Pointer -> ModelState (m_modelState)
+// ------------------------------------------------------------------
+//  Pawn (the physical entity in the world)
+// ------------------------------------------------------------------
+offsets! {
+    pub struct PawnOffsets {
+        health:              u64 = 0, "m_iHealth"
+        armor:               u64 = 0, "m_ArmorValue"
+        team:                u64 = 0, "m_iTeamNum"
+        life_state:          u64 = 0, "m_lifeState"
+        weapon:              u64 = 0, "m_pClippingWeapon"
+        fov_multiplier:      u64 = 0, "m_flFOVSensitivityAdjust"
+        game_scene_node:     u64 = 0, "m_pGameSceneNode"
+        eye_offset:          u64 = 0, "m_vecViewOffset"
+        eye_angles:          u64 = 0, "m_angEyeAngles"
+        velocity:            u64 = 0, "m_vecAbsVelocity"
+        aim_punch_cache:     u64 = 0, "m_aimPunchCache"
+        shots_fired:         u64 = 0, "m_iShotsFired"
+        view_angles:         u64 = 0, "v_angle"
+        spotted_state:       u64 = 0, "m_entitySpottedState"
+        crosshair_entity:    u64 = 0, "m_iIDEntIndex"
+        is_scoped:           u64 = 0, "m_bIsScoped"
+        flash_alpha:         u64 = 0, "m_flFlashMaxAlpha"
+        flash_duration:      u64 = 0, "m_flFlashDuration"
+        deathmatch_immunity: u64 = 0, "m_bGunGameImmunity"
+        camera_services:     u64 = 0, "m_pCameraServices"
+        item_services:       u64 = 0, "m_pItemServices"
+        weapon_services:     u64 = 0, "m_pWeaponServices"
+        observer_services:   u64 = 0, "m_pObserverServices"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct SkeletonInstanceOffsets {
-    pub skeleton_instance: u64, // CSkeletonInstance (m_skeletonInstance)
+// ------------------------------------------------------------------
+//  Scene-graph & skeleton
+// ------------------------------------------------------------------
+offsets! {
+    pub struct GameSceneNodeOffsets {
+        dormant:    u64 = 0, "m_bDormant"
+        origin:     u64 = 0, "m_vecAbsOrigin"
+        model_state:u64 = 0, "m_modelState"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct SmokeOffsets {
-    pub did_smoke_effect: u64, // bool (m_bDidSmokeEffect)
-    pub smoke_color: u64,      // Vec3 (m_vSmokeColor)
+offsets! {
+    pub struct SkeletonInstanceOffsets {
+        skeleton_instance: u64 = 0, "m_skeletonInstance"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct MolotovOffsets {
-    pub is_incendiary: u64, // bool (m_bIsIncGrenade)
+// ------------------------------------------------------------------
+//  Grenades & environment
+// ------------------------------------------------------------------
+offsets! {
+    pub struct SmokeOffsets {
+        did_smoke_effect: u64 = 0, "m_bDidSmokeEffect"
+        smoke_color:      u64 = 0, "m_vSmokeColor"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct InfernoOffsets {
-    pub is_burning: u64,     // bool[64] (m_bFireIsBurning)
-    pub fire_count: u64,     // i32 (m_fireCount)
-    pub fire_positions: u64, // Vec3[64] (m_firePositions)
+offsets! {
+    pub struct MolotovOffsets {
+        is_incendiary: u64 = 0, "m_bIsIncGrenade"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct SpottedStateOffsets {
-    pub spotted: u64, // bool (m_bSpotted)
-    pub mask: u64,    // i32[2] or u64? (m_bSpottedByMask)
+offsets! {
+    pub struct InfernoOffsets {
+        is_burning:     u64 = 0, "m_bFireIsBurning"
+        fire_count:     u64 = 0, "m_fireCount"
+        fire_positions: u64 = 0, "m_firePositions"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct CameraServicesOffsets {
-    pub fov: u64, // u32 (m_iFOV)
+// ------------------------------------------------------------------
+//  Services & state helpers
+// ------------------------------------------------------------------
+offsets! {
+    pub struct SpottedStateOffsets {
+        spotted: u64 = 0, "m_bSpotted"
+        mask:    u64 = 0, "m_bSpottedByMask"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct ItemServicesOffsets {
-    pub has_defuser: u64, // bool (m_bHasDefuser)
-    pub has_helmet: u64,  // bool (m_bHasHelmet)
+offsets! {
+    pub struct CameraServicesOffsets {
+        fov: u64 = 0, "m_iFOV"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct WeaponServicesOffsets {
-    pub weapons: u64, // Pointer -> Vec<Pointer -> Weapon> (m_hMyWeapons)
+offsets! {
+    pub struct ItemServicesOffsets {
+        has_defuser: u64 = 0, "m_bHasDefuser"
+        has_helmet:  u64 = 0, "m_bHasHelmet"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct ObserverServicesOffsets {
-    pub target: u64, // Handle -> BaseEntity (m_hObserverTarget)
+offsets! {
+    pub struct WeaponServicesOffsets {
+        weapons: u64 = 0, "m_hMyWeapons"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct WeaponOffsets {
-    pub attribute_manager: u64,     // AttributeContainer (m_AttributeManager)
-    pub item: u64,                  // EIconItemView (m_Item)
-    pub item_definition_index: u64, // u16 (m_iItemDefinitionIndex)
+offsets! {
+    pub struct ObserverServicesOffsets {
+        target: u64 = 0, "m_hObserverTarget"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct PlantedC4Offsets {
-    pub is_ticking: u64,       // bool (m_bBombTicking)
-    pub blow_time: u64,        // f32 (m_flC4Blow)
-    pub being_defused: u64,    // bool (m_bBeingDefused)
-    pub is_defused: u64,       // bool (m_bBombDefused)
-    pub has_exploded: u64,     // bool (m_bHasExploded)
-    pub defuse_time_left: u64, // u64 (m_flDefuseCountDown)
+// ------------------------------------------------------------------
+//  Weapons & bomb
+// ------------------------------------------------------------------
+offsets! {
+    pub struct WeaponOffsets {
+        attribute_manager:     u64 = 0, "m_AttributeManager"
+        item:                  u64 = 0, "m_Item"
+        item_definition_index: u64 = 0, "m_iItemDefinitionIndex"
+    }
 }
 
-#[derive(Debug, Default)]
-pub struct EntityIdentityOffsets {
-    pub size: i32,
+offsets! {
+    pub struct PlantedC4Offsets {
+        is_ticking:      u64 = 0, "m_bBombTicking"
+        blow_time:       u64 = 0, "m_flC4Blow"
+        being_defused:   u64 = 0, "m_bBeingDefused"
+        is_defused:      u64 = 0, "m_bBombDefused"
+        has_exploded:    u64 = 0, "m_bHasExploded"
+        defuse_time_left:u64 = 0, "m_flDefuseCountDown"
+    }
 }
 
-#[derive(Debug, Default)]
+offsets! {
+    pub struct EntityIdentityOffsets {
+        size: i32 = 0, "sizeof(CEntityIdentity)"
+    }
+}
+
+// ------------------------------------------------------------------
+//  Top-level container
+// ------------------------------------------------------------------
+#[derive(Copy, Clone, Debug, Default)]
 pub struct Offsets {
     pub library: LibraryOffsets,
     pub interface: InterfaceOffsets,
