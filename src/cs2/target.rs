@@ -12,7 +12,7 @@ use crate::{
     math::angles_to_fov,
 };
 
-#[derive(Debug, Default)]
+// ------------------------------------------------------------------
 pub struct Target {
     pub player: Option<Player>,
     pub angle: Vec2,
@@ -22,123 +22,154 @@ pub struct Target {
     pub previous_aim_punch: Vec2,
 }
 
-impl Target {
-    pub fn reset(&mut self) {
-        *self = Target::default();
+impl Default for Target {
+    fn default() -> Self {
+        Self {
+            player: None,
+            angle: Vec2::ZERO,
+            distance: 0.0,
+            bone_index: 0,
+            local_pawn_index: 0,
+            previous_aim_punch: Vec2::ZERO,
+        }
     }
 }
 
+impl Target {
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+}
+
+// ------------------------------------------------------------------
 impl CS2 {
     pub fn find_target(&mut self, config: &Config) {
-        let Some(local_player) = Player::local_player(self) else {
-            return;
+        /* -----------------------------------------------------------
+           1.  Early-outs
+        ----------------------------------------------------------- */
+        let local_player = match Player::local_player(self) {
+            Some(p) => p,
+            None => return self.target.reset(),
         };
 
-        let team = local_player.team(self);
-        if team != cs2::TEAM_CT && team != cs2::TEAM_T {
-            self.target.reset();
-            return;
+        let local_team = local_player.team(self);
+        if !matches!(local_team, cs2::TEAM_CT | cs2::TEAM_T) {
+            return self.target.reset();
         }
 
+        /* -----------------------------------------------------------
+           2.  Weapon-specific recoil
+        ----------------------------------------------------------- */
         let weapon_class = local_player.weapon_class(self);
-
-        let view_angles = local_player.view_angles(self);
-        let ffa = self.is_ffa();
         let shots_fired = local_player.shots_fired(self);
         let aim_punch = match (weapon_class, local_player.aim_punch(self) * 2.0) {
             (WeaponClass::Sniper, _) => Vec2::ZERO,
-            (_, punch) if punch.length() == 0.0 && shots_fired > 1 => {
+            (_, punch) if punch.length_squared() == 0.0 && shots_fired > 1 => {
                 self.target.previous_aim_punch
             }
             (_, punch) => punch,
         };
         self.target.previous_aim_punch = aim_punch;
 
-        if self.players.is_empty() {
-            self.target.reset();
-            return;
+        /* -----------------------------------------------------------
+           3.  Config shortcuts
+        ----------------------------------------------------------- */
+        let aim_cfg = self.aimbot_config(config);
+        let view_angles = local_player.view_angles(self);
+        let eye_pos = local_player.eye_position(self);
+        let max_fov = aim_cfg.fov;
+        let ffa = self.is_ffa();
+        let is_custom = self.is_custom_game_mode();
+        let friendly_ok = aim_cfg.target_friendlies;
+
+        /* -----------------------------------------------------------
+           4.  Helper: decide which candidate is better
+        ----------------------------------------------------------- */
+        #[inline(always)]
+        fn is_better(mode: &TargetingMode, curr: &Candidate, best: &Candidate) -> bool {
+            match mode {
+                TargetingMode::Fov => curr.fov < best.fov,
+                TargetingMode::Distance => curr.distance < best.distance,
+            }
         }
 
-        let aimbot_config = self.aimbot_config(config);
-        let targeting_mode = &aimbot_config.targeting_mode;
-        let max_fov = aimbot_config.fov;
-        let is_custom_mode = self.is_custom_game_mode();
+        /* -----------------------------------------------------------
+           5.  Main search
+        ----------------------------------------------------------- */
+        let mut best: Option<Candidate> = None;
 
-        let mut best_fov = 360.0;
-        let mut best_distance = f32::MAX;
-        let eye_position = local_player.eye_position(self);
-
-        if self.target.player.is_none() {
-            self.target.reset();
-        }
-        if let Some(player) = &self.target.player
-            && !player.is_valid(self)
-        {
-            self.target.reset();
-        }
-
-        let target_friendlies = aimbot_config.target_friendlies;
-
-        for player in &self.players {
-            if !(ffa || target_friendlies && is_custom_mode) && team == player.team(self) {
+        for &player in &self.players {
+            // --- skip invalid / teammates ---------------------------------
+            if !player.is_valid(self) {
+                continue;
+            }
+            let player_team = player.team(self);
+            if !ffa && !friendly_ok && !is_custom && player_team == local_team {
                 continue;
             }
 
-            let head_position = player.bone_position(self, Bones::Head.u64());
-            let distance = eye_position.distance(head_position);
-            let angle = self.angle_to_target(&local_player, &head_position, &aim_punch);
-            let fov = angles_to_fov(&view_angles, &angle);
+            // --- use HEAD as a cheap first-pass filter ---------------------
+            let head_pos = player.bone_position(self, Bones::Head.u64());
+            let head_dist = eye_pos.distance(head_pos);
+            let head_angle = self.angle_to_target(&local_player, &head_pos, &aim_punch);
+            let head_fov = angles_to_fov(&view_angles, &head_angle);
 
-            let fov_limit = max_fov * self.distance_scale(distance);
-            if fov > fov_limit {
+            let fov_limit = max_fov * self.distance_scale(head_dist);
+            if head_fov > fov_limit {
                 continue;
             }
 
-            let should_select = match targeting_mode {
-                TargetingMode::Fov => fov < best_fov,
-                TargetingMode::Distance => distance < best_distance,
-            };
+            // --- now find the best bone on this player ---------------------
+            let mut best_bone: Option<Candidate> = None;
 
-            if should_select {
-                best_fov = fov;
-                best_distance = distance;
+            for bone in Bones::iter() {
+                let bone_pos = player.bone_position(self, bone.u64());
+                let dist = eye_pos.distance(bone_pos);
+                let angle = self.angle_to_target(&local_player, &bone_pos, &aim_punch);
+                let fov = angles_to_fov(&view_angles, &angle);
 
-                self.target.player = Some(*player);
-                self.target.angle = angle;
-                self.target.distance = distance;
-                self.target.bone_index = Bones::Head.u64();
+                let cand = Candidate {
+                    player,
+                    angle,
+                    distance: dist,
+                    bone_index: bone.u64(),
+                    fov,
+                };
+
+                if best_bone.as_ref().map_or(true, |b| is_better(&aim_cfg.targeting_mode, &cand, b)) {
+                    best_bone = Some(cand);
+                }
+            }
+
+            // --- compare best bone of this player to global best -----------
+            if let Some(bone_cand) = best_bone
+                && best.as_ref().map_or(true, |b| is_better(&aim_cfg.targeting_mode, &bone_cand, b))
+            {
+                best = Some(bone_cand);
             }
         }
 
-        if self.target.player.is_none() {
-            return;
-        }
-
-        // update target angle
-        let mut smallest_fov = 360.0;
-        let target = self.target.player.as_ref().unwrap();
-        for bone in Bones::iter() {
-            let bone_position = target.bone_position(self, bone.u64());
-            let distance = eye_position.distance(bone_position);
-            let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
-            let fov = angles_to_fov(&view_angles, &angle);
-
-            if fov < smallest_fov {
-                smallest_fov = fov;
-
-                self.target.angle = angle;
-                self.target.distance = distance;
-                self.target.bone_index = bone.u64();
+        /* -----------------------------------------------------------
+           6.  Commit
+        ----------------------------------------------------------- */
+        match best {
+            Some(c) => {
+                self.target.player = Some(c.player);
+                self.target.angle = c.angle;
+                self.target.distance = c.distance;
+                self.target.bone_index = c.bone_index;
             }
+            None => self.target.reset(),
         }
-        /*
-        let head_position = self.get_bone_position(process, self.target.pawn, Bones::Head.u64());
-        let distance = eye_position.distance(head_position);
-        let angle = self.get_target_angle(process, local_pawn, head_position, aim_punch);
-
-        self.target.angle = angle;
-        self.target.distance = distance;
-        self.target.bone_index = Bones::Head.u64();
-        */
     }
+}
+
+// ------------------------------------------------------------------
+#[derive(Clone, Copy)]
+struct Candidate {
+    player: Player,
+    angle: Vec2,
+    distance: f32,
+    bone_index: u64,
+    fov: f32,
 }
