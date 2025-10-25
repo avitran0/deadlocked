@@ -1,82 +1,67 @@
-use glam::vec2;
-
+use glam::Vec2;
 use crate::{
-    config::Config,
     cs2::{CS2, entity::player::Player},
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
 };
 
-impl CS2 {
-    pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
-        let config = self.aimbot_config(config);
+// ---------- helpers ---------------------------------------------------------
+fn human_curve(x: f32) -> f32 { x * x * (3.0 - 2.0 * x) }
 
-        if !config.enabled || self.target.player.is_none() {
-            return;
-        }
+fn white(seed: u32) -> f32 {
+    let s = (seed << 13) ^ seed;
+    let s = s.wrapping_mul(s.wrapping_mul(15731).wrapping_add(789221));
+    ((s >> 16) & 0x7fff) as f32 / 16384.0 - 1.0
+}
+
+// ---------- aimbot ----------------------------------------------------------
+impl CS2 {
+    pub fn aimbot(&mut self, _config: &crate::config::Config, mouse: &mut Mouse) {
+        // pull the same config you already expose
+        let cfg = self.aimbot_config(_config);
+        if !cfg.enabled || self.target.player.is_none() { return; }
         let target = self.target.player.as_ref().unwrap();
 
-        let Some(local_player) = Player::local_player(self) else {
-            return;
-        };
+        let local = match Player::local_player(self) { Some(p) => p, None => return };
 
-        if config.flash_check && local_player.is_flashed(self) {
-            return;
+        if cfg.flash_check   && local.is_flashed(self)   { return; }
+        if cfg.visibility_check && !target.visible(self, &local) { return; }
+        if !target.is_valid(self) { return; }
+        if local.shots_fired(self) < cfg.start_bullet { return; }
+
+        // best bone
+        let (target_angle, _) = cfg.bones.iter()
+            .map(|b| target.bone_position(self, b.u64()))
+            .map(|p| self.angle_to_target(&local, &p, &self.target.previous_aim_punch))
+            .map(|a| (a, angles_to_fov(&local.view_angles(self), &a)))
+            .fold((Vec2::ZERO, 360.0), |best, cur| if cur.1 < best.1 { cur } else { best });
+
+        let view = local.view_angles(self);
+        let max_fov = cfg.fov * if cfg.distance_adjusted_fov {
+            self.distance_scale(self.target.distance) } else { 1.0 };
+        if angles_to_fov(&view, &target_angle) > max_fov { return; }
+
+        // humanised move
+        let mut aim = view - target_angle;
+        if aim.y < -180.0 { aim.y += 360.0; }
+        vec2_clamp(&mut aim);
+
+        let sens = self.get_sensitivity() * local.fov_multiplier(self);
+        let base = Vec2::new(aim.y / sens * 50.0, -aim.x / sens * 50.0);
+
+        let tick = self.global_tick_count() as u32;
+        let jitter = Vec2::new(white(tick), white(tick.wrapping_mul(7919))) * 0.35;
+        let slip  = Vec2::new(white(tick.wrapping_mul(13001)), white(tick.wrapping_mul(19717))) * 0.20;
+
+        let smooth = (cfg.smooth + 1.0).clamp(1.0, 20.0);
+        let move_ = (base + jitter + slip) * human_curve(1.0 / smooth);
+
+        // anti-twitch: skip 2 frames after big snap
+        if self.aimbot_cooldown == 0 {
+            mouse.move_rel(&move_);
+            if move_.length_squared() > 0.02 { self.aimbot_cooldown = 2; }
+        } else {
+            self.aimbot_cooldown -= 1;
         }
-
-        if config.visibility_check && !target.visible(self, &local_player) {
-            return;
-        }
-
-        let target_angle = {
-            let mut smallest_fov = 360.0;
-            let mut smallest_angle = glam::Vec2::ZERO;
-            for bone in &config.bones {
-                let bone_pos = target.bone_position(self, bone.u64());
-                let angle =
-                    self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
-                let fov = angles_to_fov(&local_player.view_angles(self), &angle);
-                if fov < smallest_fov {
-                    smallest_fov = fov;
-                    smallest_angle = angle;
-                }
-            }
-            smallest_angle
-        };
-
-        let view_angles = local_player.view_angles(self);
-        if angles_to_fov(&view_angles, &target_angle)
-            > (config.fov
-                * if config.distance_adjusted_fov {
-                    self.distance_scale(self.target.distance)
-                } else {
-                    1.0
-                })
-        {
-            return;
-        }
-
-        if !target.is_valid(self) {
-            return;
-        }
-
-        if local_player.shots_fired(self) < config.start_bullet {
-            return;
-        }
-
-        let mut aim_angles = view_angles - target_angle;
-        if aim_angles.y < -180.0 {
-            aim_angles.y += 360.0
-        }
-        vec2_clamp(&mut aim_angles);
-
-        let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
-
-        let mouse_angles = vec2(
-            aim_angles.y / sensitivity * 50.0,
-            -aim_angles.x / sensitivity * 50.0,
-        ) / (config.smooth + 1.0).clamp(1.0, 20.0);
-
-        mouse.move_rel(&mouse_angles);
     }
 }
