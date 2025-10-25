@@ -61,6 +61,9 @@ pub struct CS2 {
     wallhack: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
+    // stealth helpers
+    pub aimbot_cooldown: u8,
+    pub last_aimbot_move: glam::Vec2,
 }
 
 impl Game for CS2 {
