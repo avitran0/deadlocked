@@ -4,7 +4,6 @@ pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     let mut yaw;
     let mut pitch;
 
-    // forward vector points up or down
     if forward.x == 0.0 && forward.y == 0.0 {
         yaw = 0.0;
         pitch = if forward.z > 0.0 { 270.0 } else { 90.0 };
@@ -22,21 +21,29 @@ pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
         }
     }
 
-    Vec2::new(pitch, yaw)
+    Vec2::new(yaw, pitch)
 }
 
 pub fn angles_to_fov(view_angles: &Vec2, aim_angles: &Vec2) -> f32 {
-    let mut delta = view_angles - aim_angles;
+    let view_yaw = view_angles.y.to_radians();
+    let view_pitch = view_angles.x.to_radians();
+    let aim_yaw = aim_angles.y.to_radians();
+    let aim_pitch = aim_angles.x.to_radians();
 
-    if delta.x > 180.0 {
-        delta.x = 360.0 - delta.x;
-    }
-    delta.x = delta.x.abs();
+    let view_forward = Vec3::new(
+        view_pitch.cos() * view_yaw.cos(),
+        view_pitch.cos() * view_yaw.sin(),
+        -view_pitch.sin(),
+    );
 
-    // clamp?
-    delta.y = ((delta.y + 180.0) % 360.0 - 180.0).abs();
+    let aim_forward = Vec3::new(
+        aim_pitch.cos() * aim_yaw.cos(),
+        aim_pitch.cos() * aim_yaw.sin(),
+        -aim_pitch.sin(),
+    );
 
-    delta.length()
+    let dot = view_forward.dot(aim_forward).clamp(-1.0, 1.0);
+    dot.acos().to_degrees()
 }
 
 pub fn vec2_clamp(vec: &mut Vec2) {
@@ -79,8 +86,8 @@ pub fn world_to_screen(position: &Vec3, data: &crate::data::Data) -> Option<egui
 
     let half_size = Vec2::new(data.window_size.x * 0.5, data.window_size.y * 0.5);
 
-    screen_position.x = half_size.x + 0.5 * screen_position.x * data.window_size.x + 0.5;
-    screen_position.y = half_size.y - 0.5 * screen_position.y * data.window_size.y + 0.5;
+    screen_position.x = half_size.x + screen_position.x * half_size.x;
+    screen_position.y = half_size.y - screen_position.y * half_size.y;
 
     if screen_position.x < 0.0
         || screen_position.x > data.window_size.x
