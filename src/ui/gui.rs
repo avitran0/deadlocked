@@ -700,64 +700,64 @@ impl App {
                         self.send_config();
                     }
                 });
+
+                collapsing_open(ui, "Grenade Trails", |ui| {
+                    if ui
+                    .checkbox(&mut self.config.hud.grenade_trails, "Grenade Trails")
+                    .changed()
+                    {
+                        self.send_config();
+                    }
+
+                    if let Some(color) =
+                    self.color_picker(ui, &self.config.hud.smoke_trail_color, "Smoke Trail Color")
+                    {
+                        self.config.hud.smoke_trail_color = color;
+                        self.send_config();
+                    }
+
+                    if let Some(color) = self.color_picker(
+                        ui,
+                        &self.config.hud.molotov_trail_color,
+                        "Molotov Trail Color",
+                    ) {
+                        self.config.hud.molotov_trail_color = color;
+                        self.send_config();
+                    }
+
+                    if let Some(color) = self.color_picker(
+                        ui,
+                        &self.config.hud.incendiary_trail_color,
+                        "Incendiary Trail Color",
+                    ) {
+                        self.config.hud.incendiary_trail_color = color;
+                        self.send_config();
+                    }
+
+                    if let Some(color) =
+                    self.color_picker(ui, &self.config.hud.flash_trail_color, "Flash Trail Color")
+                    {
+                        self.config.hud.flash_trail_color = color;
+                        self.send_config();
+                    }
+
+                    if let Some(color) = self.color_picker(
+                        ui,
+                        &self.config.hud.he_trail_color,
+                        "HE Grenade Trail Color",
+                    ) {
+                        self.config.hud.he_trail_color = color;
+                        self.send_config();
+                    }
+
+                    if let Some(color) =
+                    self.color_picker(ui, &self.config.hud.decoy_trail_color, "Decoy Trail Color")
+                    {
+                        self.config.hud.decoy_trail_color = color;
+                        self.send_config();
+                    }
+                });
             });
-
-        collapsing_open(ui, "Grenade Trails", |ui| {
-            if ui
-                .checkbox(&mut self.config.hud.grenade_trails, "Grenade Trails")
-                .changed()
-            {
-                self.send_config();
-            }
-
-            if let Some(color) =
-                self.color_picker(ui, &self.config.hud.smoke_trail_color, "Smoke Trail Color")
-            {
-                self.config.hud.smoke_trail_color = color;
-                self.send_config();
-            }
-
-            if let Some(color) = self.color_picker(
-                ui,
-                &self.config.hud.molotov_trail_color,
-                "Molotov Trail Color",
-            ) {
-                self.config.hud.molotov_trail_color = color;
-                self.send_config();
-            }
-
-            if let Some(color) = self.color_picker(
-                ui,
-                &self.config.hud.incendiary_trail_color,
-                "Incendiary Trail Color",
-            ) {
-                self.config.hud.incendiary_trail_color = color;
-                self.send_config();
-            }
-
-            if let Some(color) =
-                self.color_picker(ui, &self.config.hud.flash_trail_color, "Flash Trail Color")
-            {
-                self.config.hud.flash_trail_color = color;
-                self.send_config();
-            }
-
-            if let Some(color) = self.color_picker(
-                ui,
-                &self.config.hud.he_trail_color,
-                "HE Grenade Trail Color",
-            ) {
-                self.config.hud.he_trail_color = color;
-                self.send_config();
-            }
-
-            if let Some(color) =
-                self.color_picker(ui, &self.config.hud.decoy_trail_color, "Decoy Trail Color")
-            {
-                self.config.hud.decoy_trail_color = color;
-                self.send_config();
-            }
-        });
     }
 
     #[cfg(feature = "visuals")]
