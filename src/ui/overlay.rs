@@ -191,6 +191,19 @@ impl App {
             );
         }
 
+        if data.aimbot_active {
+            self.text(
+                &painter,
+                "aimbot active",
+                pos2(
+                    data.window_size.x / 2.0 + 8.0,
+                    data.window_size.y / 2.0 + 24.0,
+                ),
+                Align2::LEFT_TOP,
+                None,
+            );
+        }
+
         if self.config.hud.spectators {
             let mut spectators_watching_me = Vec::new();
             for (spectator_name, target_id) in &data.spectator_names {
@@ -761,7 +774,6 @@ impl App {
         }
         let text_center = center - up * CROSS_SIZE;
         if let Some(text_center) = world_to_screen(&text_center, data) {
-            let mut offset = 0.0;
             self.text(
                 painter,
                 &grenade.name,
@@ -772,17 +784,16 @@ impl App {
             self.text(
                 painter,
                 format!("{}", grenade.weapon,),
-                text_center + egui::vec2(0.0, offset),
+                text_center + egui::vec2(0.0, self.config.hud.font_size),
                 Align2::CENTER_TOP,
                 None,
             );
-            offset+=self.config.hud.font_size;
             let text = match (
                 grenade.modifiers.duck,
                 grenade.modifiers.jump,
                 grenade.modifiers.run,
             ) {
-                (false, false, false) => "",
+                (false, false, false) => return,
                 (true, false, false) => "Duck",
                 (true, true, false) => "Duck/Jump",
                 (true, true, true) => "Duck/Jump/Run",
@@ -791,25 +802,14 @@ impl App {
                 (false, true, true) => "Jump/Run",
                 (false, false, true) => "Run",
             };
-            if text != "" {
-                self.text(
-                    painter,
-                    text,
-                    text_center + egui::vec2(0.0, offset),
-                    Align2::CENTER_TOP,
-                    None,
-                );
-                offset+=self.config.hud.font_size;
-            }
-            if grenade.description != "" {
-                self.text(
-                    painter,
-                    &grenade.description,
-                    text_center + egui::vec2(0.0, offset),
-                    Align2::CENTER_TOP,
-                    None,
-                );
-            }
+
+            self.text(
+                painter,
+                text,
+                text_center + egui::vec2(0.0, self.config.hud.font_size * 2.0),
+                Align2::CENTER_TOP,
+                None,
+            );
         }
     }
 

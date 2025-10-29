@@ -9,7 +9,7 @@ use glam::{IVec2, Mat4, Vec2, Vec3};
 
 use crate::{
     bvh::Bvh,
-    config::{AimbotConfig, Config, RcsConfig, TriggerbotConfig, TriggerbotMode},
+    config::{AimbotConfig, AimbotMode, Config, RcsConfig, TriggerbotConfig, TriggerbotMode},
     constants::cs2::{self, TEAM_CT, TEAM_T, class},
     cs2::{
         bones::Bones,
@@ -61,6 +61,7 @@ pub struct CS2 {
     wallhack: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
+    aimbot_active: bool,
 }
 
 impl Game for CS2 {
@@ -126,7 +127,19 @@ impl Game for CS2 {
 
         self.find_target(config);
 
-        if self.is_button_down(&config.aim.hotkey) {
+        let aimbot_config = self.aimbot_config(config);
+        let hotkey_pressed = self.is_button_down(&config.aim.aimbot_hotkey);
+
+        if aimbot_config.mode == AimbotMode::Toggle && hotkey_pressed {
+            self.aimbot_active = !self.aimbot_active;
+        }
+
+        let should_aim = match aimbot_config.mode {
+            AimbotMode::Toggle => self.aimbot_active,
+            AimbotMode::Hold => hotkey_pressed,
+        };
+
+        if should_aim {
             self.aimbot(config, mouse);
         }
     }
@@ -240,6 +253,11 @@ impl Game for CS2 {
         data.is_ffa = self.is_ffa();
         data.is_custom_mode = self.is_custom_game_mode();
         data.map_name = self.current_map();
+        data.aimbot_active = if self.aimbot_config(config).mode == AimbotMode::Toggle {
+            self.aimbot_active
+        } else {
+            false
+        };
         data.triggerbot_active = if self.triggerbot_config(config).mode == TriggerbotMode::Toggle {
             self.trigger.active
         } else {
@@ -287,6 +305,7 @@ impl CS2 {
             wallhack: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
+            aimbot_active: false,
         }
     }
 

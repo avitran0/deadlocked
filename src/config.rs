@@ -77,6 +77,7 @@ impl WeaponConfig {
 pub struct AimbotConfig {
     pub enable_override: bool,
     pub enabled: bool,
+    pub mode: AimbotMode,
     pub target_friendlies: bool,
     pub distance_adjusted_fov: bool,
     pub start_bullet: i32,
@@ -93,6 +94,7 @@ impl Default for AimbotConfig {
         Self {
             enable_override: false,
             enabled: true,
+            mode: AimbotMode::Hold,
             target_friendlies: false,
             distance_adjusted_fov: true,
             start_bullet: 0,
@@ -130,6 +132,12 @@ impl Default for RcsConfig {
             smooth: 0.3,
         }
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
+pub enum AimbotMode {
+    Hold,
+    Toggle,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
@@ -179,7 +187,7 @@ impl Default for TriggerbotConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AimConfig {
-    pub hotkey: KeyCode,
+    pub aimbot_hotkey: KeyCode,
     pub triggerbot_hotkey: KeyCode,
     pub global: WeaponConfig,
     pub weapons: HashMap<Weapon, WeaponConfig>,
@@ -196,7 +204,7 @@ impl Default for AimConfig {
         }
 
         Self {
-            hotkey: KeyCode::Mouse5,
+            aimbot_hotkey: KeyCode::Mouse5,
             triggerbot_hotkey: KeyCode::Mouse4,
             global: WeaponConfig::enabled(true),
             weapons,

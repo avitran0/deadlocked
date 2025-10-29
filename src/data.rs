@@ -24,6 +24,7 @@ pub struct Data {
     pub view_angles: Vec2,
     pub window_position: Vec2,
     pub window_size: Vec2,
+    pub aimbot_active: bool,
     pub triggerbot_active: bool,
     pub wallhack_active: bool,
     pub spectators: Vec<(u64, u64)>,
