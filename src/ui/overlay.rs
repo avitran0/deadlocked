@@ -181,7 +181,7 @@ impl App {
         if data.aimbot_active {
             self.text(
                 &painter,
-                "aimobt active",
+                "aimbot active",
                 pos2(
                     data.window_size.x / 2.0 + 8.0,
                     data.window_size.y / 2.0 + 8.0,
