@@ -34,8 +34,18 @@ uuid = { version = "1.18", features = ["v4", "serde"] }
 copy_to_output = "2.2"
 
 [profile.dev]
-overflow-checks = false
+overflow-checks = true
+lto = false
+opt-level = 0
+debug = true
+strip = false
+
+incremental = true
 
 [profile.release]
+overflow-checks = false
 lto = true
-debug = true
+opt-level = 2
+debug = false
+
+incremental = true
