@@ -1,21 +1,21 @@
 use std::{
     collections::HashMap,
     fs::File,
-    io::{BufReader, Read, Write as _},
-    path::{Path, PathBuf},
+    io::{BufReader, Write as _},
+    path::Path,
     process::Command,
     sync::{Arc, Mutex},
 };
 
-use bytemuck::AnyBitPattern;
-use glam::{Mat4, Quat, Vec2, Vec3, Vec4};
+pub mod bvh;
+pub mod dmx;
+pub mod binary;
+pub mod steam;
 
 use crate::{
     os::crash::{self, report_error},
-    parser::bvh::{Bvh, Triangle},
+    parser::{bvh::{Bvh, Triangle}, steam::{find_game_dir, find_maps_dir, exe_path}, dmx::parse_dmx, dmx::Attribute},
 };
-
-pub mod bvh;
 
 pub fn parse_maps(
     bvh: Arc<Mutex<HashMap<String, Bvh>>>,
@@ -29,7 +29,7 @@ pub fn parse_maps(
         return;
     }
 
-    let game_dir = match game_dir() {
+    let game_dir = match find_game_dir() {
         Ok(dir) => dir,
         Err(err) => {
             log::warn!("could not find cs2 game directory: {err}");
@@ -42,10 +42,9 @@ pub fn parse_maps(
         log::warn!("could not read cs2 build number");
         return;
     };
-    let cs2_build = cs2_build_raw.trim();
-    let cs2_build: u64 = cs2_build.parse().unwrap_or_default();
+    let cs2_build: u64 = cs2_build_raw.trim().parse().unwrap_or_default();
 
-    let maps_dir = match maps_dir() {
+    let maps_dir = match find_maps_dir() {
         Ok(dir) => dir,
         Err(err) => {
             log::error!("could not find cs2 maps directory: {err}");
@@ -54,8 +53,11 @@ pub fn parse_maps(
         }
     };
     let parsed_build_file = maps_dir.join("parsed_build.txt");
-    let parsed_build = std::fs::read_to_string(&parsed_build_file).unwrap_or_default();
-    let parsed_build: u64 = parsed_build.parse().unwrap_or_default();
+    let parsed_build: u64 = std::fs::read_to_string(&parsed_build_file)
+        .unwrap_or_default()
+        .trim()
+        .parse()
+        .unwrap_or_default();
 
     if parsed_build != cs2_build {
         force_reparse = true;
@@ -78,7 +80,7 @@ pub fn parse_maps(
             continue;
         };
 
-        if !file.file_type().unwrap().is_file() {
+        if !file.file_type().map_or(true, |ft| !ft.is_file()) {
             continue;
         }
 
@@ -191,24 +193,8 @@ fn parse_map(
     let bvh_path = maps_dir.join(bvh_name);
 
     if bvh_path.exists() && !force_reparse {
-        let mut bvh_file = match File::open(&bvh_path) {
-            Ok(file) => file,
-            Err(err) => {
-                log::error!("could not open {bvh_path:?}: {err}");
-                report_error(err);
-                return;
-            }
-        };
-        if let Some(map_bvh) = Bvh::load(&mut bvh_file) {
-            log::debug!("loaded bvh for {map_name}");
-            match bvh.lock() {
-                Ok(lock) => lock,
-                Err(err) => {
-                    log::error!("failed to lock bvh mutex ({map_name}): {err}");
-                    return;
-                }
-            }
-            .insert(map_name, map_bvh);
+        if let Some(map_bvh) = load_cached_bvh(&bvh_path, &map_name) {
+            store_bvh(bvh, map_name, map_bvh);
             return;
         }
     }
@@ -216,23 +202,59 @@ fn parse_map(
     let geom_dir = maps_dir.join("geometry/maps").join(&map_name);
     if !geom_dir.exists() {
         log::warn!("geometry directory doesn't exist...");
+        return;
     }
 
     let mut map_bvh = Bvh::new();
-    let geom_dir_iter = match std::fs::read_dir(&geom_dir) {
-        Ok(dir) => dir,
-        Err(err) => {
-            log::warn!("could not read geometry directory: {err}");
-            report_error(err);
-            return;
+    if let Err(err) = process_geometry_files(&geom_dir, &map_name, &mut map_bvh) {
+        log::error!("Error processing geometry for {map_name}: {err}");
+        return;
+    }
+    
+    map_bvh.build();
+    if let Err(err) = save_bvh(&map_bvh, &bvh_path, &map_name) {
+        log::error!("Error saving BVH for {map_name}: {err}");
+        return;
+    }
+    
+    store_bvh(bvh, map_name, map_bvh);
+}
+
+fn load_cached_bvh(bvh_path: &Path, map_name: &str) -> Option<Bvh> {
+    let mut bvh_file = File::open(bvh_path).ok()?;
+    let map_bvh = Bvh::load(&mut bvh_file)?;
+    log::debug!("loaded bvh for {map_name}");
+    Some(map_bvh)
+}
+
+fn store_bvh(bvh: Arc<Mutex<HashMap<String, Bvh>>>, map_name: String, map_bvh: Bvh) {
+    match bvh.lock() {
+        Ok(mut lock) => {
+            lock.insert(map_name, map_bvh);
         }
-    };
+        Err(err) => {
+            log::error!("failed to lock bvh mutex: {err}");
+        }
+    }
+}
+
+fn save_bvh(map_bvh: &Bvh, bvh_path: &Path, map_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+    let mut bvh_file = File::create(bvh_path)?;
+    map_bvh.save(&mut bvh_file);
+    log::info!("parsed bvh for {map_name}");
+    Ok(())
+}
+
+fn process_geometry_files(geom_dir: &Path, _map_name: &str, map_bvh: &mut Bvh) -> Result<(), Box<dyn std::error::Error>> {
+    let geom_dir_iter = std::fs::read_dir(geom_dir)?;
     for file in geom_dir_iter {
         let Ok(file) = file else {
             continue;
         };
         let file_name = file.file_name();
-        let file_name = file_name.to_str().unwrap();
+        let Some(file_name) = file_name.to_str() else {
+            continue;
+        };
         let file_type = if file_name.contains("world_physics_hull") {
             FileType::Hull
         } else if file_name.contains("world_physics_phys") {
@@ -240,13 +262,7 @@ fn parse_map(
         } else {
             continue;
         };
-        let file = match File::open(file.path()) {
-            Ok(file) => file,
-            Err(err) => {
-                log::error!("could not open {file_name} ({map_name}): {err}");
-                return;
-            }
-        };
+        let file = File::open(file.path())?;
         let mut reader = BufReader::new(file);
         let elements = parse_dmx(&mut reader);
         let vertex_element = elements.get("DmeVertexData_bind").unwrap();
@@ -292,24 +308,7 @@ fn parse_map(
             }
         }
     }
-    map_bvh.build();
-    let mut bvh_file = match File::create(&bvh_path) {
-        Ok(file) => file,
-        Err(err) => {
-            log::error!("could not save bvh for {map_name} in file {bvh_path:?}: {err}");
-            return;
-        }
-    };
-    map_bvh.save(&mut bvh_file);
-    log::info!("parsed bvh for {map_name}");
-    match bvh.lock() {
-        Ok(lock) => lock,
-        Err(err) => {
-            log::error!("failed to lock bvh mutex ({map_name}): {err}");
-            return;
-        }
-    }
-    .insert(map_name, map_bvh);
+    Ok(())
 }
 
 #[derive(PartialEq)]
@@ -318,286 +317,3 @@ enum FileType {
     Phys,
 }
 
-fn read_element(reader: &mut impl Read, strings: &[String]) -> Element {
-    let kind = &strings[read::<i32>(reader) as usize];
-    let name = &strings[read::<i32>(reader) as usize];
-    let _uuid = read_bytes(reader, 16);
-    Element::new(kind.to_string(), name.to_string())
-}
-
-fn parse_dmx(reader: &mut impl Read) -> HashMap<String, Element> {
-    let _header = read_string(reader);
-    let _prefix_elements: i32 = read(reader);
-    let string_count: i32 = read(reader);
-    let mut strings = Vec::with_capacity(string_count as usize);
-    for _ in 0..string_count {
-        strings.push(read_string(reader));
-    }
-
-    let element_count: i32 = read(reader);
-    let mut elements = Vec::with_capacity(element_count as usize);
-    for _ in 0..element_count {
-        let element = read_element(reader, &strings);
-        elements.push(element);
-    }
-
-    for element in &mut elements {
-        let attribute_count: i32 = read(reader);
-        for _ in 0..attribute_count {
-            let name = &strings[read::<i32>(reader) as usize];
-            let kind: u8 = read(reader);
-            use Attribute as AT;
-            let value = match kind {
-                1 => AT::Element({
-                    let index: i32 = read(reader);
-                    if index == -1 {
-                        None
-                    } else if index == -2 {
-                        panic!();
-                    } else {
-                        Some(index)
-                    }
-                }),
-                2 => AT::Integer(read(reader)),
-                3 => AT::Float(read(reader)),
-                4 => AT::Bool(read::<u8>(reader) != 0),
-                5 => AT::String(strings[read::<i32>(reader) as usize].clone()),
-                6 => AT::ByteArray({
-                    let count: i32 = read(reader);
-                    read_bytes(reader, count as usize)
-                }),
-                7 => AT::TimeSpan(read(reader)),
-                8 => AT::Color(read(reader)),
-                9 => AT::Vec2(read(reader)),
-                10 => AT::Vec3(read(reader)),
-                11 => AT::Angle(read(reader)),
-                12 => AT::Vec4(read(reader)),
-                13 => AT::Quaternion(read(reader)),
-                14 => AT::Matrix(read(reader)),
-                15 => AT::Byte(read(reader)),
-                16 => AT::U64(read(reader)),
-
-                33 => AT::ElementArray({
-                    let count: i32 = read(reader);
-                    (0..count)
-                        .map(|_| {
-                            let idx: i32 = read(reader);
-                            match idx {
-                                -1 => None,
-                                -2 => panic!("Invalid Element index in array"),
-                                x => Some(x),
-                            }
-                        })
-                        .collect()
-                }),
-                34 => AT::IntegerArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                35 => AT::FloatArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                36 => AT::BoolArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read::<u8>(reader) != 0).collect()
-                }),
-                37 => AT::StringArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read_string(reader)).collect()
-                }),
-                38 => panic!(),
-                39 => AT::TimeSpanArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                40 => AT::ColorArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                41 => AT::Vec2Array({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                42 => AT::Vec3Array({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                43 => AT::AngleArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                44 => AT::Vec4Array({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-
-                45 => AT::QuaternionArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                46 => AT::MatrixArray({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-                47 => AT::ByteArray({
-                    let count: i32 = read(reader);
-                    read_bytes(reader, count as usize)
-                }),
-                48 => AT::U64Array({
-                    let count: i32 = read(reader);
-                    (0..count).map(|_| read(reader)).collect()
-                }),
-
-                _ => panic!(),
-            };
-            element.add(name.to_string(), value);
-        }
-    }
-    let mut elems = HashMap::new();
-    elements.into_iter().for_each(|e| {
-        let name = format!("{}_{}", e.kind, e.name);
-        elems.insert(name, e);
-    });
-
-    elems
-}
-
-#[derive(Debug, Clone)]
-struct Element {
-    kind: String,
-    name: String,
-    attributes: HashMap<String, Attribute>,
-}
-
-impl Element {
-    pub fn new(kind: String, name: String) -> Self {
-        Self {
-            kind,
-            name,
-            attributes: HashMap::new(),
-        }
-    }
-
-    pub fn add(&mut self, name: String, attribute: Attribute) {
-        self.attributes.insert(name, attribute);
-    }
-}
-
-#[allow(unused)]
-#[derive(Debug, Clone)]
-enum Attribute {
-    // element index
-    Element(Option<i32>),
-    Integer(i32),
-    Float(f32),
-    Bool(bool),
-    String(String),
-    ByteArray(Vec<u8>),
-    TimeSpan(i32),
-    Color(u32),
-    Vec2(Vec2),
-    Vec3(Vec3),
-    Vec4(Vec4),
-    Angle(Vec3),
-    Quaternion(Quat),
-    Matrix(Mat4),
-    U64(u64),
-    Byte(u8),
-
-    ElementArray(Vec<Option<i32>>),
-    IntegerArray(Vec<i32>),
-    FloatArray(Vec<f32>),
-    BoolArray(Vec<bool>),
-    StringArray(Vec<String>),
-    TimeSpanArray(Vec<i32>),
-    ColorArray(Vec<u32>),
-    Vec2Array(Vec<Vec2>),
-    Vec3Array(Vec<Vec3>),
-    Vec4Array(Vec<Vec4>),
-    AngleArray(Vec<Vec3>),
-    QuaternionArray(Vec<Quat>),
-    MatrixArray(Vec<Mat4>),
-    U64Array(Vec<u64>),
-}
-
-fn game_dir() -> Result<PathBuf, String> {
-    let Ok(home) = std::env::var("HOME") else {
-        return Err("could not find home directory".to_owned());
-    };
-    let steam_path = PathBuf::from(&home).join(".steam/steam");
-    if !steam_path.exists() {
-        return Err(format!(
-            "could not locate steam directory ({home}/.steam/steam)"
-        ));
-    }
-
-    let library_folders = steam_path.join("config/libraryfolders.vdf");
-    let Ok(content) = std::fs::read_to_string(&library_folders) else {
-        return Err(format!(
-            "could not read steam library folders({home}/.steam/steam/config/libraryfolders.vdf)"
-        ));
-    };
-    let libs: Vec<&str> = content
-        .lines()
-        .filter_map(|line| {
-            if line.contains("\"path\"") {
-                Some(line.rsplit('"').nth(1).unwrap())
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let game_dir = libs
-        .iter()
-        .find(|&&lib| {
-            let dir = PathBuf::from(lib).join("steamapps/common/Counter-Strike Global Offensive");
-            dir.exists()
-        })
-        .ok_or("could not locate cs2 files. is it installed?".to_owned())?;
-    Ok(PathBuf::from(game_dir).join("steamapps/common/Counter-Strike Global Offensive"))
-}
-
-fn maps_dir() -> Result<PathBuf, String> {
-    let maps_dir = game_dir().map(|p| p.join("game/csgo/maps"))?;
-    if !maps_dir.exists() {
-        Err("could locate csgo directory, but not maps directory".to_string())
-    } else {
-        Ok(maps_dir)
-    }
-}
-
-fn exe_path() -> PathBuf {
-    std::env::current_exe()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf()
-}
-
-fn read<T: AnyBitPattern + Default>(reader: &mut impl Read) -> T {
-    let mut buffer = vec![0u8; size_of::<T>()];
-    reader.read_exact(&mut buffer).unwrap();
-    *bytemuck::from_bytes(&buffer)
-}
-
-fn read_string(reader: &mut impl Read) -> String {
-    let mut buffer = Vec::with_capacity(8);
-    let mut byte = [0u8; 1];
-
-    loop {
-        reader.read_exact(&mut byte).unwrap();
-        if byte[0] == 0 {
-            break;
-        }
-        buffer.push(byte[0]);
-    }
-    String::from_utf8(buffer).unwrap()
-}
-
-fn read_bytes(reader: &mut impl Read, count: usize) -> Vec<u8> {
-    let mut buf = vec![0u8; count];
-    reader.read_exact(&mut buf).unwrap();
-    buf
-}
