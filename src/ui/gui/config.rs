@@ -1,4 +1,4 @@
-use egui::{Align, Button, Context, Ui};
+use egui::{Align, Button, Context, Slider, Ui};
 
 use crate::{
     config::{CONFIG_PATH, Config, available_configs, delete_config, parse_config, write_config},
@@ -76,6 +76,95 @@ impl App {
                         }
                     }
                 });
+        });
+
+        // Logo animation settings
+        collapsing_open(ui, "Logo", |ui| {
+            if ui
+                .checkbox(&mut self.logo_animated, "Animate Logo")
+                .on_hover_text("Animate the top-right logo (blend between two colors)")
+                .changed()
+            {
+                // restart animation
+                self.logo_animation_start = std::time::Instant::now();
+            }
+
+            // Logo text input
+            ui.horizontal(|ui| {
+                ui.label("Logo Text");
+                if ui.text_edit_singleline(&mut self.logo_text).changed() {
+                    // restart animation timing and keep it visible immediately
+                    self.logo_animation_start = std::time::Instant::now();
+                    // clamp split index to text length
+                    let len = self.logo_text.chars().count() as i32;
+                    if self.logo_split_index > len {
+                        self.logo_split_index = len;
+                    }
+                }
+            });
+
+            // Manual split toggle + slider
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.logo_manual_split, "Manual Split")
+                    .on_hover_text("Enable to pick how many characters go to the left color")
+                    .changed()
+                {
+                    // when enabling manual, ensure the split index is within range
+                    let len = self.logo_text.chars().count() as i32;
+                    if self.logo_split_index > len {
+                        self.logo_split_index = len;
+                    }
+                }
+
+                if self.logo_manual_split {
+                    let len = self.logo_text.chars().count() as i32;
+                    let max = if len >= 0 { len } else { 0 };
+                    // slider for split index: number of characters assigned to the LEFT color
+                    ui.label("Split (left chars)");
+                    if ui
+                        .add(Slider::new(&mut self.logo_split_index, 0..=max).text(""))
+                        .changed()
+                    {
+                        self.logo_animation_start = std::time::Instant::now();
+                    }
+                } else {
+                    // show computed default split for information
+                    let len = self.logo_text.chars().count();
+                    let default_left = (len + 1) / 2;
+                    ui.label(format!("Auto split: left {} / right {}", default_left, len - default_left));
+                }
+            });
+
+            // Color A (applies to the left half)
+            ui.horizontal(|ui| {
+                ui.label("Color A (left)");
+                let mut temp_a = self.logo_color_a;
+                if ui.color_edit_button_srgba(&mut temp_a).changed() {
+                    self.logo_color_a = temp_a;
+                }
+            });
+
+            // Color B (applies to the right half)
+            ui.horizontal(|ui| {
+                ui.label("Color B (right)");
+                let mut temp_b = self.logo_color_b;
+                if ui.color_edit_button_srgba(&mut temp_b).changed() {
+                    self.logo_color_b = temp_b;
+                }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Speed (Hz)");
+                // A slider is used instead of raw numeric entry
+                if ui
+                    .add(Slider::new(&mut self.logo_animation_speed, 0.1..=5.0).text(""))
+                    .changed()
+                {
+                    // restart animation cleanly
+                    self.logo_animation_start = std::time::Instant::now();
+                }
+            });
         });
     }
 
