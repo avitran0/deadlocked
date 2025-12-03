@@ -28,6 +28,7 @@ use crate::{
         window_context::WindowContext,
     },
 };
+use egui::Color32;
 
 const FRAME_RATE: u64 = 120;
 const FRAME_DURATION: Duration = Duration::from_micros(1_000_000 / FRAME_RATE);
@@ -65,6 +66,18 @@ pub struct App {
     pub current_tab: Tab,
     pub aimbot_tab: AimbotTab,
     pub aimbot_weapon: Weapon,
+
+    // Logo animation settings (UI-state stored in the App)
+    pub logo_animated: bool,
+    pub logo_color_a: Color32,
+    pub logo_color_b: Color32,
+    pub logo_animation_start: Instant,
+    pub logo_animation_speed: f32,
+
+    // Custom logo text and manual split control
+    pub logo_text: String,
+    pub logo_manual_split: bool,
+    pub logo_split_index: i32,
 }
 
 impl App {
@@ -80,6 +93,10 @@ impl App {
         write_config(&config, &CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
 
         let grenades = read_grenades();
+
+        let default_logo = "DeadLocked".to_owned();
+        let default_len = default_logo.chars().count();
+        let default_split = ((default_len + 1) / 2) as i32;
 
         let ret = Self {
             gui: None,
@@ -112,6 +129,18 @@ impl App {
             current_tab: Tab::Aimbot,
             aimbot_tab: AimbotTab::Global,
             aimbot_weapon: Weapon::Ak47,
+
+            // default logo animation state
+            logo_animated: false,
+            logo_color_a: Color32::from_rgb(240, 100, 100), // red-ish
+            logo_color_b: Color32::WHITE,                   // white
+            logo_animation_start: Instant::now(),
+            logo_animation_speed: 1.0, // cycles per second
+
+            // default logo text + manual split defaults
+            logo_text: default_logo,
+            logo_manual_split: false,
+            logo_split_index: default_split,
         };
         ret.send_config();
         ret.send_message(
