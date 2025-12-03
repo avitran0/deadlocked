@@ -48,9 +48,8 @@ pub fn find_maps_dir() -> Result<PathBuf, String> {
 }
 
 pub fn exe_path() -> PathBuf {
-    std::env::current_exe()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .to_path_buf()
+	std::env::current_exe()
+		.ok()
+		.and_then(|p| p.parent().map(|p| p.to_path_buf()))
+		.unwrap_or_else(|| PathBuf::from("."))
 }

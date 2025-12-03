@@ -1,7 +1,7 @@
 use std::io::Read;
 use bytemuck::Pod;
 
-pub fn read<T: Pod + Default>(reader: &mut impl Read) -> T {
+pub fn read<T: Pod>(reader: &mut impl Read) -> T {
     let mut buffer = vec![0u8; std::mem::size_of::<T>()];
     reader.read_exact(&mut buffer).unwrap();
     *bytemuck::from_bytes(&buffer)

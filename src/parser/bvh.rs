@@ -1,4 +1,5 @@
 use std::{
+    cmp::Ordering,
     fs::File,
     io::{BufReader, BufWriter},
 };
@@ -230,7 +231,9 @@ impl Bvh {
         primitives.sort_by(|&a_idx, &b_idx| {
             let a_cent = self.triangles[a_idx].centroid();
             let b_cent = self.triangles[b_idx].centroid();
-            a_cent[axis].partial_cmp(&b_cent[axis]).unwrap()
+            a_cent[axis]
+                .partial_cmp(&b_cent[axis])
+                .unwrap_or(Ordering::Equal)
         });
 
         let mid = primitives.len() / 2;
@@ -264,6 +267,10 @@ impl Bvh {
     pub fn has_line_of_sight(&self, start: Vec3, end: Vec3) -> bool {
         let dir = end - start;
         let distance = dir.length();
+
+        if distance <= 0.0 {
+            return true;
+        }
 
         let dir_norm = dir / distance;
         let inv_dir = 1.0 / dir_norm;

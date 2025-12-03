@@ -80,7 +80,7 @@ pub fn parse_maps(
             continue;
         };
 
-        if !file.file_type().map_or(true, |ft| !ft.is_file()) {
+        if !file.path().is_file() {
             continue;
         }
 
