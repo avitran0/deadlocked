@@ -104,9 +104,9 @@ impl App {
     }
 
     fn add_game_status(&mut self, ui: &mut Ui) {
-        // Top row with status info on the left and a small "Deadlocked" logo/text on the right.
+        // Logo
         ui.horizontal_top(|ui| {
-            // Left side: original status + mouse combobox
+            // .
             ui.horizontal(|ui| {
                 ui.label(
                     egui::RichText::new(format!("{}", self.game_status))
@@ -163,7 +163,7 @@ impl App {
                     });
             });
 
-            // Logo on the right side. 
+            // Logo on the right side. and matches the theme.
             ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
                 let logo = egui::RichText::new("Deadlocked")
                     .size(16.0)
