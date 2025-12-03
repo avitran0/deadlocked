@@ -104,60 +104,73 @@ impl App {
     }
 
     fn add_game_status(&mut self, ui: &mut Ui) {
+        // Top row with status info on the left and a small "Deadlocked" logo/text on the right.
         ui.horizontal_top(|ui| {
-            ui.label(
-                egui::RichText::new(format!("{}", self.game_status))
-                    .line_height(Some(8.0))
-                    .color(match self.game_status {
-                        GameStatus::Working => Colors::GREEN,
-                        GameStatus::GameNotStarted => Colors::YELLOW,
-                    }),
-            );
+            // Left side: original status + mouse combobox
+            ui.horizontal(|ui| {
+                ui.label(
+                    egui::RichText::new(format!("{}", self.game_status))
+                        .line_height(Some(8.0))
+                        .color(match self.game_status {
+                            GameStatus::Working => Colors::GREEN,
+                            GameStatus::GameNotStarted => Colors::YELLOW,
+                        }),
+                );
 
-            let mouse_text = match &self.mouse_status {
-                DeviceStatus::Working(name) => name,
-                DeviceStatus::PermissionsRequired => {
-                    "mouse input only works when user is in input group"
-                }
-                DeviceStatus::Disconnected => "mouse was disconnected",
-                DeviceStatus::NotFound => "no mouse was found",
-            };
-
-            let color = match &self.mouse_status {
-                DeviceStatus::Working(_) => Colors::SUBTEXT,
-                _ => Colors::YELLOW,
-            };
-            ui.label(
-                egui::RichText::new(mouse_text)
-                    .line_height(Some(8.0))
-                    .color(color),
-            );
-
-            egui::ComboBox::new("mouse_device", "")
-                .selected_text(
-                    self.selected_mouse
-                        .as_deref()
-                        .unwrap_or("No device selected"),
-                )
-                .show_ui(ui, |ui| {
-                    for device in discover_mice() {
-                        let label = format!("{} ({})", device.name, device.event_name);
-                        if ui
-                            .selectable_label(
-                                self.selected_mouse.as_deref() == Some(&device.event_name),
-                                &label,
-                            )
-                            .clicked()
-                        {
-                            self.selected_mouse = Some(device.event_name.clone());
-
-                            self.send_message(
-                                Message::SelectMouse(device.event_name.clone()),
-                                Target::Game,
-                            );
-                        }
+                let mouse_text = match &self.mouse_status {
+                    DeviceStatus::Working(name) => name,
+                    DeviceStatus::PermissionsRequired => {
+                        "mouse input only works when user is in input group"
                     }
-                });
+                    DeviceStatus::Disconnected => "mouse was disconnected",
+                    DeviceStatus::NotFound => "no mouse was found",
+                };
+
+                let color = match &self.mouse_status {
+                    DeviceStatus::Working(_) => Colors::SUBTEXT,
+                    _ => Colors::YELLOW,
+                };
+                ui.label(
+                    egui::RichText::new(mouse_text)
+                        .line_height(Some(8.0))
+                        .color(color),
+                );
+
+                egui::ComboBox::new("mouse_device", "")
+                    .selected_text(
+                        self.selected_mouse
+                            .as_deref()
+                            .unwrap_or("No device selected"),
+                    )
+                    .show_ui(ui, |ui| {
+                        for device in discover_mice() {
+                            let label = format!("{} ({})", device.name, device.event_name);
+                            if ui
+                                .selectable_label(
+                                    self.selected_mouse.as_deref() == Some(&device.event_name),
+                                    &label,
+                                )
+                                .clicked()
+                            {
+                                self.selected_mouse = Some(device.event_name.clone());
+
+                                self.send_message(
+                                    Message::SelectMouse(device.event_name.clone()),
+                                    Target::Game,
+                                );
+                            }
+                        }
+                    });
+            });
+
+            // Logo on the right side. 
+            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                let logo = egui::RichText::new("Deadlocked")
+                    .size(16.0)
+                    .strong()
+                    .color(self.config.accent_color);
+                ui.label(logo);
+            });
         });
     }
 
