@@ -9,7 +9,7 @@ use crossbeam::channel::{Receiver, Sender};
 
 use crate::{
     config::{
-        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME, LOOP_DURATION, SLEEP_DURATION, parse_config,
+        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME, LOOP_DURATION, SLEEP_DURATION,
         write_config,
     },
     cs2::CS2,
@@ -56,11 +56,6 @@ impl GameManager {
             manual_mouse: false,
             preferred_event: None,
         };
-
-        let config_path = CONFIG_PATH.join(DEFAULT_CONFIG_NAME);
-        if config_path.exists() {
-            game.config = parse_config(&config_path);
-        }
 
         if let Some(ref name) = game.config.preferred_mouse
             && let Some(device) = get_mouse_by_name(name)
