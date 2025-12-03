@@ -1,4 +1,5 @@
-use egui::{Align, CollapsingHeader, Color32, Context, DragValue, Ui};
+use std::time::Instant;
+use egui::{Align, Align2, CollapsingHeader, Color32, Context, DragValue, RichText, Ui};
 
 use crate::{
     config::{BASE_PATH, VERSION, WeaponConfig, write_config},
@@ -104,12 +105,12 @@ impl App {
     }
 
     fn add_game_status(&mut self, ui: &mut Ui) {
-        // Logo
+        // logo in the top right
         ui.horizontal_top(|ui| {
-            // .
+            // Left side: original status + mouse combobox
             ui.horizontal(|ui| {
                 ui.label(
-                    egui::RichText::new(format!("{}", self.game_status))
+                    RichText::new(format!("{}", self.game_status))
                         .line_height(Some(8.0))
                         .color(match self.game_status {
                             GameStatus::Working => Colors::GREEN,
@@ -131,7 +132,7 @@ impl App {
                     _ => Colors::YELLOW,
                 };
                 ui.label(
-                    egui::RichText::new(mouse_text)
+                    RichText::new(mouse_text)
                         .line_height(Some(8.0))
                         .color(color),
                 );
@@ -163,13 +164,111 @@ impl App {
                     });
             });
 
-            // Logo on the right side. and matches the theme.
-            ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                let logo = egui::RichText::new("Deadlocked")
-                    .size(16.0)
-                    .strong()
-                    .color(self.config.accent_color);
-                ui.label(logo);
+            // Right-aligned logo: use a right_to_left layout for robust anchoring inside the central panel.
+            ui.with_layout(egui::Layout::right_to_left(Align::Min), |ui| {
+               
+                let mut logo_size = egui::vec2(260.0, 28.0);
+                let avail = ui.available_width();
+                if avail < logo_size.x + 8.0 {
+                    logo_size.x = (avail - 8.0).max(40.0); // minimum width
+                }
+
+                // Reserve space and draw the logo background + text inside the reserved rect
+                let resp = ui.add_sized(logo_size, egui::Label::new(RichText::new("")));
+                let rect = resp.rect;
+                let painter = ui.painter();
+
+                // background rect (darker accent)
+                let accent = self.config.accent_color;
+                let [ar, ag, ab, _] = accent.to_array();
+                let darker_accent = Color32::from_rgb(
+                    ((ar as u16 * 200) / 255) as u8,
+                    ((ag as u16 * 200) / 255) as u8,
+                    ((ab as u16 * 200) / 255) as u8,
+                );
+                painter.rect_filled(rect.shrink(2.0), 6.0, darker_accent);
+
+                // compute per-substring colors:
+                // split by characters; if manual split is enabled use logo_split_index; otherwise auto-split ceil(n/2)
+                let text: String = self.logo_text.clone();
+                let chars: Vec<char> = text.chars().collect();
+                let len = chars.len();
+                let left_count = if self.logo_manual_split {
+                    (self.logo_split_index.max(0) as usize).min(len)
+                } else {
+                    (len + 1) / 2
+                };
+
+                let left_str: String = chars.iter().take(left_count).collect();
+                let right_str: String = chars.iter().skip(left_count).collect();
+
+                // when animation is ON: left blends A->B, right blends B->A
+                let (color_left, color_right) = if self.logo_animated {
+                    let elapsed = Instant::now().duration_since(self.logo_animation_start).as_secs_f32();
+                    let phase = ((elapsed * self.logo_animation_speed * std::f32::consts::TAU).sin() * 0.5) + 0.5;
+                    let [a_r, a_g, a_b, a_a] = self.logo_color_a.to_array();
+                    let [b_r, b_g, b_b, b_a] = self.logo_color_b.to_array();
+                    let lerp_byte = |a: u8, b: u8, t: f32| -> u8 {
+                        let v = (a as f32) * (1.0 - t) + (b as f32) * t;
+                        v.clamp(0.0, 255.0) as u8
+                    };
+                    let left = Color32::from_rgba_premultiplied(
+                        lerp_byte(a_r, b_r, phase),
+                        lerp_byte(a_g, b_g, phase),
+                        lerp_byte(a_b, b_b, phase),
+                        lerp_byte(a_a, b_a, phase),
+                    );
+                    let right = Color32::from_rgba_premultiplied(
+                        lerp_byte(b_r, a_r, phase),
+                        lerp_byte(b_g, a_g, phase),
+                        lerp_byte(b_b, a_b, phase),
+                        lerp_byte(b_a, a_a, phase),
+                    );
+                    (left, right)
+                } else {
+                    (self.logo_color_a, self.logo_color_b)
+                };
+
+                // Draw the full word as contiguous text but paint the left & right substrings separately.
+                // Use an approximatio to measure width per substring.
+                fn approx_text_width(font_size: f32, text: &str) -> f32 {
+                    let avg_factor = 0.58_f32;
+                    (text.len() as f32) * font_size * avg_factor
+                }
+
+                let font_size = 16.0;
+                let font = egui::FontId::proportional(font_size);
+                let w_left = approx_text_width(font_size, &left_str);
+                let w_right = approx_text_width(font_size, &right_str);
+                let total_w = w_left + w_right;
+                let center = rect.center();
+
+                // left substring center x
+                let left_center_x = center.x - (total_w / 2.0) + (w_left / 2.0);
+                let right_center_x = left_center_x + (w_left / 2.0) + (w_right / 2.0);
+
+                let left_pos = egui::pos2(left_center_x, center.y);
+                let right_pos = egui::pos2(right_center_x, center.y);
+
+                // Outline offsets for legibility
+                let outline_offsets = [
+                    egui::vec2(-1.0, -1.0),
+                    egui::vec2(1.0, -1.0),
+                    egui::vec2(-1.0, 1.0),
+                    egui::vec2(1.0, 1.0),
+                ];
+
+                for offs in outline_offsets {
+                    painter.text(left_pos + offs, Align2::CENTER_CENTER, &left_str, font.clone(), Color32::BLACK);
+                    painter.text(right_pos + offs, Align2::CENTER_CENTER, &right_str, font.clone(), Color32::BLACK);
+                }
+                painter.text(left_pos, Align2::CENTER_CENTER, &left_str, font.clone(), color_left);
+                painter.text(right_pos, Align2::CENTER_CENTER, &right_str, font.clone(), color_right);
+
+                // hover cursor change
+                if resp.hovered() {
+                    ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+                }
             });
         });
     }
