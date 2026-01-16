@@ -85,6 +85,36 @@ impl App {
                 self.send_config();
             }
 
+            ui.separator();
+
+            if ui
+                .checkbox(&mut self.config.player.only_render_on_sound, "Sound Only ESP")
+                .on_hover_text("Only draw players when they make noise (steps, shooting)")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if self.config.player.only_render_on_sound {
+                ui.horizontal(|ui| {
+                    if ui
+                        .add(
+                            egui::DragValue::new(&mut self.config.player.sound_fadeout_time)
+                                .range(0.1..=10.0)
+                                .speed(0.1)
+                                .suffix("s"),
+                        )
+                        .on_hover_text("How long visuals linger after sound stops")
+                        .changed()
+                    {
+                        self.send_config();
+                    }
+                    ui.label("Fade Time");
+                });
+            }
+
+            ui.separator();
+
             egui::ComboBox::new("draw_box", "Box")
                 .selected_text(format!("{:?}", self.config.player.draw_box))
                 .show_ui(ui, |ui| {

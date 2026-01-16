@@ -143,16 +143,35 @@ impl App {
             self.draw_sound_esp(&painter, player, data);
 
             if data.wallhack_active {
-                self.player_box(&painter, player, data);
-                self.skeleton(&painter, player, data);
+                let opacity = if self.config.player.only_render_on_sound {
+                    if let Some(last_sound) = player.last_sound_time {
+                        let elapsed = last_sound.elapsed().as_secs_f32();
+                        let max_time = self.config.player.sound_fadeout_time;
+                        
+                        if elapsed < max_time {
+                            1.0 - (elapsed / max_time)
+                        } else {
+                            0.0
+                        }
+                    } else {
+                        0.0
+                    }
+                } else {
+                    1.0
+                };
+
+                if opacity > 0.0 {
+                    self.player_box(&painter, player, data, opacity);
+                    self.skeleton(&painter, player, data, opacity);
+                }
             }
         }
 
         if self.config.player.show_friendlies && data.is_custom_mode {
             for player in &data.friendlies {
                 if data.wallhack_active {
-                    self.player_box(&painter, player, data);
-                    self.skeleton(&painter, player, data);
+                    self.player_box(&painter, player, data, 1.0);
+                    self.skeleton(&painter, player, data, 1.0);
                 }
             }
         }
@@ -385,19 +404,19 @@ impl App {
         }
     }
 
-    fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data) {
+    fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, opacity: f32) {
         use crate::config::DrawMode;
 
-        let health_color =
-            self.health_color(player.health, self.config.player.box_visible_color.a());
+        let health_color = self.health_color(player.health, (255.0 * opacity) as u8);
+        
         let color = match &self.config.player.draw_box {
             DrawMode::None => health_color,
             DrawMode::Health => health_color,
             DrawMode::Color => {
                 if player.visible {
-                    self.config.player.box_visible_color
+                    self.config.player.box_visible_color.gamma_multiply(opacity)
                 } else {
-                    self.config.player.box_invisible_color
+                    self.config.player.box_invisible_color.gamma_multiply(opacity)
                 }
             }
         };
@@ -546,13 +565,13 @@ impl App {
         }
     }
 
-    fn skeleton(&self, painter: &Painter, player: &PlayerData, data: &Data) {
+    fn skeleton(&self, painter: &Painter, player: &PlayerData, data: &Data, opacity: f32) {
         let color = match &self.config.player.draw_skeleton {
             DrawMode::None => return,
             DrawMode::Health => {
-                self.health_color(player.health, self.config.player.skeleton_color.a())
+                self.health_color(player.health, (self.config.player.skeleton_color.a() as f32 * opacity) as u8)
             }
-            DrawMode::Color => self.config.player.skeleton_color,
+            DrawMode::Color => self.config.player.skeleton_color.gamma_multiply(opacity),
         };
         let stroke = Stroke::new(self.config.hud.line_width, color);
 
