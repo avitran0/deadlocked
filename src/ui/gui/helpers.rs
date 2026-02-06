@@ -58,7 +58,8 @@ pub fn combo_box<T: std::fmt::Debug + strum::IntoEnumIterator + PartialEq>(
 }
 
 pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
-    let [mut r, mut g, mut b, mut a] = color.to_array();
+    // use unmultiplied sRGBA values so changing alpha doesn't alter the displayed RGB
+    let [mut r, mut g, mut b, mut a] = color.to_srgba_unmultiplied();
     let res = ui
         .horizontal(|ui| {
             let (response, painter) =
@@ -68,10 +69,10 @@ pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
                 ui.style().visuals.widgets.inactive.corner_radius,
                 *color,
             );
-            let mut res = ui.add(DragValue::new(&mut r).prefix("r: "));
-            res = res.union(ui.add(DragValue::new(&mut g).prefix("g: ")));
-            res = res.union(ui.add(DragValue::new(&mut b).prefix("b: ")));
-            res = res.union(ui.add(DragValue::new(&mut a).prefix("a: ")));
+            let mut res = ui.add(DragValue::new(&mut r).prefix("r: ").range(0u8..=255u8));
+            res = res.union(ui.add(DragValue::new(&mut g).prefix("g: ").range(0u8..=255u8)));
+            res = res.union(ui.add(DragValue::new(&mut b).prefix("b: ").range(0u8..=255u8)));
+            res = res.union(ui.add(DragValue::new(&mut a).prefix("a: ").range(0u8..=255u8)));
             ui.label(label);
             res
         })
@@ -79,7 +80,7 @@ pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
 
     let changed = res.changed();
     if changed {
-        *color = Color32::from_rgb(r, g, b);
+        *color = Color32::from_rgba_unmultiplied(r, g, b, a);
     }
 
     changed

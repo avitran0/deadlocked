@@ -389,22 +389,28 @@ impl App {
 
 const OUTLINE_WIDTH: f32 = 1.0;
 fn outline(pos: Pos2, color: Color32) -> [(Pos2, Color32); 5] {
+    // Use the same alpha for the outline so it fades with the text instead of
+    // staying fully opaque and making the text look darker when alpha is
+    // reduced.
+    let alpha = color.a();
+    let outline_color = Color32::from_rgba_unmultiplied(0, 0, 0, alpha);
+
     [
         (
             pos2(pos.x - OUTLINE_WIDTH, pos.y - OUTLINE_WIDTH),
-            Color32::BLACK,
+            outline_color,
         ),
         (
             pos2(pos.x + OUTLINE_WIDTH, pos.y - OUTLINE_WIDTH),
-            Color32::BLACK,
+            outline_color,
         ),
         (
             pos2(pos.x - OUTLINE_WIDTH, pos.y + OUTLINE_WIDTH),
-            Color32::BLACK,
+            outline_color,
         ),
         (
             pos2(pos.x + OUTLINE_WIDTH, pos.y + OUTLINE_WIDTH),
-            Color32::BLACK,
+            outline_color,
         ),
         (pos, color),
     ]
