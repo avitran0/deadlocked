@@ -51,6 +51,13 @@ impl App {
                 self.send_config();
             }
 
+            if ui
+                .checkbox(&mut self.config.player.visiblity_check, "Visibility Check")
+                .changed()
+            {
+                self.send_config();
+            }
+
             if keybind(
                 ui,
                 "esp_hotkey",

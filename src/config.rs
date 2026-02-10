@@ -216,6 +216,7 @@ pub enum BoxMode {
 #[serde(default)]
 pub struct PlayerConfig {
     pub enabled: bool,
+    pub visiblity_check: bool,
     pub esp_hotkey: KeyCode,
     pub show_friendlies: bool,
     pub draw_box: DrawMode,
@@ -237,6 +238,7 @@ impl Default for PlayerConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            visiblity_check: false,
             esp_hotkey: KeyCode::X,
             show_friendlies: false,
             draw_box: DrawMode::Color,

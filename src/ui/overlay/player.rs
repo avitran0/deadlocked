@@ -13,6 +13,10 @@ use crate::{
 
 impl App {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
+        if self.config.player.visiblity_check && !player.visible {
+            return;
+        }
+
         self.player_box(painter, player, data);
         self.skeleton(painter, player, data);
     }
