@@ -19,6 +19,8 @@ in
         cargo
         rustc
         scdoc
+        sccache
+        lld
         # Runtime dependencies
         wayland
         source2viewer

@@ -139,6 +139,19 @@ impl App {
             offset += font_size;
         }
 
+        if self.config.player.distance {
+            let distance = (player.position - data.local_player.position).length();
+            let distance_text = format!("{:.0}m", distance * 0.0254);
+            self.text(
+                painter,
+                &distance_text,
+                pos2(tr.x + ew, tr.y + offset),
+                Align2::LEFT_TOP,
+                None,
+            );
+            offset += font_size;
+        }
+
         if self.config.player.tags && player.has_defuser {
             painter.text(
                 pos2(tr.x + ew, tr.y + offset),
@@ -190,7 +203,7 @@ impl App {
             }
             DrawMode::Color => self.config.player.skeleton_color,
         };
-        let stroke = Stroke::new(self.config.hud.line_width, color);
+        let stroke = Stroke::new(self.config.player.skeleton_thickness, color);
 
         for (a, b) in &Bones::CONNECTIONS {
             let Some(a) = player.bones.get(a) else {

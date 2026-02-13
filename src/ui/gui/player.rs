@@ -85,6 +85,21 @@ impl App {
                 self.send_config();
             }
 
+            if self.config.player.draw_skeleton != crate::config::DrawMode::None {
+                ui.horizontal(|ui| {
+                    let response = ui.add(
+                        egui::DragValue::new(&mut self.config.player.skeleton_thickness)
+                        .speed(0.1)
+                        .range(1.0..=10.0),
+                    );
+                    ui.label("Skeleton Thickness");
+
+                    if response.changed() {
+                        self.send_config();
+                    }
+                });
+            }
+
             if checkbox(ui, "Head Circle", &mut self.config.player.head_circle) {
                 self.send_config();
             }
@@ -220,6 +235,13 @@ impl App {
 
             if ui
                 .checkbox(&mut self.config.player.tags, "Show Tags")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if ui
+                .checkbox(&mut self.config.player.distance, "Distance")
                 .changed()
             {
                 self.send_config();

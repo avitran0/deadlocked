@@ -224,6 +224,7 @@ pub struct PlayerConfig {
     pub box_invisible_color: Color32,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
+    pub skeleton_thickness: f32,
     pub head_circle: bool,
     pub health_bar: bool,
     pub armor_bar: bool,
@@ -231,6 +232,7 @@ pub struct PlayerConfig {
     pub weapon_icon: bool,
     pub tags: bool,
     pub visible_only: bool,
+    pub distance: bool,
     pub sound: SoundConfig,
 }
 
@@ -246,6 +248,7 @@ impl Default for PlayerConfig {
             box_invisible_color: Color32::RED,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
+            skeleton_thickness: 2.0,
             head_circle: true,
             health_bar: true,
             armor_bar: true,
@@ -253,6 +256,7 @@ impl Default for PlayerConfig {
             weapon_icon: true,
             tags: true,
             visible_only: false,
+            distance: true,
             sound: SoundConfig::default(),
         }
     }
