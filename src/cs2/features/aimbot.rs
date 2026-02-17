@@ -47,7 +47,7 @@ impl CS2 {
             return;
         }
 
-        if !grenade && config.visibility_check && !target.unwrap().visible(self, &local_player) {
+        if !grenade && config.visibility_check && !target.unwrap().visible(self, &local_player, None) {
             return;
         }
 

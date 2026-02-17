@@ -33,15 +33,15 @@ pub mod cs2 {
     ];
 
     pub mod class {
-        pub const PLAYER_CONTROLLER: &str = "19CCSPlayerController";
+        pub const PLAYER_CONTROLLER: &str = "cs_player_controller";
 
-        pub const PLANTED_C4: &str = "11C_PlantedC4";
-        pub const INFERNO: &str = "9C_Inferno";
-        pub const SMOKE: &str = "24C_SmokeGrenadeProjectile";
-        pub const MOLOTOV: &str = "19C_MolotovProjectile";
-        pub const FLASHBANG: &str = "21C_FlashbangProjectile";
-        pub const HE_GRENADE: &str = "21C_HEGrenadeProjectile";
-        pub const DECOY: &str = "17C_DecoyProjectile";
+        pub const PLANTED_C4: &str = "planted_c4";
+        pub const INFERNO: &str = "inferno";
+        pub const SMOKE: &str = "smoke_grenade_projectile";
+        pub const MOLOTOV: &str = "molotov_projectile";
+        pub const FLASHBANG: &str = "flashbang_projectile";
+        pub const HE_GRENADE: &str = "hegrenade_projectile";
+        pub const DECOY: &str = "decoy_projectile";
     }
 }
 

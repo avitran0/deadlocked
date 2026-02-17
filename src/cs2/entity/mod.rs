@@ -117,10 +117,13 @@ impl CS2 {
                 continue;
             }
 
-            let vtable: u64 = self.process.read(entity);
-            let rtti: u64 = self.process.read(vtable - 0x8);
-            let name_ptr: u64 = self.process.read(rtti + 0x8);
-            let name = self.process.read_string(name_ptr);
+            let name_pointer: u64 =
+                *bytemuck::from_bytes(&bucket[identity_offset + 0x20..identity_offset + 0x28]);
+            if name_pointer == 0 {
+                continue;
+            }
+
+            let name = self.process.read_string(name_pointer);
 
             match name.as_str() {
                 class::PLAYER_CONTROLLER => {
@@ -155,19 +158,6 @@ impl CS2 {
                 class::HE_GRENADE => self.entities.push(Entity::HeGrenade(entity)),
                 class::DECOY => self.entities.push(Entity::Decoy(entity)),
                 _ => {
-                    // check if weapon
-                    let entity_identity: u64 = self.process.read(entity + 0x10);
-                    if entity_identity == 0 {
-                        continue;
-                    }
-
-                    let name_pointer = self.process.read(entity_identity + 0x20);
-                    if name_pointer == 0 {
-                        continue;
-                    }
-
-                    let name = self.process.read_string(name_pointer);
-
                     if name.starts_with("weapon_") {
                         if self.entity_has_owner(entity) {
                             continue;
@@ -179,14 +169,6 @@ impl CS2 {
                     }
                 }
             }
-
-            // m_designerName
-            /*let name_pointer: u64 =
-                *bytemuck::from_bytes(&bucket[identity_offset + 0x20..identity_offset + 0x28]);
-            let Some(entity) = self.entity_type(entity, name_pointer) else {
-                continue;
-            };
-            self.entities.push(entity);*/
         }
     }
 }

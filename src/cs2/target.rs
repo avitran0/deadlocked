@@ -1,5 +1,4 @@
 use glam::Vec2;
-use strum::IntoEnumIterator;
 
 use crate::{
     config::{Config, TargetingMode},
@@ -154,8 +153,8 @@ impl CS2 {
         // update target angle
         let mut smallest_fov = 360.0;
         let target = self.target.player.as_ref().unwrap();
-        for bone in Bones::iter() {
-            let bone_position = target.bone_position(self, bone.u64());
+        let bones = target.all_bones(self);
+        for (bone, bone_position) in bones {
             let distance = eye_position.distance(bone_position);
             let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);

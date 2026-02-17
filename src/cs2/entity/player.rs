@@ -387,11 +387,15 @@ impl Player {
     }
 
     pub fn has_bomb(&self, cs2: &CS2) -> bool {
+        if !cs2.is_ffa() && self.team(cs2) == cs2::TEAM_CT {
+            return false;
+        }
+
         let weapons = self.all_weapons(cs2);
         weapons.contains(&Weapon::C4)
     }
 
-    pub fn visible(&self, cs2: &CS2, local_player: &Player) -> bool {
+    pub fn visible(&self, cs2: &CS2, local_player: &Player, bones: Option<&HashMap<Bones, Vec3>>) -> bool {
         if let Some(bvh) = &cs2.bvh {
             let eye_pos = local_player.eye_position(cs2);
             const CHECKED_BONES: [Bones; 5] = [
@@ -401,9 +405,19 @@ impl Player {
                 Bones::LeftHand,
                 Bones::RightHand,
             ];
-            if !CHECKED_BONES
+
+            let check_visibility = |pos: Vec3| bvh.has_line_of_sight(eye_pos, pos);
+
+            if let Some(bones) = bones {
+                if !CHECKED_BONES
+                    .iter()
+                    .any(|bone| bones.get(bone).map(|&p| check_visibility(p)).unwrap_or(false))
+                {
+                    return false;
+                }
+            } else if !CHECKED_BONES
                 .iter()
-                .any(|bone| bvh.has_line_of_sight(eye_pos, self.bone_position(cs2, bone.u64())))
+                .any(|bone| check_visibility(self.bone_position(cs2, bone.u64())))
             {
                 return false;
             }
@@ -445,14 +459,13 @@ impl Player {
         (flags & 1) == 0
     }
 
-    pub fn is_making_sound(&self, cs2: &CS2) -> Option<SoundType> {
+    pub fn is_making_sound_optimized(&self, cs2: &CS2, current_weapon: &Weapon) -> Option<SoundType> {
         if self.shots_fired(cs2) > 0 {
             return Some(SoundType::Gunshot);
         }
 
         let velocity = self.velocity(cs2);
         let speed = vec2(velocity.x, velocity.y).length();
-        let current_weapon = self.weapon(cs2);
 
         let is_jumping = velocity.z > 100.0 && self.is_in_air(cs2);
         // knife walking speed is 250 units/s

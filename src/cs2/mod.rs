@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 use parking_lot::Mutex;
@@ -51,6 +51,7 @@ pub struct CS2 {
     planted_c4: Option<PlantedC4>,
     grenades: Arc<Mutex<GrenadeList>>,
     target_grenade: Option<Grenade>,
+    cache_timer: u32,
 }
 
 impl Game for CS2 {
@@ -86,8 +87,13 @@ impl Game for CS2 {
             return;
         }
 
-        // self.cache_players();
-        self.cache_entities();
+        if self.cache_timer == 0 {
+            self.cache_entities();
+            self.cache_timer = 5;
+        } else {
+            self.cache_timer -= 1;
+        }
+
         self.check_bvh();
 
         for entity in &self.entities {
@@ -148,23 +154,37 @@ impl Game for CS2 {
             return;
         }
 
+        let bones_needed = config.player.enabled || config.hud.fov_circle || self.aimbot_config(config).enabled;
+
         for player in &self.players {
+            let bones = if bones_needed {
+                player.all_bones(self)
+            } else {
+                HashMap::new()
+            };
+            let weapon = player.weapon(self);
+            let head = if bones_needed {
+                bones.get(&Bones::Head).copied().unwrap_or_default()
+            } else {
+                player.bone_position(self, Bones::Head.u64())
+            };
+
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
                 armor: player.armor(self),
                 position: player.position(self),
-                head: player.bone_position(self, Bones::Head.u64()),
+                head,
                 name: player.name(self),
-                weapon: player.weapon(self),
-                bones: player.all_bones(self),
+                weapon: weapon.clone(),
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
-                visible: player.visible(self, &local_player),
+                visible: player.visible(self, &local_player, if bones_needed { Some(&bones) } else { None }),
                 color: player.color(self),
                 rotation: player.rotation(self),
-                sound: player.is_making_sound(self),
+                sound: player.is_making_sound_optimized(self, &weapon),
+                bones,
             };
 
             if !self.is_ffa() && player.team(self) == local_team {
@@ -174,15 +194,25 @@ impl Game for CS2 {
             }
         }
 
+        let local_bones = if bones_needed {
+            local_player.all_bones(self)
+        } else {
+            HashMap::new()
+        };
+        let local_head = if bones_needed {
+            local_bones.get(&Bones::Head).copied().unwrap_or_default()
+        } else {
+            local_player.bone_position(self, Bones::Head.u64())
+        };
+
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             health: local_player.health(self),
             armor: local_player.armor(self),
             position: local_player.position(self),
-            head: local_player.bone_position(self, Bones::Head.u64()),
+            head: local_head,
             name: local_player.name(self),
             weapon: local_player.weapon(self),
-            bones: local_player.all_bones(self),
             has_defuser: local_player.has_defuser(self),
             has_helmet: local_player.has_helmet(self),
             has_bomb: local_player.has_bomb(self),
@@ -190,6 +220,7 @@ impl Game for CS2 {
             color: local_player.color(self),
             rotation: local_player.rotation(self),
             sound: None,
+            bones: local_bones,
         };
 
         data.entities = self
@@ -266,6 +297,7 @@ impl CS2 {
             planted_c4: None,
             grenades,
             target_grenade: None,
+            cache_timer: 0,
         }
     }
 
