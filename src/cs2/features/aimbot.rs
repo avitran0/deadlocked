@@ -2,7 +2,10 @@ use glam::vec2;
 
 use crate::{
     config::{Config, KeyMode},
-    cs2::{CS2, entity::player::Player},
+    cs2::{
+        CS2,
+        entity::{player::Player, weapon::Weapon},
+    },
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
 };
@@ -18,7 +21,22 @@ impl CS2 {
         let hotkey = config.aim.aimbot_hotkey;
         let config = self.aimbot_config(config);
 
-        if !config.enabled || (self.target.player.is_none() && self.target_grenade.is_none()) {
+        let is_utility = matches!(
+            self.weapon,
+            Weapon::Knife
+                | Weapon::C4
+                | Weapon::Flashbang
+                | Weapon::HeGrenade
+                | Weapon::Smoke
+                | Weapon::Molotov
+                | Weapon::Decoy
+                | Weapon::Incendiary
+        );
+
+        if !config.enabled
+            || is_utility
+            || (self.target.player.is_none() && self.target_grenade.is_none())
+        {
             return;
         }
 
@@ -106,10 +124,29 @@ impl CS2 {
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
-        let mouse_angles = vec2(
-            aim_angles.y / sensitivity * 50.0,
-            -aim_angles.x / sensitivity * 50.0,
-        ) / (if grenade { 1.0 } else { config.smooth + 1.0 }).clamp(1.0, 20.0);
+        // 1.0 / 0.022 (m_yaw) = 45.4545... 50.0 was a bit too fast/imprecise
+        let yaw_pitch_factor = 45.454545;
+
+        // Scale smoothing by distance: at long distances, we need to be more aggressive
+        // to actually reach the target, otherwise smoothing "trails" behind.
+        let dynamic_smooth = if grenade {
+            1.0
+        } else {
+            let distance_factor = (self.target.distance / 1000.0).clamp(0.2, 1.0);
+            (config.smooth / distance_factor).clamp(1.0, 30.0)
+        };
+
+        let mut mouse_angles = vec2(
+            aim_angles.y / sensitivity * yaw_pitch_factor,
+            -aim_angles.x / sensitivity * yaw_pitch_factor,
+        ) / dynamic_smooth;
+
+        // Ensure we always move at least a tiny bit if we are off target,
+        // preventing the "stuck" feeling at long ranges.
+        const MIN_MOUSE_MOVE: f32 = 0.5;
+        if mouse_angles.length() > 0.0 && mouse_angles.length() < MIN_MOUSE_MOVE {
+            mouse_angles = mouse_angles.normalize() * MIN_MOUSE_MOVE;
+        }
 
         mouse.move_rel(&mouse_angles);
     }

@@ -8,7 +8,11 @@ use crate::{
     cs2::{
         CS2,
         bones::Bones,
-        entity::{player::Player, weapon_class::WeaponClass},
+        entity::{
+            player::Player,
+            weapon::Weapon,
+            weapon_class::WeaponClass,
+        },
     },
     math::angles_to_fov,
     os::mouse::Mouse,
@@ -27,7 +31,23 @@ impl CS2 {
         let hotkey = config.aim.triggerbot_hotkey;
         let config = self.triggerbot_config(config);
 
-        if !config.enabled || self.trigger.shot_start.is_some() || self.trigger.shot_end.is_some() {
+        let is_utility = matches!(
+            self.weapon,
+            Weapon::Knife
+                | Weapon::C4
+                | Weapon::Flashbang
+                | Weapon::HeGrenade
+                | Weapon::Smoke
+                | Weapon::Molotov
+                | Weapon::Decoy
+                | Weapon::Incendiary
+        );
+
+        if !config.enabled
+            || is_utility
+            || self.trigger.shot_start.is_some()
+            || self.trigger.shot_end.is_some()
+        {
             return;
         }
 

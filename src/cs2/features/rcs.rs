@@ -52,23 +52,26 @@ impl CS2 {
             return;
         }
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
+        let yaw_pitch_factor = 45.454545;
 
-        let mouse_angle = Vec2::new(
-            (aim_punch.y - self.recoil.previous.y) / sensitivity * 100.0,
-            -(aim_punch.x - self.recoil.previous.x) / sensitivity * 100.0,
+        // We multiply by 2.0 because aim_punch represents half of the actual recoil displacement
+        let punch_delta = (aim_punch - self.recoil.previous) * 2.0;
+
+        let mut mouse_angle = Vec2::new(
+            punch_delta.y / sensitivity * yaw_pitch_factor,
+            -punch_delta.x / sensitivity * yaw_pitch_factor,
         ) + self.recoil.unaccounted;
-        let mouse_angle = mouse_angle / (config.smooth + 1.0).clamp(1.0, 2.0);
+        
+        // RCS smoothing should be very subtle to keep up with the fast recoil changes
+        let rcs_smooth = (config.smooth + 1.0).clamp(1.0, 5.0);
+        let current_move = mouse_angle / rcs_smooth;
 
-        self.recoil.unaccounted = Vec2::ZERO;
-
-        // only if the aimbot is not active
         self.recoil.previous = aim_punch;
-        if (0.0..1.0).contains(&mouse_angle.x) {
-            self.recoil.unaccounted.x = mouse_angle.x;
+        self.recoil.unaccounted = mouse_angle - current_move;
+
+        // Only move if we aren't currently snapping with the aimbot to avoid conflict
+        if !self.aim.active || !self.is_button_down(&config.aimbot_hotkey) {
+             mouse.move_rel(&current_move);
         }
-        if (0.0..1.0).contains(&mouse_angle.y) {
-            self.recoil.unaccounted.y = mouse_angle.y;
-        }
-        mouse.move_rel(&mouse_angle)
     }
 }

@@ -120,29 +120,32 @@ impl CS2 {
                 continue;
             }
 
-            let head_position = player.bone_position(self, Bones::Head.u64());
-            let distance = eye_position.distance(head_position);
-            let angle = self.angle_to_target(&local_player, &head_position, &aim_punch);
-            let fov = angles_to_fov(&view_angles, &angle);
+            // Check configured bones for the best one to target
+            for bone in &aimbot_config.bones {
+                let bone_position = player.bone_position(self, bone.u64());
+                let distance = eye_position.distance(bone_position);
+                let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
+                let fov = angles_to_fov(&view_angles, &angle);
 
-            let fov_limit = max_fov * self.distance_scale(distance);
-            if fov > fov_limit {
-                continue;
-            }
+                let fov_limit = max_fov * self.distance_scale(distance);
+                if fov > fov_limit {
+                    continue;
+                }
 
-            let should_select = match targeting_mode {
-                TargetingMode::Fov => fov < best_fov,
-                TargetingMode::Distance => distance < best_distance,
-            };
+                let should_select = match targeting_mode {
+                    TargetingMode::Fov => fov < best_fov,
+                    TargetingMode::Distance => distance < best_distance,
+                };
 
-            if should_select {
-                best_fov = fov;
-                best_distance = distance;
+                if should_select {
+                    best_fov = fov;
+                    best_distance = distance;
 
-                self.target.player = Some(*player);
-                self.target.angle = angle;
-                self.target.distance = distance;
-                self.target.bone_index = Bones::Head.u64();
+                    self.target.player = Some(*player);
+                    self.target.angle = angle;
+                    self.target.distance = distance;
+                    self.target.bone_index = bone.u64();
+                }
             }
         }
 

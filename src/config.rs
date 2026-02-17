@@ -118,6 +118,7 @@ pub struct RcsConfig {
     pub enable_override: bool,
     pub enabled: bool,
     pub smooth: f32,
+    pub aimbot_hotkey: KeyCode,
 }
 
 impl Default for RcsConfig {
@@ -126,6 +127,7 @@ impl Default for RcsConfig {
             enable_override: false,
             enabled: false,
             smooth: 0.3,
+            aimbot_hotkey: KeyCode::Mouse5,
         }
     }
 }

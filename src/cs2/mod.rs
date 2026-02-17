@@ -310,13 +310,16 @@ impl CS2 {
         &config.aim.global.aimbot
     }
 
-    fn rcs_config<'a>(&self, config: &'a Config) -> &'a RcsConfig {
-        if let Some(weapon_config) = config.aim.weapons.get(&self.weapon)
+    fn rcs_config<'a>(&self, config: &'a Config) -> RcsConfig {
+        let mut rcs_config = if let Some(weapon_config) = config.aim.weapons.get(&self.weapon)
             && weapon_config.rcs.enable_override
         {
-            return &weapon_config.rcs;
-        }
-        &config.aim.global.rcs
+            weapon_config.rcs.clone()
+        } else {
+            config.aim.global.rcs.clone()
+        };
+        rcs_config.aimbot_hotkey = config.aim.aimbot_hotkey;
+        rcs_config
     }
 
     fn triggerbot_config<'a>(&self, config: &'a Config) -> &'a TriggerbotConfig {
