@@ -150,12 +150,32 @@ impl Game for CS2 {
             return;
         }
 
+        use crate::os::process::BatchReader;
         for player in &self.players {
+            let gs_node = player.game_scene_node(self);
+            let mut batch = BatchReader::new(&self.process);
+
+            let steam_id_idx =
+                batch.add::<u64>(player.controller + self.offsets.controller.steam_id);
+            let health_idx = batch.add::<i32>(player.pawn + self.offsets.pawn.health);
+            let armor_idx = batch.add::<i32>(player.pawn + self.offsets.pawn.armor);
+            let pos_idx = batch.add::<Vec3>(gs_node + self.offsets.game_scene_node.origin);
+            let team_idx = batch.add::<u8>(player.pawn + self.offsets.pawn.team);
+            let life_state_idx = batch.add::<u8>(player.pawn + self.offsets.pawn.life_state);
+            let color_idx = batch.add::<i32>(player.controller + self.offsets.controller.color);
+            let rotation_idx = batch.add::<f32>(player.pawn + self.offsets.pawn.eye_angles + 0x04);
+
+            batch.read();
+
+            if batch.get::<u8>(life_state_idx) != 0 {
+                continue;
+            }
+
             let player_data = PlayerData {
-                steam_id: player.steam_id(self),
-                health: player.health(self),
-                armor: player.armor(self),
-                position: player.position(self),
+                steam_id: batch.get(steam_id_idx),
+                health: batch.get(health_idx),
+                armor: batch.get(armor_idx),
+                position: batch.get(pos_idx),
                 head: player.bone_position(self, Bones::Head.u64()),
                 name: player.name(self),
                 weapon: player.weapon(self),
@@ -164,12 +184,12 @@ impl Game for CS2 {
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
                 visible: player.visible(self, &local_player),
-                color: player.color(self),
-                rotation: player.rotation(self),
+                color: batch.get(color_idx),
+                rotation: batch.get(rotation_idx),
                 sound: player.is_making_sound(self),
             };
 
-            if !self.is_ffa() && player.team(self) == local_team {
+            if !self.is_ffa() && batch.get::<u8>(team_idx) == local_team {
                 data.friendlies.push(player_data);
             } else {
                 data.players.push(player_data);

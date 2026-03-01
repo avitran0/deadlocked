@@ -11,15 +11,17 @@ bytemuck = "1.24"
 crossbeam = "0.8"
 egui = "0.33"
 egui_glow = { version = "0.33", features = ["winit"] }
-egui-winit = { version = "0.33", default-features = false, features = ["x11"] }
+egui-winit = { version = "0.33", default-features = false, features = ["x11", "wayland"] }
 epaint = { version = "0.33", features = ["serde"] }
 glam = { version = "0.32", features = ["bytemuck", "serde"] }
 glutin = { version = "0.32", default-features = false, features = [
     "x11",
+    "wayland",
     "egl",
 ] }
 glutin-winit = { version = "0.5", default-features = false, features = [
     "x11",
+    "wayland",
     "egl",
 ] }
 nix = { version = "0.31", features = ["ioctl"] }
@@ -34,7 +36,7 @@ tungstenite = "0.28"
 ureq = { version = "3.0", features = ["json"] }
 url = "2.5"
 uuid = { version = "1.18", features = ["v4", "serde"] }
-winit = { version = "0.30", default-features = false, features = ["x11"] }
+winit = { version = "0.30", default-features = false, features = ["x11", "wayland"] }
 
 [build-dependencies]
 copy_to_output = "2.2"

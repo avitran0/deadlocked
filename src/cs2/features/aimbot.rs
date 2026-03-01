@@ -113,16 +113,17 @@ impl CS2 {
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
+        let smooth = if grenade { 1.0 } else { config.smooth + 1.0 }.clamp(1.0, 20.0);
         let mouse_angles = vec2(
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
-        ) / (if grenade { 1.0 } else { config.smooth + 1.0 }).clamp(1.0, 20.0);
+        ) / smooth;
 
         log::debug!(
             "aimbot mouse movement: {:.2}/{:.2}",
             mouse_angles.x,
             mouse_angles.y
         );
-        mouse.move_rel(&mouse_angles);
+        mouse.move_rel_humanized(&mouse_angles, smooth);
     }
 }

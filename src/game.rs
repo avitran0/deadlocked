@@ -5,7 +5,7 @@ use utils::{log, sync::Mutex};
 
 use crate::{
     config::{
-        parse_config, Config, CONFIG_PATH, DEFAULT_CONFIG_NAME, LOOP_DURATION, SLEEP_DURATION,
+        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME, LOOP_DURATION, SLEEP_DURATION, parse_config,
     },
     cs2::CS2,
     data::Data,

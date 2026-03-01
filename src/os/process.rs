@@ -174,6 +174,68 @@ impl Process {
         result
     }
 
+    pub fn read_raw_batch(&self, iovecs: &mut [(u64, &mut [u8])]) {
+        let mut local_iovs = Vec::with_capacity(iovecs.len());
+        let mut remote_iovs = Vec::with_capacity(iovecs.len());
+
+        for (address, buffer) in iovecs {
+            local_iovs.push(iovec {
+                iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+                iov_len: buffer.len(),
+            });
+            remote_iovs.push(iovec {
+                iov_base: *address as *mut libc::c_void,
+                iov_len: buffer.len(),
+            });
+        }
+
+        unsafe {
+            process_vm_readv(
+                self.pid,
+                local_iovs.as_ptr(),
+                local_iovs.len() as libc::c_ulong,
+                remote_iovs.as_ptr(),
+                remote_iovs.len() as libc::c_ulong,
+                0,
+            );
+        }
+    }
+}
+
+pub struct BatchReader<'a> {
+    process: &'a Process,
+    iovecs: Vec<(u64, Vec<u8>)>,
+}
+
+impl<'a> BatchReader<'a> {
+    pub fn new(process: &'a Process) -> Self {
+        Self {
+            process,
+            iovecs: Vec::new(),
+        }
+    }
+
+    pub fn add<T: Pod>(&mut self, address: u64) -> usize {
+        let index = self.iovecs.len();
+        self.iovecs.push((address, vec![0u8; size_of::<T>()]));
+        index
+    }
+
+    pub fn read(&mut self) {
+        let mut iovecs: Vec<(u64, &mut [u8])> = self
+            .iovecs
+            .iter_mut()
+            .map(|(address, buffer)| (*address, buffer.as_mut_slice()))
+            .collect();
+        self.process.read_raw_batch(&mut iovecs);
+    }
+
+    pub fn get<T: Pod>(&self, index: usize) -> T {
+        *bytemuck::from_bytes(&self.iovecs[index].1)
+    }
+}
+
+impl Process {
     #[cfg(feature = "read-only")]
     pub fn write<T: Pod>(&self, _address: u64, _value: T) {}
 

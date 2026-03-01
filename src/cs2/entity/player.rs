@@ -9,7 +9,7 @@ use super::{CS2, weapon_class::WeaponClass};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Player {
-    controller: u64,
+    pub(crate) controller: u64,
     pub(crate) pawn: u64,
 }
 
@@ -220,7 +220,7 @@ impl Player {
         weapons
     }
 
-    fn game_scene_node(&self, cs2: &CS2) -> u64 {
+    pub(crate) fn game_scene_node(&self, cs2: &CS2) -> u64 {
         cs2.process
             .read(self.pawn + cs2.offsets.pawn.game_scene_node)
     }

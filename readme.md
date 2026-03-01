@@ -129,14 +129,25 @@ See [radar.md](radar.md)
 - OpenBox
 - XFCE
 
-**Limited/No support:**
+**Wayland support:**
 
-- Hyprland (poor X11 support)
-- Other Wayland-only compositors
+Native Wayland is supported, but requires manual compositor configuration to make the overlay work correctly (always on top and click-through).
 
-### I'm using Hyprland and something doesn't work
+### Hyprland Setup
 
-Hyprland has poor X11 support for the techniques this cheat uses. This cannot be fixed.
+For Hyprland, add the following rules to your `hyprland.conf`:
+
+```conf
+windowrulev2 = float, title:^(deadlocked_overlay)$
+windowrulev2 = pin, title:^(deadlocked_overlay)$
+windowrulev2 = noinput, title:^(deadlocked_overlay)$
+windowrulev2 = noblur, title:^(deadlocked_overlay)$
+windowrulev2 = noshadow, title:^(deadlocked_overlay)$
+windowrulev2 = opaque, title:^(deadlocked_overlay)$
+windowrulev2 = size 100% 100%, title:^(deadlocked_overlay)$
+```
+
+If you encounter issues, you can force X11 mode by running with the `--x11` flag.
 
 ### I'm using Gamescope and the overlay is too small
 

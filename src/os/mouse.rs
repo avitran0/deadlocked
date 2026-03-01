@@ -1,8 +1,13 @@
 use std::{
-    fs::File, io::Write, os::fd::AsRawFd, path::Path, sync::atomic::{AtomicBool, Ordering}, time::{SystemTime, UNIX_EPOCH}
+    fs::File,
+    io::Write,
+    os::fd::AsRawFd,
+    path::Path,
+    sync::atomic::{AtomicBool, Ordering},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
-use glam::{IVec2, Vec2};
+use glam::Vec2;
 use nix::{ioctl_none, ioctl_write_int, ioctl_write_ptr, libc::c_ulong};
 use utils::log;
 
@@ -89,6 +94,7 @@ const BTN_LEFT: u16 = 0x110;
 
 pub struct Mouse {
     file: File,
+    remainder: Vec2,
 }
 
 static CREATED: AtomicBool = AtomicBool::new(false);
@@ -115,12 +121,13 @@ impl Mouse {
             ui_dev_create(fd)?;
         }
 
-        Ok(Self { file })
+        Ok(Self {
+            file,
+            remainder: Vec2::ZERO,
+        })
     }
 
     pub fn move_rel(&mut self, coords: &Vec2) {
-        let coords = IVec2::new(coords.x as i32, coords.y as i32);
-
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let time = Timeval {
             seconds: now.as_secs(),
@@ -131,14 +138,14 @@ impl Mouse {
             time,
             event_type: EV_REL,
             code: AXIS_X,
-            value: coords.x,
+            value: coords.x as i32,
         };
 
         let y = InputEvent {
             time,
             event_type: EV_REL,
             code: AXIS_Y,
-            value: coords.y,
+            value: coords.y as i32,
         };
 
         let syn = InputEvent {
@@ -149,10 +156,37 @@ impl Mouse {
         };
 
         self.file.write_all(&x.bytes()).unwrap();
-        self.file.write_all(&syn.bytes()).unwrap();
-
         self.file.write_all(&y.bytes()).unwrap();
         self.file.write_all(&syn.bytes()).unwrap();
+    }
+
+    pub fn move_rel_humanized(&mut self, coords: &Vec2, smooth: f32) {
+        use rand::RngExt;
+
+        let mut rng = rand::rng();
+
+        // sub-pixel precision
+        let total = *coords + self.remainder;
+        let mut x = total.x;
+        let mut y = total.y;
+
+        // add some jitter if smooth is high enough
+        if smooth > 1.0 {
+            let jitter_factor = (smooth / 20.0).clamp(0.0, 1.0) * 0.5;
+            x += rng.random_range(-jitter_factor..jitter_factor);
+            y += rng.random_range(-jitter_factor..jitter_factor);
+        }
+
+        let ix = x as i32;
+        let iy = y as i32;
+
+        self.remainder = Vec2::new(x - ix as f32, y - iy as f32);
+
+        if ix == 0 && iy == 0 {
+            return;
+        }
+
+        self.move_rel(&Vec2::new(ix as f32, iy as f32));
     }
 
     pub fn left_press(&mut self) {

@@ -45,12 +45,13 @@ fn main() {
         return;
     }
 
-    // this runs as x11 for now, because wayland decorations for winit are not good
-    // and don't support disabling the maximize button
-    unsafe { std::env::remove_var("WAYLAND_DISPLAY") };
-
     let force_reparse = args.iter().any(|arg| arg == "--force-reparse");
     let use_system_binary = args.iter().any(|arg| arg == "--local-s2v");
+    let force_x11 = args.iter().any(|arg| arg == "--x11");
+
+    if force_x11 {
+        unsafe { std::env::remove_var("WAYLAND_DISPLAY") };
+    }
     spawn_with_crash_handler(move || {
         parse_maps(force_reparse, use_system_binary);
     });

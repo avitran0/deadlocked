@@ -29,17 +29,25 @@ impl WindowContext {
         use glutin::prelude::GlSurface as _;
         use winit::raw_window_handle::HasWindowHandle as _;
 
+        let is_x11 = std::env::var("WAYLAND_DISPLAY").is_err();
+
         let winit_window_builder = if overlay {
-            winit::window::WindowAttributes::default()
+            let mut attributes = winit::window::WindowAttributes::default()
                 .with_decorations(false)
                 .with_inner_size(winit::dpi::PhysicalSize::new(1, 1))
                 .with_position(winit::dpi::PhysicalPosition::new(0, 0))
                 .with_resizable(true)
                 .with_transparent(true)
                 .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
-                .with_override_redirect(true)
-                .with_x11_window_type(vec![WindowType::Tooltip])
-                .with_title("deadlocked_overlay")
+                .with_title("deadlocked_overlay");
+
+            if is_x11 {
+                attributes = attributes
+                    .with_override_redirect(true)
+                    .with_x11_window_type(vec![WindowType::Tooltip]);
+            }
+
+            attributes
         } else {
             winit::window::WindowAttributes::default()
                 .with_inner_size(winit::dpi::LogicalSize::new(750, 450))
