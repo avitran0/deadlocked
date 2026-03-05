@@ -76,6 +76,78 @@ impl App {
     }
 
     fn unsafe_right(&mut self, ui: &mut Ui) {
+        collapsing_open(ui, "Aim", |ui| {
+            if ui
+                .checkbox(&mut self.config.misc.silent_aim, "Silent Aim")
+                .on_hover_text(
+                    "Applies angle writes before shot logic instead of only mouse movement",
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+        });
+
+        collapsing_open(ui, "Privacy", |ui| {
+            if ui
+                .checkbox(
+                    &mut self.config.misc.telemetry_enabled,
+                    "Enable Crash Telemetry",
+                )
+                .on_hover_text(
+                    "Sends anonymous crash stack traces and basic system info for debugging",
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+        });
+
+        collapsing_open(ui, "Movement", |ui| {
+            if ui
+                .checkbox(
+                    &mut self.config.misc.auto_counter_strafe,
+                    "Auto Counter-Strafe On Shot",
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.config.misc.counter_strafe_tap_ms)
+                            .range(1..=80)
+                            .speed(1),
+                    )
+                    .on_hover_text("How long each opposite movement key tap is held")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Tap Duration (ms)");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.config.misc.counter_strafe_speed_threshold)
+                            .range(0.0..=250.0)
+                            .speed(0.5)
+                            .max_decimals(1),
+                    )
+                    .on_hover_text(
+                        "Minimum local movement speed before velocity-based counter-strafe taps",
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Speed Threshold");
+            });
+        });
+
         collapsing_open(ui, "FOV Changer", |ui| {
             if ui
                 .checkbox(&mut self.config.misc.fov_changer, "FOV Changer")

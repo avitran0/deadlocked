@@ -2,6 +2,7 @@ use egui::{DragValue, Ui};
 use strum::IntoEnumIterator as _;
 
 use crate::{
+    config::KeyMode,
     cs2::bones::Bones,
     ui::{
         app::App,
@@ -39,15 +40,6 @@ impl App {
 
     fn aimbot_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "Aimbot", |ui| {
-            if keybind(
-                ui,
-                "aimbot_hotkey",
-                "Hotkey",
-                &mut self.config.aim.aimbot_hotkey,
-            ) {
-                self.send_config();
-            }
-
             if self.aimbot_tab == AimbotTab::Weapon
                 && checkbox_hover(
                     ui,
@@ -74,6 +66,20 @@ impl App {
                 &mut self.weapon_config().aimbot.mode,
             ) {
                 self.send_config();
+            }
+
+            let aimbot_mode = self.weapon_config().aimbot.mode.clone();
+            if aimbot_mode != KeyMode::Shoot {
+                if keybind(
+                    ui,
+                    "aimbot_hotkey",
+                    "Hotkey",
+                    &mut self.config.aim.aimbot_hotkey,
+                ) {
+                    self.send_config();
+                }
+            } else {
+                ui.label("Hotkey: not used in Shoot mode");
             }
 
             if checkbox_hover(
@@ -156,6 +162,19 @@ impl App {
             }
 
             if ui
+                .checkbox(
+                    &mut self.weapon_config().aimbot.smoke_wall_check,
+                    "Smoke/Wall Check",
+                )
+                .on_hover_text(
+                    "Requires parsed map BVH, clear geometry LOS, and no smoke between you and target",
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if ui
                 .checkbox(&mut self.weapon_config().aimbot.flash_check, "Flash Check")
                 .changed()
             {
@@ -207,13 +226,27 @@ impl App {
                 self.send_config();
             }
 
-            if keybind(
+            if combo_box(
                 ui,
-                "triggerbot_hotkey",
-                "Hotkey",
-                &mut self.config.aim.triggerbot_hotkey,
+                "triggerbot_mode",
+                "Mode",
+                &mut self.weapon_config().triggerbot.mode,
             ) {
                 self.send_config();
+            }
+
+            let trigger_mode = self.weapon_config().triggerbot.mode.clone();
+            if trigger_mode != KeyMode::Shoot {
+                if keybind(
+                    ui,
+                    "triggerbot_hotkey",
+                    "Hotkey",
+                    &mut self.config.aim.triggerbot_hotkey,
+                ) {
+                    self.send_config();
+                }
+            } else {
+                ui.label("Hotkey: not used in Shoot mode");
             }
 
             ui.horizontal(|ui| {
@@ -228,15 +261,6 @@ impl App {
                 }
                 ui.label("Delay (ms)");
             });
-
-            if combo_box(
-                ui,
-                "triggerbot_mode",
-                "Mode",
-                &mut self.weapon_config().triggerbot.mode,
-            ) {
-                self.send_config();
-            }
 
             if ui
                 .checkbox(&mut self.weapon_config().triggerbot.head_only, "Head Only")
@@ -256,7 +280,67 @@ impl App {
                 {
                     self.send_config();
                 }
-                ui.label("Additional Duration (ms)");
+                ui.label("Press Duration (ms)");
+            });
+
+            if ui
+                .checkbox(
+                    &mut self.weapon_config().triggerbot.aim_assist,
+                    "Trigger Aim Assist",
+                )
+                .on_hover_text("Micro-adjusts aim before firing to reduce misses")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.weapon_config().triggerbot.aim_fov)
+                            .range(0.1..=30.0)
+                            .suffix("°")
+                            .speed(0.02)
+                            .max_decimals(2),
+                    )
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Assist FOV");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.weapon_config().triggerbot.fire_fov)
+                            .range(0.05..=10.0)
+                            .suffix("°")
+                            .speed(0.01)
+                            .max_decimals(2),
+                    )
+                    .on_hover_text("How close aim must be before triggerbot clicks")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Fire FOV");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.weapon_config().triggerbot.aim_smooth)
+                            .range(0.0..=20.0)
+                            .speed(0.05)
+                            .max_decimals(2),
+                    )
+                    .on_hover_text("Lower values aim faster during trigger adjustment")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Assist Smooth");
             });
         });
 
@@ -265,6 +349,19 @@ impl App {
                 .checkbox(
                     &mut self.weapon_config().triggerbot.flash_check,
                     "Flash Check",
+                )
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if ui
+                .checkbox(
+                    &mut self.weapon_config().triggerbot.smoke_wall_check,
+                    "Smoke/Wall Check",
+                )
+                .on_hover_text(
+                    "Requires parsed map BVH, clear geometry LOS, and no smoke between you and target",
                 )
                 .changed()
             {
@@ -286,7 +383,7 @@ impl App {
                     &mut self.weapon_config().triggerbot.velocity_check,
                     "Velocity Check",
                 )
-                .on_hover_text("Only shoot if the player moves slower than the specified threshold")
+                .on_hover_text("Only shoot if YOUR horizontal movement speed is below threshold")
                 .changed()
             {
                 self.send_config();
@@ -299,7 +396,7 @@ impl App {
                             .range(0..=5000),
                     )
                     .on_hover_text(
-                        "Maximum velocity at which the triggerbot can shoot (in CS2 Units)",
+                        "Maximum horizontal speed at which triggerbot can shoot (CS2 units/sec)",
                     )
                     .changed()
                 {

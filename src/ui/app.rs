@@ -1,6 +1,8 @@
 use std::{
     collections::HashMap,
-    path::PathBuf,
+    fs,
+    path::{Path, PathBuf},
+    process::Command,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -28,14 +30,12 @@ use crate::{
     },
 };
 
-const FRAME_RATE: u64 = 120;
-const FRAME_DURATION: Duration = Duration::from_micros(1_000_000 / FRAME_RATE);
-
 pub struct App {
     pub gui: Option<WindowContext>,
     pub overlay: Option<WindowContext>,
     pub clipboard: Clipboard,
     next_frame_time: Instant,
+    next_kde_check: Instant,
 
     pub tx: Sender<Envelope>,
     pub rx: Receiver<Message>,
@@ -44,6 +44,10 @@ pub struct App {
     pub game_status: GameStatus,
     pub radar_status: RadarStatus,
     pub display_scale: f32,
+    pub overlay_window_pos: Option<(i32, i32)>,
+    pub overlay_window_size: Option<(u32, u32)>,
+    pub overlay_visible: Option<bool>,
+    pub kde_compositing_active: bool,
     pub trails: HashMap<u64, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
 
@@ -78,7 +82,8 @@ impl App {
             overlay: None,
 
             clipboard: Clipboard::new().unwrap(),
-            next_frame_time: Instant::now() + FRAME_DURATION,
+            next_frame_time: Instant::now() + frame_duration(&config),
+            next_kde_check: Instant::now(),
 
             tx,
             rx,
@@ -91,6 +96,10 @@ impl App {
             game_status: GameStatus::NotStarted,
             radar_status: RadarStatus::Disconnected,
             display_scale: 1.0,
+            overlay_window_pos: None,
+            overlay_window_size: None,
+            overlay_visible: None,
+            kde_compositing_active: true,
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
 
@@ -119,6 +128,8 @@ impl App {
     }
 
     fn create_window(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        configure_kde_compositor_policy();
+
         let gui = WindowContext::new(event_loop, false, self.config.accent_color);
         let overlay = WindowContext::new(event_loop, true, self.config.accent_color);
 
@@ -127,26 +138,239 @@ impl App {
 
         self.gui = Some(gui);
         self.overlay = Some(overlay);
+        self.refresh_kde_compositor_state();
+        self.set_overlay_visible(true);
     }
+
+    pub fn overlay_allowed(&self) -> bool {
+        !is_kde_session() || self.kde_compositing_active
+    }
+
+    pub fn set_overlay_visible(&mut self, visible: bool) {
+        if self.overlay_visible == Some(visible) {
+            return;
+        }
+        if let Some(overlay) = &self.overlay {
+            overlay.window().set_visible(visible);
+        }
+        self.overlay_visible = Some(visible);
+    }
+
+    fn refresh_kde_compositor_state(&mut self) {
+        if !is_kde_session() {
+            self.kde_compositing_active = true;
+            return;
+        }
+
+        let now = Instant::now();
+        if now < self.next_kde_check {
+            return;
+        }
+        self.next_kde_check = now + Duration::from_secs(5);
+
+        let was_active = self.kde_compositing_active;
+        let Some(active) = query_kde_compositing_active() else {
+            return;
+        };
+        self.kde_compositing_active = active;
+
+        if active {
+            return;
+        }
+
+        if was_active {
+            log::warn!("KWin compositing is disabled, re-applying overlay compositor policy");
+        }
+        configure_kde_compositor_policy();
+        if let Some(active_after) = query_kde_compositing_active() {
+            self.kde_compositing_active = active_after;
+        }
+    }
+}
+
+fn is_kde_session() -> bool {
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    desktop.contains("kde")
+        || desktop.contains("plasma")
+        || std::env::var_os("KDE_FULL_SESSION").is_some()
+        || std::env::var_os("KDE_SESSION_VERSION").is_some()
+}
+
+fn configure_kde_compositor_policy() {
+    if !is_kde_session() {
+        return;
+    }
+
+    let base_config = std::env::var_os("XDG_CONFIG_HOME")
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".config")));
+    let Some(config_dir) = base_config else {
+        return;
+    };
+
+    let kwinrc_path = config_dir.join("kwinrc");
+    if !set_kwin_block_compositing_with_kwriteconfig(&kwinrc_path) {
+        let _ = set_kwin_block_compositing_with_file_patch(&kwinrc_path);
+    }
+
+    request_kwin_reconfigure();
+}
+
+fn set_kwin_block_compositing_with_kwriteconfig(kwinrc_path: &Path) -> bool {
+    let file = kwinrc_path.to_string_lossy().to_string();
+    for binary in ["kwriteconfig6", "kwriteconfig5", "kwriteconfig"] {
+        let Ok(status) = Command::new(binary)
+            .args([
+                "--file",
+                &file,
+                "--group",
+                "Compositing",
+                "--key",
+                "WindowsBlockCompositing",
+                "false",
+            ])
+            .status()
+        else {
+            continue;
+        };
+
+        if status.success() {
+            return true;
+        }
+    }
+    false
+}
+
+fn set_kwin_block_compositing_with_file_patch(kwinrc_path: &Path) -> bool {
+    let content = fs::read_to_string(kwinrc_path).unwrap_or_default();
+    let mut changed = false;
+    let mut output = Vec::with_capacity(content.lines().count() + 4);
+    let mut in_compositing = false;
+    let mut saw_compositing_section = false;
+    let mut saw_block_key = false;
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        let is_section = trimmed.starts_with('[') && trimmed.ends_with(']');
+
+        if is_section {
+            if in_compositing && !saw_block_key {
+                output.push(String::from("WindowsBlockCompositing=false"));
+                changed = true;
+            }
+            in_compositing = trimmed == "[Compositing]";
+            if in_compositing {
+                saw_compositing_section = true;
+                saw_block_key = false;
+            }
+            output.push(line.to_string());
+            continue;
+        }
+
+        if in_compositing && trimmed.starts_with("WindowsBlockCompositing=") {
+            saw_block_key = true;
+            if trimmed != "WindowsBlockCompositing=false" {
+                output.push(String::from("WindowsBlockCompositing=false"));
+                changed = true;
+            } else {
+                output.push(line.to_string());
+            }
+            continue;
+        }
+
+        output.push(line.to_string());
+    }
+
+    if saw_compositing_section && in_compositing && !saw_block_key {
+        output.push(String::from("WindowsBlockCompositing=false"));
+        changed = true;
+    }
+
+    if !saw_compositing_section {
+        if !output.last().is_some_and(|line| line.is_empty()) {
+            output.push(String::new());
+        }
+        output.push(String::from("[Compositing]"));
+        output.push(String::from("WindowsBlockCompositing=false"));
+        changed = true;
+    }
+
+    if !changed {
+        return true;
+    }
+
+    if let Some(parent) = kwinrc_path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+
+    fs::write(kwinrc_path, format!("{}\n", output.join("\n"))).is_ok()
+}
+
+fn request_kwin_reconfigure() {
+    let _ = Command::new("dbus-send")
+        .args([
+            "--session",
+            "--type=method_call",
+            "--dest=org.kde.KWin",
+            "/KWin",
+            "org.kde.KWin.reconfigure",
+        ])
+        .status();
+}
+
+fn query_kde_compositing_active() -> Option<bool> {
+    let output = Command::new("dbus-send")
+        .args([
+            "--session",
+            "--print-reply",
+            "--dest=org.kde.KWin",
+            "/Compositor",
+            "org.freedesktop.DBus.Properties.Get",
+            "string:org.kde.kwin.Compositing",
+            "string:active",
+        ])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    if stdout.contains("boolean true") {
+        Some(true)
+    } else if stdout.contains("boolean false") {
+        Some(false)
+    } else {
+        None
+    }
+}
+
+fn frame_duration(config: &Config) -> Duration {
+    let hz = config.hud.overlay_refresh_rate.clamp(30, 360);
+    Duration::from_micros(1_000_000 / hz)
 }
 
 impl ApplicationHandler for App {
     fn new_events(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
+            self.refresh_kde_compositor_state();
+
             if let Some(window) = &self.gui {
                 window.window().request_redraw();
             }
             if let Some(window) = &self.overlay {
                 window.window().request_redraw();
             }
-            self.next_frame_time += FRAME_DURATION;
+            self.next_frame_time += frame_duration(&self.config);
         }
     }
 
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         self.create_window(event_loop);
 
-        self.next_frame_time = Instant::now() + FRAME_DURATION;
+        self.next_frame_time = Instant::now() + frame_duration(&self.config);
         event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
             self.next_frame_time,
         ));
@@ -180,6 +404,7 @@ impl ApplicationHandler for App {
         } else {
             return;
         };
+        let is_gui_window = gui.window().id() == window_id;
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
@@ -190,9 +415,10 @@ impl ApplicationHandler for App {
                 event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                     self.next_frame_time,
                 ));
-                gui.request_redraw();
-                overlay.request_redraw();
-                self.render();
+                // Render only once per frame from the GUI window event.
+                if is_gui_window {
+                    self.render();
+                }
             }
             _ => {
                 let event_response = self.gui.as_mut().unwrap().process_event(&event);

@@ -1,4 +1,4 @@
-use egui::{Align2, Color32, Painter, Stroke, pos2};
+use egui::{Align2, Color32, FontId, Painter, Stroke, pos2};
 
 use crate::{
     cs2::entity::weapon_class::WeaponClass, data::Data, math::world_to_screen, ui::app::App,
@@ -7,13 +7,19 @@ use crate::{
 impl App {
     pub fn overlay_debug(&self, painter: &Painter, data: &Data) {
         if self.config.hud.debug {
-            painter.line(
-                vec![pos2(0.0, 0.0), pos2(data.window_size.x, data.window_size.y)],
-                Stroke::new(self.config.hud.line_width, Color32::WHITE),
-            );
-            painter.line(
-                vec![pos2(data.window_size.x, 0.0), pos2(0.0, data.window_size.y)],
-                Stroke::new(self.config.hud.line_width, Color32::WHITE),
+            painter.text(
+                pos2(8.0, 8.0),
+                Align2::LEFT_TOP,
+                format!(
+                    "in_game={} players={} friendlies={} entities={} map={}",
+                    data.in_game,
+                    data.players.len(),
+                    data.friendlies.len(),
+                    data.entities.len(),
+                    data.map_name
+                ),
+                FontId::proportional(self.config.hud.font_size),
+                Color32::WHITE,
             );
         }
     }

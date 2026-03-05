@@ -1,4 +1,5 @@
 pub mod aimbot;
+pub mod counter_strafe;
 pub mod esp_toggle;
 mod fov_changer;
 mod no_flash;

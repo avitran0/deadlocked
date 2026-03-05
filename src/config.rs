@@ -79,6 +79,7 @@ pub struct AimbotConfig {
     pub distance_adjusted_fov: bool,
     pub start_bullet: i32,
     pub visibility_check: bool,
+    pub smoke_wall_check: bool,
     pub flash_check: bool,
     pub fov: f32,
     pub smooth: f32,
@@ -91,14 +92,15 @@ impl Default for AimbotConfig {
         Self {
             enable_override: false,
             enabled: true,
-            mode: KeyMode::Hold,
+            mode: KeyMode::Shoot,
             target_friendlies: false,
             distance_adjusted_fov: true,
-            start_bullet: 0,
+            start_bullet: 1,
             visibility_check: true,
+            smoke_wall_check: true,
             flash_check: true,
-            fov: 2.5,
-            smooth: 5.0,
+            fov: 1.8,
+            smooth: 8.5,
             bones: vec![
                 Bones::Head,
                 Bones::Neck,
@@ -135,6 +137,7 @@ impl Default for RcsConfig {
 pub enum KeyMode {
     Hold,
     Toggle,
+    Shoot,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
@@ -152,9 +155,14 @@ pub struct TriggerbotConfig {
     pub shot_duration: u64,
     pub mode: KeyMode,
     pub flash_check: bool,
+    pub smoke_wall_check: bool,
     pub scope_check: bool,
     pub velocity_check: bool,
     pub velocity_threshold: f32,
+    pub aim_assist: bool,
+    pub aim_fov: f32,
+    pub aim_smooth: f32,
+    pub fire_fov: f32,
     pub head_only: bool,
 }
 
@@ -162,14 +170,19 @@ impl Default for TriggerbotConfig {
     fn default() -> Self {
         Self {
             enable_override: false,
-            enabled: false,
-            delay: 100..=200,
-            shot_duration: 200,
-            mode: KeyMode::Hold,
+            enabled: true,
+            delay: 85..=145,
+            shot_duration: 16,
+            mode: KeyMode::Shoot,
             flash_check: true,
+            smoke_wall_check: true,
             scope_check: true,
-            velocity_check: true,
-            velocity_threshold: 100.0,
+            velocity_check: false,
+            velocity_threshold: 220.0,
+            aim_assist: true,
+            aim_fov: 1.8,
+            aim_smooth: 4.0,
+            fire_fov: 0.22,
             head_only: false,
         }
     }
@@ -192,8 +205,8 @@ impl Default for AimConfig {
         }
 
         Self {
-            aimbot_hotkey: KeyCode::Mouse5,
-            triggerbot_hotkey: KeyCode::Mouse4,
+            aimbot_hotkey: KeyCode::MouseLeft,
+            triggerbot_hotkey: KeyCode::MouseLeft,
             global: WeaponConfig::enabled(true),
             weapons,
         }
@@ -305,6 +318,8 @@ pub struct HudConfig {
     pub line_width: f32,
     pub font_size: f32,
     pub icon_size: f32,
+    pub overlay_refresh_rate: u64,
+    pub data_refresh_rate: u64,
     pub debug: bool,
 }
 
@@ -328,6 +343,8 @@ impl Default for HudConfig {
             line_width: 2.0,
             font_size: 16.0,
             icon_size: 20.0,
+            overlay_refresh_rate: 120,
+            data_refresh_rate: 90,
             debug: false,
         }
     }
@@ -356,6 +373,11 @@ pub struct UnsafeConfig {
     pub max_flash_alpha: f32,
     pub fov_changer: bool,
     pub desired_fov: u32,
+    pub silent_aim: bool,
+    pub telemetry_enabled: bool,
+    pub auto_counter_strafe: bool,
+    pub counter_strafe_tap_ms: u64,
+    pub counter_strafe_speed_threshold: f32,
     pub no_smoke: bool,
     pub change_smoke_color: bool,
     pub smoke_color: Color32,
@@ -368,6 +390,11 @@ impl Default for UnsafeConfig {
             max_flash_alpha: 127.0,
             fov_changer: false,
             desired_fov: 90,
+            silent_aim: false,
+            telemetry_enabled: true,
+            auto_counter_strafe: true,
+            counter_strafe_tap_ms: 18,
+            counter_strafe_speed_threshold: 22.0,
             no_smoke: false,
             change_smoke_color: false,
             smoke_color: Color32::RED,

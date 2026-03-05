@@ -2,12 +2,16 @@ use std::{
     backtrace::Backtrace,
     collections::HashMap,
     panic::{self, PanicHookInfo},
+    path::PathBuf,
     process::Command,
     sync::atomic::{AtomicBool, Ordering},
     time::Duration,
 };
 
+use serde::Deserialize;
 use utils::log;
+
+use crate::config::{CONFIG_PATH, DEFAULT_CONFIG_NAME};
 
 pub fn install_crash_handler() {
     let default_hook = panic::take_hook();
@@ -21,6 +25,11 @@ const TIMEOUT_DURATION: Duration = Duration::from_secs(2);
 static SENT_REPORT: AtomicBool = AtomicBool::new(false);
 fn crash_handler(panic_info: &PanicHookInfo) {
     if SENT_REPORT.swap(true, Ordering::SeqCst) {
+        return;
+    }
+
+    if !telemetry_enabled() {
+        log::info!("crash telemetry disabled, skipping report");
         return;
     }
 
@@ -56,6 +65,10 @@ fn crash_handler(panic_info: &PanicHookInfo) {
 const UNKNOWN: &str = "unknown";
 
 pub fn info() {
+    if !telemetry_enabled() {
+        return;
+    }
+
     let hwid = hwid();
     let kernel = std::fs::read_to_string("/proc/sys/kernel/osrelease")
         .unwrap_or(UNKNOWN.to_owned())
@@ -150,4 +163,45 @@ fn git_commit() -> String {
             }
         })
         .unwrap_or(UNKNOWN.to_owned())
+}
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(default)]
+struct TelemetryFileConfig {
+    misc: TelemetryMiscConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(default)]
+struct TelemetryMiscConfig {
+    telemetry_enabled: bool,
+}
+
+impl Default for TelemetryMiscConfig {
+    fn default() -> Self {
+        Self {
+            telemetry_enabled: true,
+        }
+    }
+}
+
+fn telemetry_enabled() -> bool {
+    if let Ok(value) = std::env::var("DEADLOCKED_TELEMETRY") {
+        let normalized = value.trim().to_ascii_lowercase();
+        if matches!(normalized.as_str(), "0" | "false" | "no" | "off") {
+            return false;
+        }
+        if matches!(normalized.as_str(), "1" | "true" | "yes" | "on") {
+            return true;
+        }
+    }
+
+    let config_path: PathBuf = CONFIG_PATH.join(DEFAULT_CONFIG_NAME);
+    let Ok(contents) = std::fs::read_to_string(config_path) else {
+        return true;
+    };
+    let Ok(config) = toml::from_str::<TelemetryFileConfig>(&contents) else {
+        return true;
+    };
+    config.misc.telemetry_enabled
 }

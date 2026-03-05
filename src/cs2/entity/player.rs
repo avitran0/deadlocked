@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use glam::{Vec2, Vec3, vec2};
 
-use crate::{constants::cs2, cs2::bones::Bones, data::SoundType};
+use crate::{constants::cs2, cs2::bones::Bones, data::SoundType, math::vec2_clamp};
 
 use super::{CS2, weapon_class::WeaponClass};
 
@@ -128,7 +128,7 @@ impl Player {
 
     pub fn name(&self, cs2: &CS2) -> String {
         cs2.process
-            .read_string_uncached(self.controller + cs2.offsets.controller.name)
+            .read_string(self.controller + cs2.offsets.controller.name)
     }
 
     /// returns a pawn-only player
@@ -344,6 +344,12 @@ impl Player {
 
     pub fn view_angles(&self, cs2: &CS2) -> Vec2 {
         cs2.process.read(self.pawn + cs2.offsets.pawn.view_angles)
+    }
+
+    pub fn set_view_angles(&self, cs2: &CS2, mut angles: Vec2) {
+        vec2_clamp(&mut angles);
+        cs2.process
+            .write(self.pawn + cs2.offsets.pawn.view_angles, angles);
     }
 
     pub fn aim_punch(&self, cs2: &CS2) -> Vec2 {

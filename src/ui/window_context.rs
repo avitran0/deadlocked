@@ -3,6 +3,7 @@ use std::{num::NonZeroU32, sync::Arc};
 use egui::{Color32, FontData, FontDefinitions, Stroke, Style};
 use egui_glow::glow::{self, HasContext as _};
 use glutin::prelude::PossiblyCurrentGlContext;
+use nix::libc;
 use winit::platform::x11::{WindowAttributesExtX11, WindowType};
 
 use crate::ui::color::Colors;
@@ -30,16 +31,25 @@ impl WindowContext {
         use winit::raw_window_handle::HasWindowHandle as _;
 
         let winit_window_builder = if overlay {
-            winit::window::WindowAttributes::default()
+            let mut attributes = winit::window::WindowAttributes::default()
                 .with_decorations(false)
                 .with_inner_size(winit::dpi::PhysicalSize::new(1, 1))
                 .with_position(winit::dpi::PhysicalPosition::new(0, 0))
                 .with_resizable(true)
                 .with_transparent(true)
                 .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
-                .with_override_redirect(true)
-                .with_x11_window_type(vec![WindowType::Tooltip])
-                .with_title("deadlocked_overlay")
+                .with_title("deadlocked_overlay");
+
+            if is_kde_session() {
+                attributes = attributes
+                    .with_override_redirect(true)
+                    .with_x11_window_type(vec![WindowType::Dock]);
+            } else {
+                attributes = attributes
+                    .with_override_redirect(true)
+                    .with_x11_window_type(vec![WindowType::Tooltip]);
+            }
+            attributes
         } else {
             winit::window::WindowAttributes::default()
                 .with_inner_size(winit::dpi::LogicalSize::new(750, 450))
@@ -122,6 +132,8 @@ impl WindowContext {
             .set_swap_interval(&gl_context, glutin::surface::SwapInterval::DontWait)
             .unwrap();
 
+        set_x11_compositor_hints(&window);
+
         if overlay {
             window.set_cursor_hittest(false).unwrap();
             window.set_outer_position(winit::dpi::PhysicalPosition::new(0, 0));
@@ -200,6 +212,109 @@ impl WindowContext {
     pub fn paint(&mut self) {
         self.egui_glow.paint(&self.window);
     }
+}
+
+fn set_x11_compositor_hints(window: &winit::window::Window) {
+    use winit::raw_window_handle::{
+        HasDisplayHandle as _, HasWindowHandle as _, RawDisplayHandle, RawWindowHandle,
+    };
+
+    let Ok(display_handle) = window.display_handle() else {
+        return;
+    };
+    let Ok(window_handle) = window.window_handle() else {
+        return;
+    };
+
+    let (display, x_window) = match (display_handle.as_raw(), window_handle.as_raw()) {
+        (RawDisplayHandle::Xlib(display), RawWindowHandle::Xlib(window)) => {
+            let Some(display) = display.display else {
+                return;
+            };
+            (display.as_ptr(), window.window)
+        }
+        _ => return,
+    };
+
+    unsafe {
+        let net_wm_bypass = x11_intern_atom(display, "_NET_WM_BYPASS_COMPOSITOR");
+        let kde_block = x11_intern_atom(display, "_KDE_NET_WM_BLOCK_COMPOSITING");
+        let cardinal = x11_intern_atom(display, "CARDINAL");
+        if cardinal == 0 {
+            return;
+        }
+
+        // 2 = compositing should not be bypassed for this window.
+        let bypass_value: libc::c_ulong = 2;
+        if net_wm_bypass != 0 {
+            XChangeProperty(
+                display,
+                x_window,
+                net_wm_bypass,
+                cardinal,
+                32,
+                PROP_MODE_REPLACE,
+                (&bypass_value as *const libc::c_ulong).cast(),
+                1,
+            );
+        }
+
+        // KDE-specific hint; 0 disables compositor blocking for this window.
+        let kde_block_value: libc::c_ulong = 0;
+        if kde_block != 0 {
+            XChangeProperty(
+                display,
+                x_window,
+                kde_block,
+                cardinal,
+                32,
+                PROP_MODE_REPLACE,
+                (&kde_block_value as *const libc::c_ulong).cast(),
+                1,
+            );
+        }
+
+        XFlush(display);
+    }
+}
+
+fn is_kde_session() -> bool {
+    let desktop = std::env::var("XDG_CURRENT_DESKTOP")
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    desktop.contains("kde")
+        || desktop.contains("plasma")
+        || std::env::var_os("KDE_FULL_SESSION").is_some()
+        || std::env::var_os("KDE_SESSION_VERSION").is_some()
+}
+
+const PROP_MODE_REPLACE: libc::c_int = 0;
+
+#[link(name = "X11")]
+unsafe extern "C" {
+    fn XInternAtom(
+        display: *mut libc::c_void,
+        atom_name: *const libc::c_char,
+        only_if_exists: libc::c_int,
+    ) -> libc::c_ulong;
+    fn XChangeProperty(
+        display: *mut libc::c_void,
+        w: libc::c_ulong,
+        property: libc::c_ulong,
+        type_: libc::c_ulong,
+        format: libc::c_int,
+        mode: libc::c_int,
+        data: *const libc::c_uchar,
+        nelements: libc::c_int,
+    );
+    fn XFlush(display: *mut libc::c_void) -> libc::c_int;
+}
+
+unsafe fn x11_intern_atom(display: *mut libc::c_void, atom_name: &str) -> libc::c_ulong {
+    let Ok(atom_name) = std::ffi::CString::new(atom_name) else {
+        return 0;
+    };
+    unsafe { XInternAtom(display, atom_name.as_ptr(), 0) }
 }
 
 impl Drop for WindowContext {

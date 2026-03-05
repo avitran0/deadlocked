@@ -91,6 +91,29 @@ const SYN_REPORT: u16 = 0x00;
 const AXIS_X: u16 = 0x00;
 const AXIS_Y: u16 = 0x01;
 const BTN_LEFT: u16 = 0x110;
+const KEY_W: u16 = 17;
+const KEY_A: u16 = 30;
+const KEY_S: u16 = 31;
+const KEY_D: u16 = 32;
+
+#[derive(Debug, Clone, Copy)]
+pub enum MovementKey {
+    W,
+    A,
+    S,
+    D,
+}
+
+impl MovementKey {
+    fn code(self) -> u16 {
+        match self {
+            Self::W => KEY_W,
+            Self::A => KEY_A,
+            Self::S => KEY_S,
+            Self::D => KEY_D,
+        }
+    }
+}
 
 pub struct Mouse {
     file: File,
@@ -118,6 +141,10 @@ impl Mouse {
             ui_set_relbit(fd, AXIS_Y as u64).map_err(|e| e.to_string())?;
 
             ui_set_keybit(fd, BTN_LEFT as u64).map_err(|e| e.to_string())?;
+            ui_set_keybit(fd, KEY_W as u64).map_err(|e| e.to_string())?;
+            ui_set_keybit(fd, KEY_A as u64).map_err(|e| e.to_string())?;
+            ui_set_keybit(fd, KEY_S as u64).map_err(|e| e.to_string())?;
+            ui_set_keybit(fd, KEY_D as u64).map_err(|e| e.to_string())?;
 
             ui_dev_setup(fd, &DEVICE_SETUP).map_err(|e| e.to_string())?;
             ui_dev_create(fd).map_err(|e| e.to_string())?;
@@ -171,7 +198,19 @@ impl Mouse {
         self.key(0);
     }
 
+    pub fn movement_press(&mut self, key: MovementKey) {
+        self.send_key_event(key.code(), 1);
+    }
+
+    pub fn movement_release(&mut self, key: MovementKey) {
+        self.send_key_event(key.code(), 0);
+    }
+
     fn key(&mut self, pressed: i32) {
+        self.send_key_event(BTN_LEFT, pressed);
+    }
+
+    fn send_key_event(&mut self, code: u16, pressed: i32) {
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
         let time = Timeval {
             seconds: now.as_secs(),
@@ -181,7 +220,7 @@ impl Mouse {
         let press = InputEvent {
             time,
             event_type: EV_KEY,
-            code: BTN_LEFT,
+            code,
             value: pressed,
         };
 

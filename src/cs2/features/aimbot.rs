@@ -3,7 +3,7 @@ use utils::log;
 
 use crate::{
     config::{Config, KeyMode},
-    cs2::{CS2, entity::player::Player},
+    cs2::{CS2, entity::player::Player, key_codes::KeyCode},
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
 };
@@ -16,6 +16,7 @@ pub struct Aimbot {
 impl CS2 {
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
         let hotkey = config.aim.aimbot_hotkey;
+        let silent_aim = config.misc.silent_aim;
         let config = self.aimbot_config(config);
 
         if !config.enabled {
@@ -38,6 +39,11 @@ impl CS2 {
                     return;
                 }
             }
+            KeyMode::Shoot => {
+                if !self.input.is_key_pressed(KeyCode::MouseLeft) {
+                    return;
+                }
+            }
         }
 
         if self.target.player.is_none() && self.target_grenade.is_none() {
@@ -56,6 +62,13 @@ impl CS2 {
 
         if !grenade && config.visibility_check && !target.unwrap().visible(self, &local_player) {
             return;
+        }
+
+        if !grenade && config.smoke_wall_check {
+            let target_position = target.unwrap().bone_position(self, self.target.bone_index);
+            if !self.is_path_clear(local_player.eye_position(self), target_position) {
+                return;
+            }
         }
 
         let target_angle = {
@@ -117,6 +130,11 @@ impl CS2 {
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
         ) / (if grenade { 1.0 } else { config.smooth + 1.0 }).clamp(1.0, 20.0);
+
+        if !grenade && config.mode == KeyMode::Shoot && silent_aim {
+            local_player.set_view_angles(self, target_angle);
+            return;
+        }
 
         log::debug!(
             "aimbot mouse movement: {:.2}/{:.2}",

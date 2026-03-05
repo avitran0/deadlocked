@@ -203,15 +203,24 @@ impl Process {
     }
 
     pub fn read_string_uncached(&self, address: u64) -> String {
-        let mut bytes = Vec::with_capacity(8);
-        let mut i = address;
-        loop {
-            let c = self.read::<u8>(i);
-            if c == 0 {
+        const CHUNK_SIZE: usize = 64;
+        const MAX_LENGTH: usize = 256;
+
+        let mut bytes = Vec::with_capacity(CHUNK_SIZE);
+        let mut offset = 0_u64;
+
+        while bytes.len() < MAX_LENGTH {
+            let remaining = MAX_LENGTH - bytes.len();
+            let read_len = remaining.min(CHUNK_SIZE);
+            let chunk = self.read_vec(address + offset, read_len);
+
+            if let Some(null_index) = chunk.iter().position(|&byte| byte == 0) {
+                bytes.extend_from_slice(&chunk[..null_index]);
                 break;
             }
-            bytes.push(c);
-            i += 1;
+
+            bytes.extend_from_slice(&chunk);
+            offset += read_len as u64;
         }
 
         String::from_utf8(bytes).unwrap_or_default()
@@ -224,6 +233,7 @@ impl Process {
     }
 
     pub fn module_base_address(&self, module_name: &str) -> Option<u64> {
+        let target_name = module_name.rsplit('/').next().unwrap_or(module_name);
         let Ok(maps) = File::open(format!("/proc/{}/maps", self.pid)) else {
             return None;
         };
@@ -231,7 +241,12 @@ impl Process {
             let Ok(line) = line else {
                 continue;
             };
-            if !line.contains(module_name) {
+            let path = line.split_whitespace().last().unwrap_or_default();
+            let file_name = path.rsplit('/').next().unwrap_or(path);
+            let module_matches = file_name == target_name
+                || file_name.starts_with(&format!("{target_name}."))
+                || path.contains(&format!("/{target_name}"));
+            if !module_matches {
                 continue;
             }
             let Some((address, _)) = line.split_once('-') else {
@@ -240,10 +255,10 @@ impl Process {
             let Ok(address) = u64::from_str_radix(address, 16) else {
                 continue;
             };
-            log::debug!("found module {module_name} at {address:X}");
+            log::debug!("found module {target_name} at {address:X}");
             return Some(address);
         }
-        log::warn!("module {module_name} not found");
+        log::debug!("module {target_name} is not mapped in process {}", self.pid);
         None
     }
 

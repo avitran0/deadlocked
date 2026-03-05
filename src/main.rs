@@ -30,10 +30,14 @@ mod ui;
 compile_error!("only linux is supported.");
 
 fn main() {
+    let debug_logging = std::env::var("DEADLOCKED_DEBUG")
+        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
+        .unwrap_or(false);
+
     Logger::install(
         LoggerOptions::default()
             .file("deadlocked.log")
-            .debug(true)
+            .debug(debug_logging)
             .truncate(true)
             .module(module_path!()),
     );

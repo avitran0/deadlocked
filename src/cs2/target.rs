@@ -57,6 +57,7 @@ impl CS2 {
         let aimbot_config = self.aimbot_config(config);
         let targeting_mode = &aimbot_config.targeting_mode;
         let max_fov = aimbot_config.fov;
+        let strict_occlusion = aimbot_config.smoke_wall_check;
         let is_custom_mode = self.is_custom_game_mode();
 
         let mut best_fov = 360.0;
@@ -122,6 +123,9 @@ impl CS2 {
             }
 
             let head_position = player.bone_position(self, Bones::Head.u64());
+            if strict_occlusion && !self.is_path_clear(eye_position, head_position) {
+                continue;
+            }
             let distance = eye_position.distance(head_position);
             let angle = self.angle_to_target(&local_player, &head_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
@@ -153,20 +157,28 @@ impl CS2 {
 
         // update target angle
         let mut smallest_fov = 360.0;
+        let mut found_bone = false;
         let target = self.target.player.as_ref().unwrap();
         for bone in Bones::iter() {
             let bone_position = target.bone_position(self, bone.u64());
+            if strict_occlusion && !self.is_path_clear(eye_position, bone_position) {
+                continue;
+            }
             let distance = eye_position.distance(bone_position);
             let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
 
             if fov < smallest_fov {
                 smallest_fov = fov;
+                found_bone = true;
 
                 self.target.angle = angle;
                 self.target.distance = distance;
                 self.target.bone_index = bone.u64();
             }
+        }
+        if !found_bone {
+            self.target.reset();
         }
         /*
         let head_position = self.get_bone_position(process, self.target.pawn, Bones::Head.u64());

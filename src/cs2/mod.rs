@@ -1,17 +1,23 @@
-use std::sync::Arc;
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 use utils::{log, sync::Mutex};
 
 use crate::{
-    config::{AimbotConfig, Config, KeyMode, RcsConfig, TriggerbotConfig},
+    config::{AimbotConfig, Config, DrawMode, KeyMode, RcsConfig, TriggerbotConfig},
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
         bones::Bones,
         entity::{
             Entity, EntityInfo, GrenadeInfo, planted_c4::PlantedC4, player::Player, weapon::Weapon,
         },
-        features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
+        features::{
+            aimbot::Aimbot, counter_strafe::CounterStrafe, esp_toggle::EspToggle, rcs::Recoil,
+            triggerbot::Triggerbot,
+        },
         input::Input,
         offsets::Offsets,
         target::Target,
@@ -34,6 +40,9 @@ mod offsets;
 mod schema;
 mod target;
 
+const WORLD_SCAN_INTERVAL: Duration = Duration::from_millis(50);
+const BVH_CHECK_INTERVAL: Duration = Duration::from_secs(1);
+
 #[derive(Debug)]
 pub struct CS2 {
     is_valid: bool,
@@ -48,9 +57,12 @@ pub struct CS2 {
     recoil: Recoil,
     aim: Aimbot,
     trigger: Triggerbot,
+    counter_strafe: CounterStrafe,
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
+    next_world_scan: Instant,
+    next_bvh_check: Instant,
     grenades: Arc<Mutex<GrenadeList>>,
     target_grenade: Option<Grenade>,
 }
@@ -90,9 +102,31 @@ impl Game for CS2 {
 
         self.input.update(&self.process, &self.offsets);
 
-        // self.cache_players();
-        self.cache_entities();
-        self.check_bvh();
+        let now = Instant::now();
+        let requires_strict_occlusion = self.aimbot_config(config).smoke_wall_check
+            || self.triggerbot_config(config).smoke_wall_check;
+        let world_scan_enabled = config.hud.bomb_timer
+            || config.hud.dropped_weapons
+            || config.hud.grenade_trails
+            || config.misc.no_smoke
+            || config.misc.change_smoke_color
+            || requires_strict_occlusion;
+
+        if world_scan_enabled && now >= self.next_world_scan {
+            self.cache_entities();
+            self.next_world_scan = now + WORLD_SCAN_INTERVAL;
+        } else {
+            self.cache_players();
+            if !world_scan_enabled {
+                self.entities.clear();
+                self.planted_c4 = None;
+            }
+        }
+
+        if now >= self.next_bvh_check {
+            self.check_bvh();
+            self.next_bvh_check = now + BVH_CHECK_INTERVAL;
+        }
 
         for entity in &self.entities {
             if let Entity::Smoke(smoke) = entity {
@@ -111,14 +145,12 @@ impl Game for CS2 {
 
         self.esp_toggle(config);
 
+        self.counter_strafe_tick(config, mouse);
         self.rcs(config, mouse);
-        self.triggerbot(config);
-
-        self.triggerbot_shoot(mouse);
-
         self.find_target(config);
-
         self.aimbot(config, mouse);
+        self.triggerbot(config, mouse);
+        self.triggerbot_shoot(mouse);
     }
 
     fn data(&self, config: &Config, data: &mut Data) {
@@ -150,6 +182,17 @@ impl Game for CS2 {
             return;
         }
 
+        let player_esp_enabled = config.player.enabled;
+        let collect_player_names = player_esp_enabled && config.player.player_name;
+        let collect_player_bones = player_esp_enabled
+            && (config.player.draw_skeleton != DrawMode::None || config.player.head_circle);
+        let collect_player_tags = player_esp_enabled && config.player.tags;
+        let collect_player_visibility = player_esp_enabled
+            && (config.player.visible_only
+                || (config.player.sound.enabled && config.player.sound.show_visible)
+                || matches!(config.player.draw_box, DrawMode::Color));
+        let collect_player_sound = player_esp_enabled && config.player.sound.enabled;
+
         for player in &self.players {
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
@@ -157,16 +200,32 @@ impl Game for CS2 {
                 armor: player.armor(self),
                 position: player.position(self),
                 head: player.bone_position(self, Bones::Head.u64()),
-                name: player.name(self),
+                name: if collect_player_names {
+                    player.name(self)
+                } else {
+                    String::new()
+                },
                 weapon: player.weapon(self),
-                bones: player.all_bones(self),
-                has_defuser: player.has_defuser(self),
-                has_helmet: player.has_helmet(self),
-                has_bomb: player.has_bomb(self),
-                visible: player.visible(self, &local_player),
+                bones: if collect_player_bones {
+                    player.all_bones(self)
+                } else {
+                    Default::default()
+                },
+                has_defuser: collect_player_tags && player.has_defuser(self),
+                has_helmet: collect_player_tags && player.has_helmet(self),
+                has_bomb: collect_player_tags && player.has_bomb(self),
+                visible: if collect_player_visibility {
+                    player.visible(self, &local_player)
+                } else {
+                    true
+                },
                 color: player.color(self),
                 rotation: player.rotation(self),
-                sound: player.is_making_sound(self),
+                sound: if collect_player_sound {
+                    player.is_making_sound(self)
+                } else {
+                    None
+                },
             };
 
             if !self.is_ffa() && player.team(self) == local_team {
@@ -182,12 +241,12 @@ impl Game for CS2 {
             armor: local_player.armor(self),
             position: local_player.position(self),
             head: local_player.bone_position(self, Bones::Head.u64()),
-            name: local_player.name(self),
+            name: String::new(),
             weapon: local_player.weapon(self),
-            bones: local_player.all_bones(self),
-            has_defuser: local_player.has_defuser(self),
-            has_helmet: local_player.has_helmet(self),
-            has_bomb: local_player.has_bomb(self),
+            bones: Default::default(),
+            has_defuser: false,
+            has_helmet: false,
+            has_bomb: false,
             visible: true,
             color: local_player.color(self),
             rotation: local_player.rotation(self),
@@ -264,9 +323,12 @@ impl CS2 {
             recoil: Recoil::default(),
             aim: Aimbot::default(),
             trigger: Triggerbot::default(),
+            counter_strafe: CounterStrafe::default(),
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
+            next_world_scan: Instant::now(),
+            next_bvh_check: Instant::now(),
             grenades,
             target_grenade: None,
         }
@@ -307,6 +369,47 @@ impl CS2 {
         vec2_clamp(&mut angles);
 
         angles
+    }
+
+    pub(crate) fn is_path_clear(&self, start: Vec3, end: Vec3) -> bool {
+        if let Some(bvh) = &self.bvh {
+            if !bvh.has_line_of_sight(start, end) {
+                return false;
+            }
+        } else {
+            // If we cannot validate geometry LOS, fail closed to avoid aiming through walls.
+            return false;
+        }
+
+        !self.segment_hits_smoke(start, end)
+    }
+
+    fn segment_hits_smoke(&self, start: Vec3, end: Vec3) -> bool {
+        const SMOKE_RADIUS: f32 = 145.0;
+        const SMOKE_RADIUS_SQ: f32 = SMOKE_RADIUS * SMOKE_RADIUS;
+
+        let segment = end - start;
+        let segment_len_sq = segment.length_squared();
+
+        for entity in &self.entities {
+            let Entity::Smoke(smoke) = entity else {
+                continue;
+            };
+
+            let center = smoke.info(self).position;
+            let t = if segment_len_sq > f32::EPSILON {
+                ((center - start).dot(segment) / segment_len_sq).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let closest = start + segment * t;
+
+            if center.distance_squared(closest) <= SMOKE_RADIUS_SQ {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn entity_has_owner(&self, entity: u64) -> bool {
