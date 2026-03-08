@@ -174,7 +174,6 @@ impl CS2 {
         offsets.inferno.fire_count = client.get("C_Inferno", "m_fireCount")?;
         offsets.inferno.fire_positions = client.get("C_Inferno", "m_firePositions")?;
 
-        offsets.spotted_state.spotted = client.get("EntitySpottedState_t", "m_bSpotted")?;
         offsets.spotted_state.mask = client.get("EntitySpottedState_t", "m_bSpottedByMask")?;
 
         offsets.camera_services.fov = client.get("CCSPlayerBase_CameraServices", "m_iFOV")?;
