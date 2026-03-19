@@ -70,6 +70,13 @@ impl CS2 {
             return;
         }
 
+        if config.smoke_wall_check {
+            let target_position = target.bone_position(self, self.target.bone_index);
+            if !self.is_path_clear(local_player.eye_position(self), target_position) {
+                return;
+            }
+        }
+
         if local_player.shots_fired(self) < config.start_bullet {
             return;
         }

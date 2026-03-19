@@ -175,6 +175,36 @@ impl App {
         });
 
         ui.collapsing("Advanced", |ui| {
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.config.hud.overlay_refresh_rate)
+                            .range(30..=360)
+                            .speed(1),
+                    )
+                    .on_hover_text("Overlay/UI render refresh rate")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Overlay FPS");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .add(
+                        DragValue::new(&mut self.config.hud.data_refresh_rate)
+                            .range(20..=240)
+                            .speed(1),
+                    )
+                    .on_hover_text("How often game data is sampled for ESP")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                ui.label("Data FPS");
+            });
+
             if ui
                 .checkbox(&mut self.config.hud.debug, "Debug Overlay")
                 .changed()

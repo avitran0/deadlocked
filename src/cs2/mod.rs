@@ -32,6 +32,9 @@ mod offsets;
 mod schema;
 mod target;
 
+const WORLD_SCAN_INTERVAL: Duration = Duration::from_millis(50);
+const BVH_CHECK_INTERVAL: Duration = Duration::from_secs(1);
+
 #[derive(Debug)]
 pub struct CS2 {
     is_valid: bool,
@@ -49,7 +52,8 @@ pub struct CS2 {
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
-    last_cache: Instant,
+    next_world_scan: Instant,
+    next_bvh_check: Instant,
 }
 
 impl CS2 {
@@ -87,11 +91,29 @@ impl CS2 {
 
         self.input.update(&self.process, &self.offsets);
 
-        // self.cache_players();
-        if self.last_cache.elapsed() > Duration::from_millis(200) {
+        let now = Instant::now();
+        let requires_strict_occlusion = self.aimbot_config(config).smoke_wall_check;
+        let world_scan_enabled = config.hud.bomb_timer
+            || config.hud.dropped_weapons
+            || config.hud.grenade_trails
+            || config.misc.no_smoke
+            || config.misc.change_smoke_color
+            || requires_strict_occlusion;
+
+        if world_scan_enabled && now >= self.next_world_scan {
             self.cache_entities();
+            self.next_world_scan = now + WORLD_SCAN_INTERVAL;
+        } else {
+            self.cache_players();
+            if !world_scan_enabled {
+                self.entities.clear();
+                self.planted_c4 = None;
+            }
+        }
+
+        if now >= self.next_bvh_check {
             self.check_bvh();
-            self.last_cache = Instant::now();
+            self.next_bvh_check = now + BVH_CHECK_INTERVAL;
         }
 
         for entity in &self.entities {
@@ -274,7 +296,8 @@ impl CS2 {
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
-            last_cache: Instant::now(),
+            next_world_scan: Instant::now(),
+            next_bvh_check: Instant::now(),
         }
     }
 
@@ -313,6 +336,47 @@ impl CS2 {
         vec2_clamp(&mut angles);
 
         angles
+    }
+
+    pub(crate) fn is_path_clear(&self, start: Vec3, end: Vec3) -> bool {
+        if let Some(bvh) = &self.bvh {
+            if !bvh.has_line_of_sight(start, end) {
+                return false;
+            }
+        } else {
+            // If we cannot validate geometry LOS, fail closed to avoid aiming through walls.
+            return false;
+        }
+
+        !self.segment_hits_smoke(start, end)
+    }
+
+    fn segment_hits_smoke(&self, start: Vec3, end: Vec3) -> bool {
+        const SMOKE_RADIUS: f32 = 145.0;
+        const SMOKE_RADIUS_SQ: f32 = SMOKE_RADIUS * SMOKE_RADIUS;
+
+        let segment = end - start;
+        let segment_len_sq = segment.length_squared();
+
+        for entity in &self.entities {
+            let Entity::Smoke(smoke) = entity else {
+                continue;
+            };
+
+            let center = smoke.info(self).position;
+            let t = if segment_len_sq > f32::EPSILON {
+                ((center - start).dot(segment) / segment_len_sq).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+            let closest = start + segment * t;
+
+            if center.distance_squared(closest) <= SMOKE_RADIUS_SQ {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn entity_has_owner(&self, entity: u64) -> bool {

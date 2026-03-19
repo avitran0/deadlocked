@@ -75,6 +75,7 @@ pub struct AimbotConfig {
     pub distance_adjusted_fov: bool,
     pub start_bullet: i32,
     pub visibility_check: bool,
+    pub smoke_wall_check: bool,
     pub flash_check: bool,
     pub fov: f32,
     pub smooth: f32,
@@ -92,6 +93,7 @@ impl Default for AimbotConfig {
             distance_adjusted_fov: true,
             start_bullet: 0,
             visibility_check: true,
+            smoke_wall_check: true,
             flash_check: true,
             fov: 2.5,
             smooth: 5.0,
@@ -302,6 +304,8 @@ pub struct HudConfig {
     pub line_width: f32,
     pub font_size: f32,
     pub icon_size: f32,
+    pub overlay_refresh_rate: u64,
+    pub data_refresh_rate: u64,
     pub debug: bool,
 }
 
@@ -326,6 +330,8 @@ impl Default for HudConfig {
             line_width: 2.0,
             font_size: 16.0,
             icon_size: 20.0,
+            overlay_refresh_rate: 120,
+            data_refresh_rate: 100,
             debug: false,
         }
     }

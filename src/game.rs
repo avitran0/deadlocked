@@ -58,6 +58,7 @@ impl GameManager {
     pub fn run(&mut self) {
         self.send_message(UiMessage(GameStatus::NotStarted));
         let mut previous_status = GameStatus::NotStarted;
+        let mut next_data_tick = Instant::now();
         loop {
             let start = Instant::now();
             while let Ok(message) = self.channel.try_receive() {
@@ -80,10 +81,15 @@ impl GameManager {
                     previous_status = GameStatus::Working;
                 }
                 self.cs2.run(&self.config, &mut self.mouse);
-                let mut data = self.data.lock();
-                self.cs2.data(&self.config, &mut data);
+                let now = Instant::now();
+                if now >= next_data_tick {
+                    let mut data = self.data.lock();
+                    self.cs2.data(&self.config, &mut data);
+                    next_data_tick = now + data_loop_duration(&self.config);
+                }
             } else {
                 *self.data.lock() = Data::default();
+                next_data_tick = Instant::now();
             }
 
             if is_valid {
@@ -106,4 +112,9 @@ impl GameManager {
     fn loop_duration(&self) -> Duration {
         Duration::from_secs_f32(1.0 / self.config.fps as f32)
     }
+}
+
+fn data_loop_duration(config: &Config) -> Duration {
+    let hz = config.hud.data_refresh_rate.clamp(20, 240);
+    Duration::from_micros(1_000_000 / hz)
 }
