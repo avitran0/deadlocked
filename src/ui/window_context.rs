@@ -190,7 +190,6 @@ impl WindowContext {
                 repeat,
                 modifiers,
             });
-            println!("inserted keypress");
         });
     }
 

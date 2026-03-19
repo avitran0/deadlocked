@@ -96,7 +96,7 @@ impl CS2 {
 
         // xref "lobby_mapveto"
         let Some(global_vars) = self.process.scan(
-            "48 8D 05 ? ? ? ? 48 8B 00 8B 50 ? E9",
+            "48 8D 05 ? ? ? ? 48 8B 00 8B 48 ? E9",
             offsets.library.client,
         ) else {
             log::warn!("could not find global vars offset");

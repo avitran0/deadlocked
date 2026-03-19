@@ -156,6 +156,17 @@ impl App {
             }
 
             if ui
+                .checkbox(
+                    &mut self.weapon_config().aimbot.smoke_wall_check,
+                    "Smoke/Wall Check",
+                )
+                .on_hover_text("Blocks aiming through map geometry and smoke volumes")
+                .changed()
+            {
+                self.send_config();
+            }
+
+            if ui
                 .checkbox(&mut self.weapon_config().aimbot.flash_check, "Flash Check")
                 .changed()
             {

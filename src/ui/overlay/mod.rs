@@ -29,9 +29,12 @@ impl App {
 
         self.update_trails();
         self.update_player_sounds();
+        let (window_position, window_size) = {
+            let data = self.data.lock();
+            (data.window_position, data.window_size)
+        };
+        self.update_window(window_position, window_size);
         let data = &self.data.lock();
-
-        self.update_window(data);
         self.overlay_debug(&painter, data);
 
         for player in &data.players {
@@ -87,23 +90,26 @@ impl App {
         self.grenade_manager(data, &painter);
     }
 
-    fn update_window(&self, data: &Data) {
+    fn update_window(&mut self, window_position: glam::Vec2, window_size: glam::Vec2) {
         let Some(window) = &self.overlay else {
             return;
         };
 
-        window
-            .window()
-            .set_outer_position(winit::dpi::PhysicalPosition::new(
-                data.window_position.x,
-                data.window_position.y,
-            ));
-        let _ = window
-            .window()
-            .request_inner_size(winit::dpi::PhysicalSize::new(
-                data.window_size.x.max(1.0),
-                data.window_size.y.max(1.0),
-            ));
+        let new_pos = (window_position.x as i32, window_position.y as i32);
+        if self.overlay_window_pos != Some(new_pos) {
+            window
+                .window()
+                .set_outer_position(winit::dpi::PhysicalPosition::new(new_pos.0, new_pos.1));
+            self.overlay_window_pos = Some(new_pos);
+        }
+
+        let new_size = (window_size.x.max(1.0) as u32, window_size.y.max(1.0) as u32);
+        if self.overlay_window_size != Some(new_size) {
+            let _ = window
+                .window()
+                .request_inner_size(winit::dpi::PhysicalSize::new(new_size.0, new_size.1));
+            self.overlay_window_size = Some(new_size);
+        }
     }
 
     fn grenade_manager(&self, data: &Data, painter: &Painter) {
