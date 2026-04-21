@@ -136,7 +136,25 @@ impl CS2 {
         let schema = Schema::new(&self.process, offsets.library.schema)?;
         let client = schema.get_library(cs2::CLIENT_LIB)?;
 
-        offsets.controller.steam_id = client.get("CBasePlayerController", "m_steamID")?;
+        let mut steam_id_offset = None;
+        for class in ["CBasePlayerController", "CCSPlayerController"] {
+            for field in ["m_steamID", "m_steamId", "m_steamid"] {
+                if let Some(offset) = client.try_get(class, field) {
+                    steam_id_offset = Some(offset);
+                    break;
+                }
+            }
+            if steam_id_offset.is_some() {
+                break;
+            }
+        }
+        offsets.controller.steam_id = match steam_id_offset {
+            Some(offset) => offset,
+            None => {
+                log::warn!("could not resolve steam id offset, using 0");
+                0
+            }
+        };
         offsets.controller.name = client.get("CBasePlayerController", "m_iszPlayerName")?;
         offsets.controller.pawn = client.get("CBasePlayerController", "m_hPawn")?;
         offsets.controller.desired_fov = client.get("CBasePlayerController", "m_iDesiredFOV")?;

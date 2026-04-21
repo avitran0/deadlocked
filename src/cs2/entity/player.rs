@@ -122,6 +122,9 @@ impl Player {
     }
 
     pub fn steam_id(&self, cs2: &CS2) -> u64 {
+        if cs2.offsets.controller.steam_id == 0 {
+            return 0;
+        }
         cs2.process
             .read(self.controller + cs2.offsets.controller.steam_id)
     }

@@ -167,7 +167,7 @@ impl ApplicationHandler for App {
                 event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                     self.next_frame_time,
                 ));
-                // Render once per frame from the GUI event to avoid double work.
+                // Render once per frame from the GUI event to avoid duplicate work.
                 if is_gui_window {
                     self.render();
                 }

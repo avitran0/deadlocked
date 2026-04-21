@@ -90,6 +90,10 @@ impl ModuleScope {
         f
     }
 
+    pub fn try_get(&self, class: &str, field: &str) -> Option<u64> {
+        self.classes.get(class)?.get(field)
+    }
+
     pub fn get_class(&self, class: &str) -> Option<&Class> {
         self.classes.get(class)
     }
