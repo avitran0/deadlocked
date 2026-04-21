@@ -112,7 +112,6 @@ impl CS2 {
         }
 
         if now >= self.next_bvh_check {
-        if now >= self.next_bvh_check {
             self.check_bvh();
             self.next_bvh_check = now + BVH_CHECK_INTERVAL;
         }
