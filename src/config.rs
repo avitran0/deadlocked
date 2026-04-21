@@ -330,10 +330,24 @@ impl Default for HudConfig {
             line_width: 2.0,
             font_size: 16.0,
             icon_size: 20.0,
-            overlay_refresh_rate: 120,
+            overlay_refresh_rate: 100,
             data_refresh_rate: 100,
             debug: false,
         }
+    }
+}
+
+impl HudConfig {
+    pub fn overlay_hz(&self) -> u64 {
+        self.overlay_refresh_rate.clamp(30, 360)
+    }
+
+    pub fn data_hz(&self) -> u64 {
+        self.data_refresh_rate.clamp(20, 240)
+    }
+
+    pub fn effective_overlay_hz(&self) -> u64 {
+        self.overlay_hz().min(self.data_hz())
     }
 }
 

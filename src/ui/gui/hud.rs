@@ -182,7 +182,9 @@ impl App {
                             .range(30..=360)
                             .speed(1),
                     )
-                    .on_hover_text("Overlay/UI render refresh rate")
+                    .on_hover_text(
+                        "Overlay/UI render refresh rate (capped to Data FPS to avoid stale frames)",
+                    )
                     .changed()
                 {
                     self.send_config();
@@ -204,6 +206,11 @@ impl App {
                 }
                 ui.label("Data FPS");
             });
+
+            ui.small(format!(
+                "Effective Overlay FPS: {}",
+                self.config.hud.effective_overlay_hz()
+            ));
 
             if ui
                 .checkbox(&mut self.config.hud.debug, "Debug Overlay")

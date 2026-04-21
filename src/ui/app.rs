@@ -213,6 +213,6 @@ impl ApplicationHandler for App {
 }
 
 fn frame_duration(config: &Config) -> Duration {
-    let hz = config.hud.overlay_refresh_rate.clamp(30, 360);
+    let hz = config.hud.effective_overlay_hz();
     Duration::from_micros(1_000_000 / hz)
 }

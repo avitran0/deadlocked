@@ -115,6 +115,6 @@ impl GameManager {
 }
 
 fn data_loop_duration(config: &Config) -> Duration {
-    let hz = config.hud.data_refresh_rate.clamp(20, 240);
+    let hz = config.hud.data_hz();
     Duration::from_micros(1_000_000 / hz)
 }
