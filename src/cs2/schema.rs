@@ -1,7 +1,5 @@
 use std::collections::HashMap;
 
-use utils::log;
-
 use crate::os::process::Process;
 
 pub struct Schema {
@@ -82,12 +80,12 @@ impl ModuleScope {
 
     pub fn get(&self, class: &str, field: &str) -> Option<u64> {
         let Some(c) = self.classes.get(class) else {
-            log::warn!("could not find class {class}");
+            utils::warn!("could not find class {class}");
             return None;
         };
         let f = c.get(field);
         if f.is_none() {
-            log::warn!("could not find field {field} in class {class}");
+            utils::warn!("could not find field {field} in class {class}");
         }
         f
     }
