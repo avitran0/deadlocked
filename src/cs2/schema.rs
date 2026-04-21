@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use utils::log;
+
 use crate::os::process::Process;
 
 pub struct Schema {
@@ -80,18 +82,39 @@ impl ModuleScope {
 
     pub fn get(&self, class: &str, field: &str) -> Option<u64> {
         let Some(c) = self.classes.get(class) else {
-            utils::warn!("could not find class {class}");
+            log::warn!("could not find class {class}");
             return None;
         };
         let f = c.get(field);
         if f.is_none() {
-            utils::warn!("could not find field {field} in class {class}");
+            log::warn!("could not find field {field} in class {class}");
         }
         f
     }
 
     pub fn try_get(&self, class: &str, field: &str) -> Option<u64> {
         self.classes.get(class)?.get(field)
+    }
+
+    pub fn find_in_classes_containing(
+        &self,
+        class_fragments: &[&str],
+        fields: &[&str],
+    ) -> Option<u64> {
+        for (class_name, class) in &self.classes {
+            if !class_fragments
+                .iter()
+                .any(|fragment| class_name.contains(fragment))
+            {
+                continue;
+            }
+            for field in fields {
+                if let Some(offset) = class.get(field) {
+                    return Some(offset);
+                }
+            }
+        }
+        None
     }
 
     pub fn get_class(&self, class: &str) -> Option<&Class> {
@@ -110,12 +133,58 @@ impl Class {
         let name = process.read_string_uncached(process.read(address + 0x08));
 
         let mut fields = HashMap::new();
-        let field_count: i16 = process.read(address + 0x24);
-        let size = process.read(address + 0x20);
-        if !(0..=20000).contains(&field_count) {
-            return Self { name, fields, size };
+
+        let mut selected: Option<(i16, i32, u64, i32)> = None;
+        for (field_count_offset, size_offset, fields_vec_offset) in
+            [(0x1C, 0x18, 0x28), (0x24, 0x20, 0x30)]
+        {
+            let field_count: i16 = process.read(address + field_count_offset);
+            if !(0..=20000).contains(&field_count) {
+                continue;
+            }
+
+            let size: i32 = process.read(address + size_offset);
+            let fields_vec: u64 = process.read(address + fields_vec_offset);
+            if field_count > 0 && !(process.min..=process.max).contains(&fields_vec) {
+                continue;
+            }
+
+            let sample_count = field_count.min(4) as u64;
+            let mut score = if field_count == 0 { -1 } else { 0 };
+            for i in 0..sample_count {
+                let field_address = fields_vec + (0x20 * i);
+                let field_name_address: u64 = process.read(field_address);
+                if !(process.min..=process.max).contains(&field_name_address) {
+                    continue;
+                }
+                let field_name = process.read_string_uncached(field_name_address);
+                if !field_name.is_empty() {
+                    score += 1;
+                }
+                if field_name.starts_with("m_") {
+                    score += 2;
+                }
+            }
+
+            match selected {
+                None => selected = Some((field_count, size, fields_vec, score)),
+                Some((best_count, _, _, best_score))
+                    if score > best_score || (score == best_score && field_count > best_count) =>
+                {
+                    selected = Some((field_count, size, fields_vec, score))
+                }
+                _ => {}
+            }
         }
-        let fields_vec: u64 = process.read(address + 0x30);
+
+        let Some((field_count, size, fields_vec, _)) = selected else {
+            return Self {
+                name,
+                fields,
+                size: 0,
+            };
+        };
+
         for i in 0..field_count as u64 {
             let field = Field::new(process, fields_vec + (0x20 * i));
             fields.insert(field.name, field.offset);

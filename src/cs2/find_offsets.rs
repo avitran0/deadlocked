@@ -1,5 +1,7 @@
 use std::time::Instant;
 
+use utils::log;
+
 use crate::{
     constants::cs2,
     cs2::{CS2, offsets::Offsets, schema::Schema},
@@ -21,7 +23,7 @@ impl CS2 {
             .process
             .get_interface_offset(offsets.library.engine, "GameResourceServiceClientV0")
         else {
-            utils::warn!("could not get offset for GameResourceServiceClient");
+            log::warn!("could not get offset for GameResourceServiceClient");
             return None;
         };
         offsets.interface.resource = resource_offset;
@@ -33,7 +35,7 @@ impl CS2 {
             .process
             .get_interface_offset(offsets.library.tier0, "VEngineCvar0")
         else {
-            utils::warn!("could not get convar interface offset");
+            log::warn!("could not get convar interface offset");
             return None;
         };
         offsets.interface.cvar = cvar_address;
@@ -41,7 +43,7 @@ impl CS2 {
             .process
             .get_interface_offset(offsets.library.input, "InputSystemVersion0")
         else {
-            utils::warn!("could not get input interface offset");
+            log::warn!("could not get input interface offset");
             return None;
         };
         offsets.interface.input = input_address;
@@ -50,7 +52,7 @@ impl CS2 {
             .process
             .scan("48 83 3D ? ? ? ? 00 0F 95 C0 C3", offsets.library.client)
         else {
-            utils::warn!("could not find local player offset");
+            log::warn!("could not find local player offset");
             return None;
         };
         offsets.direct.local_player = self.process.get_relative_address(local_player, 0x03, 0x08);
@@ -64,7 +66,7 @@ impl CS2 {
             .process
             .scan("C6 83 ? ? 00 00 01 4C 8D 05", offsets.library.client)
         else {
-            utils::warn!("could not find view matrix offset");
+            log::warn!("could not find view matrix offset");
             return None;
         };
 
@@ -76,7 +78,7 @@ impl CS2 {
             .process
             .get_module_export(offsets.library.sdl, "SDL_GetKeyboardFocus")
         else {
-            utils::warn!("could not find sdl window offset");
+            log::warn!("could not find sdl window offset");
             return None;
         };
         let sdl_window = self.process.get_relative_address(sdl_window, 0x02, 0x06);
@@ -87,7 +89,7 @@ impl CS2 {
             "48 8D 35 ? ? ? ? 66 0F EF C0 C6 05 ? ? ? ? 01 48 8D 3D",
             offsets.library.client,
         ) else {
-            utils::warn!("could not find planted c4 offset");
+            log::warn!("could not find planted c4 offset");
             return None;
         };
         offsets.direct.planted_c4 = self.process.get_relative_address(planted_c4, 0x03, 0x0E);
@@ -97,30 +99,16 @@ impl CS2 {
             "48 8D 05 ? ? ? ? 48 8B 00 8B 48 ? E9",
             offsets.library.client,
         ) else {
-            utils::warn!("could not find global vars offset");
+            log::warn!("could not find global vars offset");
             return None;
         };
         offsets.direct.global_vars = self.process.get_relative_address(global_vars, 0x03, 0x07);
-
-        let Some(vphys_world) = self.process.scan(
-            "4c 8d 3d ? ? ? ? 49 8b 3f e8 ? ? ? ? 48 89 c2",
-            offsets.library.client,
-        ) else {
-            utils::warn!("could not find vphys_world offset");
-            return None;
-        };
-        // 0x0D + 4, 12, 20, 28
-        let vphys_world_global_ptr = self
-            .process
-            .get_relative_address(vphys_world, 0x0D, 0x0D + 4);
-        let vphys_world_global: u64 = self.process.read(vphys_world_global_ptr);
-        offsets.direct.vphys_world = vphys_world_global;
 
         let Some(ffa_address) = self
             .process
             .get_convar(offsets.interface.cvar, "mp_teammates_are_enemies")
         else {
-            utils::warn!("could not get mp_tammates_are_enemies convar offset");
+            log::warn!("could not get mp_tammates_are_enemies convar offset");
             return None;
         };
         offsets.convar.ffa = ffa_address;
@@ -128,7 +116,7 @@ impl CS2 {
             .process
             .get_convar(offsets.interface.cvar, "sensitivity")
         else {
-            utils::warn!("could not get sensitivity convar offset");
+            log::warn!("could not get sensitivity convar offset");
             return None;
         };
         offsets.convar.sensitivity = sensitivity_address;
@@ -150,7 +138,7 @@ impl CS2 {
                     }
                 }
             }
-            None
+            client.find_in_classes_containing(&["PlayerController"], fields)
         };
 
         offsets.controller.steam_id =
@@ -204,6 +192,16 @@ impl CS2 {
         offsets.pawn.armor = client.get("C_CSPlayerPawn", "m_ArmorValue")?;
         offsets.pawn.team = client.get("C_BaseEntity", "m_iTeamNum")?;
         offsets.pawn.life_state = client.get("C_BaseEntity", "m_lifeState")?;
+        offsets.pawn.weapon = match client
+            .try_get("C_CSPlayerPawn", "m_pClippingWeapon")
+            .or_else(|| client.try_get("C_CSPlayerPawnBase", "m_pClippingWeapon"))
+        {
+            Some(offset) => offset,
+            None => {
+                log::debug!("m_pClippingWeapon missing, using active weapon fallback");
+                0
+            }
+        };
         offsets.pawn.fov_multiplier = client.get("C_BasePlayerPawn", "m_flFOVSensitivityAdjust")?;
         offsets.pawn.game_scene_node = client.get("C_BaseEntity", "m_pGameSceneNode")?;
         offsets.pawn.eye_offset = client.get("C_BaseModelEntity", "m_vecViewOffset")?;
@@ -229,7 +227,7 @@ impl CS2 {
         offsets.game_scene_node.origin = client.get("CGameSceneNode", "m_vecAbsOrigin")?;
         offsets.game_scene_node.model_state = client.get("CSkeletonInstance", "m_modelState")?;
 
-        offsets.model_state.skeleton_instance =
+        offsets.skeleton.skeleton_instance =
             client.get("CBodyComponentSkeletonInstance", "m_skeletonInstance")?;
 
         offsets.smoke.did_smoke_effect =
@@ -259,19 +257,25 @@ impl CS2 {
             client.get("CCSPlayer_ItemServices", "m_bHasDefuser")?;
         offsets.item_services.has_helmet = client.get("CCSPlayer_ItemServices", "m_bHasHelmet")?;
 
-        offsets.weapon_services.active_weapon =
-            client.get("CPlayer_WeaponServices", "m_hActiveWeapon")?;
         offsets.weapon_services.weapons = client.get("CPlayer_WeaponServices", "m_hMyWeapons")?;
+        offsets.weapon_services.active_weapon = match client
+            .try_get("CPlayer_WeaponServices", "m_hActiveWeapon")
+            .or_else(|| {
+                client.find_in_classes_containing(&["WeaponServices"], &["m_hActiveWeapon"])
+            }) {
+            Some(offset) => offset,
+            None => {
+                log::warn!("could not resolve m_hActiveWeapon offset, using 0");
+                0
+            }
+        };
 
         offsets.observer_services.target =
             client.get("CPlayer_ObserverServices", "m_hObserverTarget")?;
 
         offsets.weapon.attribute_manager = client.get("C_EconEntity", "m_AttributeManager")?;
         offsets.weapon.item = client.get("C_AttributeContainer", "m_Item")?;
-        offsets.weapon.clip_primary = client.get("C_BasePlayerWeapon", "m_iClip1")?;
-        offsets.weapon.reserve_ammo = client.get("C_BasePlayerWeapon", "m_pReserveAmmo")?;
-
-        offsets.econ_item_view.item_definition_index =
+        offsets.weapon.item_definition_index =
             client.get("C_EconItemView", "m_iItemDefinitionIndex")?;
 
         offsets.planted_c4.is_ticking = client.get("C_PlantedC4", "m_bBombTicking")?;
@@ -283,7 +287,7 @@ impl CS2 {
 
         offsets.entity_identity.size = client.get_class("CEntityIdentity")?.size();
 
-        utils::debug!("offsets: {:?} ({:?})", offsets, Instant::now() - start);
+        log::debug!("offsets: {:?} ({:?})", offsets, Instant::now() - start);
         Some(offsets)
     }
 }

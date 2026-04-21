@@ -24,7 +24,6 @@ pub struct DirectOffsets {
     pub sdl_window: u64,
     pub planted_c4: u64,
     pub global_vars: u64,
-    pub vphys_world: u64,
 }
 
 #[derive(Debug, Default)]
@@ -50,6 +49,7 @@ pub struct PawnOffsets {
     pub armor: u64,               // i32 (m_ArmorValue)
     pub team: u64,                // i32 (m_iTeamNum)
     pub life_state: u64,          // i32 (m_lifeState)
+    pub weapon: u64,              // Pointer -> WeaponBase (m_pClippingWeapon)
     pub fov_multiplier: u64,      // f32 (m_flFOVSensitivityAdjust)
     pub game_scene_node: u64,     // Pointer -> GameSceneNode (m_pGameSceneNode)
     pub eye_offset: u64,          // Vec3 (m_vecViewOffset)
@@ -79,7 +79,7 @@ pub struct GameSceneNodeOffsets {
 }
 
 #[derive(Debug, Default)]
-pub struct ModelState {
+pub struct SkeletonInstanceOffsets {
     pub skeleton_instance: u64, // CSkeletonInstance (m_skeletonInstance)
 }
 
@@ -125,8 +125,8 @@ pub struct ItemServicesOffsets {
 
 #[derive(Debug, Default)]
 pub struct WeaponServicesOffsets {
-    pub active_weapon: u64, // Handle<Weapon> (m_hActiveWeapon)
     pub weapons: u64,       // Pointer -> Vec<Pointer -> Weapon> (m_hMyWeapons)
+    pub active_weapon: u64, // Handle -> Weapon (m_hActiveWeapon)
 }
 
 #[derive(Debug, Default)]
@@ -136,14 +136,8 @@ pub struct ObserverServicesOffsets {
 
 #[derive(Debug, Default)]
 pub struct WeaponOffsets {
-    pub attribute_manager: u64, // AttributeContainer (m_AttributeManager)
-    pub item: u64,              // EconItemView (m_Item)
-    pub clip_primary: u64,      // i32 (m_iClip1)
-    pub reserve_ammo: u64,      // i32[2] (m_pReserveAmmo)
-}
-
-#[derive(Debug, Default)]
-pub struct EconItemViewOffsets {
+    pub attribute_manager: u64,     // AttributeContainer (m_AttributeManager)
+    pub item: u64,                  // EIconItemView (m_Item)
     pub item_definition_index: u64, // u16 (m_iItemDefinitionIndex)
 }
 
@@ -171,7 +165,7 @@ pub struct Offsets {
     pub controller: PlayerControllerOffsets,
     pub pawn: PawnOffsets,
     pub game_scene_node: GameSceneNodeOffsets,
-    pub model_state: ModelState,
+    pub skeleton: SkeletonInstanceOffsets,
     pub smoke: SmokeOffsets,
     pub molotov: MolotovOffsets,
     pub inferno: InfernoOffsets,
@@ -182,7 +176,6 @@ pub struct Offsets {
     pub weapon_services: WeaponServicesOffsets,
     pub observer_services: ObserverServicesOffsets,
     pub weapon: WeaponOffsets,
-    pub econ_item_view: EconItemViewOffsets,
     pub planted_c4: PlantedC4Offsets,
     pub entity_identity: EntityIdentityOffsets,
 }

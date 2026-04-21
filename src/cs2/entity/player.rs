@@ -61,14 +61,13 @@ impl Player {
     pub fn get_client_entity(cs2: &CS2, index: u64) -> Option<u64> {
         let bucket_index = index >> 9;
         let index_in_bucket = index & 0x1FF;
-        // wtf is this doing, and how?
+        // Entities are stored in 512-entry buckets.
         let bucket_ptr: u64 = cs2
             .process
             .read(cs2.offsets.interface.entity + 0x08 * bucket_index);
         if bucket_ptr == 0 {
             return None;
         }
-        // what?
         let entity = cs2
             .process
             .read(bucket_ptr + cs2.offsets.entity_identity.size as u64 * index_in_bucket);
@@ -79,11 +78,10 @@ impl Player {
     }
 
     fn get_entity(cs2: &CS2, handle: i32) -> Option<u64> {
-        // upper bits = something irrelevant
+        // Low 15 bits hold the entity index.
         let index = handle as u64 & 0x7FFF;
         let bucket_index = index >> 9;
         let index_in_bucket = index & 0x1FF;
-        // what the fuck is this doing?
         let bucket_ptr: u64 = cs2
             .process
             .read(cs2.offsets.interface.entity + 8 * bucket_index);
@@ -91,7 +89,6 @@ impl Player {
             return None;
         }
 
-        // bit-fuckery, why is this needed exactly?
         let entity = cs2
             .process
             .read(bucket_ptr + cs2.offsets.entity_identity.size as u64 * index_in_bucket);
@@ -164,11 +161,41 @@ impl Player {
             != 0
     }
 
+    fn active_weapon_entity(&self, cs2: &CS2) -> u64 {
+        if cs2.offsets.pawn.weapon != 0 {
+            let weapon_entity_instance: u64 = cs2.process.read(self.pawn + cs2.offsets.pawn.weapon);
+            if weapon_entity_instance != 0 {
+                return weapon_entity_instance;
+            }
+        }
+
+        if cs2.offsets.weapon_services.active_weapon == 0 {
+            return 0;
+        }
+
+        let weapon_services: u64 = cs2
+            .process
+            .read(self.pawn + cs2.offsets.pawn.weapon_services);
+        if weapon_services == 0 {
+            return 0;
+        }
+
+        let active_weapon_handle: i32 = cs2
+            .process
+            .read(weapon_services + cs2.offsets.weapon_services.active_weapon);
+        if active_weapon_handle == -1 {
+            return 0;
+        }
+
+        Self::get_entity(cs2, active_weapon_handle).unwrap_or(0)
+    }
+
     pub fn weapon_name(&self, cs2: &CS2) -> String {
         // CEntityInstance
-        let Some(weapon_entity_instance) = self.weapon_address(cs2) else {
+        let weapon_entity_instance = self.active_weapon_entity(cs2);
+        if weapon_entity_instance == 0 {
             return String::from(cs2::WEAPON_UNKNOWN);
-        };
+        }
         // CEntityIdentity, 0x10 = m_pEntity
         let weapon_entity_identity: u64 = cs2.process.read(weapon_entity_instance + 0x10);
         if weapon_entity_identity == 0 {
@@ -187,36 +214,13 @@ impl Player {
         WeaponClass::from_string(&self.weapon_name(cs2))
     }
 
-    fn weapon_handle(&self, cs2: &CS2) -> Option<i32> {
-        let weapon_services: u64 = cs2
-            .process
-            .read(self.pawn + cs2.offsets.pawn.weapon_services);
-        if weapon_services == 0 {
-            return None;
-        }
-
-        Some(
-            cs2.process
-                .read(weapon_services + cs2.offsets.weapon_services.active_weapon),
-        )
-    }
-
-    fn weapon_address(&self, cs2: &CS2) -> Option<u64> {
-        let handle = self.weapon_handle(cs2)?;
-        if handle == 0 {
-            return None;
-        }
-
-        let index = handle as u64 & 0xFFF;
-        Player::get_client_entity(cs2, index)
-    }
-
     pub fn weapon(&self, cs2: &CS2) -> Weapon {
-        let Some(weapon_handle) = self.weapon_handle(cs2) else {
+        // BasePlayerWeapon/EconEntity
+        let current_weapon = self.active_weapon_entity(cs2);
+        if current_weapon == 0 {
             return Weapon::Unknown;
-        };
-
-        Weapon::from_handle(weapon_handle, cs2).unwrap_or_default()
+        }
+        Weapon::from_handle(current_weapon, cs2)
     }
 
     pub fn all_weapons(&self, cs2: &CS2) -> Vec<Weapon> {
@@ -236,32 +240,19 @@ impl Player {
             .read(weapon_services + cs2.offsets.weapon_services.weapons + 0x08);
 
         for i in 0..length as u64 {
-            let weapon_handle = cs2.process.read(weapon_list + 0x04 * i);
-
-            let Some(weapon) = Weapon::from_handle(weapon_handle, cs2) else {
+            let weapon_index = cs2.process.read::<i32>(weapon_list + 0x04 * i) as u64 & 0xFFF;
+            // // BasePlayerWeapon/EconEntity
+            let Some(weapon_entity_instance) = Self::get_client_entity(cs2, weapon_index) else {
                 continue;
             };
+            if weapon_entity_instance == 0 {
+                continue;
+            }
 
-            weapons.push(weapon);
+            weapons.push(Weapon::from_handle(weapon_entity_instance, cs2));
         }
 
         weapons
-    }
-
-    pub fn clip_ammo(&self, cs2: &CS2) -> i32 {
-        let Some(weapon) = self.weapon_address(cs2) else {
-            return 0;
-        };
-
-        cs2.process.read(weapon + cs2.offsets.weapon.clip_primary)
-    }
-
-    pub fn reserve_ammo(&self, cs2: &CS2) -> i32 {
-        let Some(weapon) = self.weapon_address(cs2) else {
-            return 0;
-        };
-
-        cs2.process.read(weapon + cs2.offsets.weapon.reserve_ammo)
     }
 
     fn game_scene_node(&self, cs2: &CS2) -> u64 {
@@ -294,7 +285,7 @@ impl Player {
         let bone_data: u64 = cs2.process.read(
             gs_node
                 + cs2.offsets.game_scene_node.model_state
-                + cs2.offsets.model_state.skeleton_instance,
+                + cs2.offsets.skeleton.skeleton_instance,
         );
 
         if bone_data == 0 {
@@ -312,7 +303,7 @@ impl Player {
         let bone_data: u64 = cs2.process.read(
             gs_node
                 + cs2.offsets.game_scene_node.model_state
-                + cs2.offsets.model_state.skeleton_instance,
+                + cs2.offsets.skeleton.skeleton_instance,
         );
 
         if bone_data == 0 {
