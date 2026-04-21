@@ -130,6 +130,9 @@ impl Player {
     }
 
     pub fn name(&self, cs2: &CS2) -> String {
+        if cs2.offsets.controller.name == 0 {
+            return String::new();
+        }
         cs2.process
             .read_string_uncached(self.controller + cs2.offsets.controller.name)
     }
@@ -374,6 +377,9 @@ impl Player {
     }
 
     pub fn color(&self, cs2: &CS2) -> i32 {
+        if cs2.offsets.controller.color == 0 {
+            return 0;
+        }
         cs2.process
             .read(self.controller + cs2.offsets.controller.color)
     }
@@ -433,6 +439,9 @@ impl Player {
     }
 
     fn action_tracking_services(&self, cs2: &CS2) -> u64 {
+        if cs2.offsets.controller.action_tracking_services == 0 {
+            return 0;
+        }
         cs2.process
             .read(self.controller + cs2.offsets.controller.action_tracking_services)
     }
@@ -558,6 +567,9 @@ impl Player {
     }
 
     pub fn set_fov(&self, cs2: &CS2, value: u32) {
+        if cs2.offsets.controller.desired_fov == 0 {
+            return;
+        }
         let camera_service = cs2
             .process
             .read::<u64>(self.pawn + cs2.offsets.pawn.camera_services);

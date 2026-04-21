@@ -136,32 +136,69 @@ impl CS2 {
         let schema = Schema::new(&self.process, offsets.library.schema)?;
         let client = schema.get_library(cs2::CLIENT_LIB)?;
 
-        let mut steam_id_offset = None;
-        for class in ["CBasePlayerController", "CCSPlayerController"] {
-            for field in ["m_steamID", "m_steamId", "m_steamid"] {
-                if let Some(offset) = client.try_get(class, field) {
-                    steam_id_offset = Some(offset);
-                    break;
+        let controller_classes = [
+            "CBasePlayerController",
+            "CCSPlayerController",
+            "C_CSPlayerController",
+            "CPlayerController",
+        ];
+        let find_controller_field = |fields: &[&str]| -> Option<u64> {
+            for class in &controller_classes {
+                for field in fields {
+                    if let Some(offset) = client.try_get(class, field) {
+                        return Some(offset);
+                    }
                 }
             }
-            if steam_id_offset.is_some() {
-                break;
-            }
-        }
-        offsets.controller.steam_id = match steam_id_offset {
+            None
+        };
+
+        offsets.controller.steam_id =
+            match find_controller_field(&["m_steamID", "m_steamId", "m_steamid"]) {
+                Some(offset) => offset,
+                None => {
+                    log::warn!("could not resolve steam id offset, using 0");
+                    0
+                }
+            };
+        offsets.controller.name =
+            match find_controller_field(&["m_iszPlayerName", "m_sSanitizedPlayerName"]) {
+                Some(offset) => offset,
+                None => {
+                    log::warn!("could not resolve player name offset, using 0");
+                    0
+                }
+            };
+        offsets.controller.pawn = match find_controller_field(&["m_hPawn", "m_hPlayerPawn"]) {
             Some(offset) => offset,
             None => {
-                log::warn!("could not resolve steam id offset, using 0");
+                log::warn!("could not resolve controller pawn offset");
+                return None;
+            }
+        };
+        offsets.controller.desired_fov = match find_controller_field(&["m_iDesiredFOV", "m_iFOV"]) {
+            Some(offset) => offset,
+            None => {
+                log::warn!("could not resolve desired fov offset, using 0");
                 0
             }
         };
-        offsets.controller.name = client.get("CBasePlayerController", "m_iszPlayerName")?;
-        offsets.controller.pawn = client.get("CBasePlayerController", "m_hPawn")?;
-        offsets.controller.desired_fov = client.get("CBasePlayerController", "m_iDesiredFOV")?;
         offsets.controller.owner_entity = client.get("C_BaseEntity", "m_hOwnerEntity")?;
-        offsets.controller.color = client.get("CCSPlayerController", "m_iCompTeammateColor")?;
+        offsets.controller.color = match find_controller_field(&["m_iCompTeammateColor"]) {
+            Some(offset) => offset,
+            None => {
+                log::warn!("could not resolve teammate color offset, using 0");
+                0
+            }
+        };
         offsets.controller.action_tracking_services =
-            client.get("CCSPlayerController", "m_pActionTrackingServices")?;
+            match find_controller_field(&["m_pActionTrackingServices"]) {
+                Some(offset) => offset,
+                None => {
+                    log::warn!("could not resolve action tracking services offset, using 0");
+                    0
+                }
+            };
 
         offsets.pawn.health = client.get("C_BaseEntity", "m_iHealth")?;
         offsets.pawn.armor = client.get("C_CSPlayerPawn", "m_ArmorValue")?;
