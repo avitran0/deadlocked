@@ -155,7 +155,7 @@ impl CS2 {
         offsets.pawn.eye_angles = client.get("C_CSPlayerPawn", "m_angEyeAngles")?;
         offsets.pawn.velocity = client.get("C_BaseEntity", "m_vecAbsVelocity")?;
         offsets.pawn.flags = client.get("C_BaseEntity", "m_fFlags")?;
-        offsets.pawn.aim_punch_cache = client.get("C_CSPlayerPawn", "m_aimPunchTickFraction")? + 8;
+        offsets.pawn.aim_punch_cache = client.get("C_CSPlayerPawn", "m_pAimPunchServices")? + 8;
         offsets.pawn.shots_fired = client.get("C_CSPlayerPawn", "m_iShotsFired")?;
         offsets.pawn.view_angles = client.get("C_BasePlayerPawn", "v_angle")?;
         offsets.pawn.spotted_state = client.get("C_CSPlayerPawn", "m_entitySpottedState")?;
