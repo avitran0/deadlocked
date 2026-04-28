@@ -174,7 +174,7 @@ impl CS2 {
 
                     if name.starts_with("weapon_") {
                         if self.entity_has_owner(entity) {
-                            return;
+                            continue;
                         }
 
                         let weapon = Weapon::from_entity(entity, self);
