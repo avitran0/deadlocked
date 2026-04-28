@@ -56,12 +56,7 @@ impl App {
                 self.send_config();
             }
 
-            if checkbox_hover(
-                ui,
-                "Show Friendlies",
-                "Only active in custom game modes (workshop/custom maps)",
-                &mut self.config.player.show_friendlies,
-            ) {
+            if checkbox(ui, "Show Friendlies", &mut self.config.player.show_friendlies) {
                 self.send_config();
             }
 
