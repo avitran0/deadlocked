@@ -95,6 +95,10 @@ impl App {
                 self.send_config();
             }
 
+            if checkbox(ui, "Show Aimbot Binds", &mut self.config.hud.keybind_list) {
+                self.send_config();
+            }
+
             if checkbox(
                 ui,
                 "Sniper Crosshair",
