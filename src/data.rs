@@ -23,6 +23,7 @@ pub struct Data {
     pub weapon: Weapon,
     pub players: Vec<PlayerData>,
     pub friendlies: Vec<PlayerData>,
+    pub spectators: Vec<String>,
     pub local_player: PlayerData,
     pub entities: Vec<EntityInfo>,
     pub bomb: BombData,

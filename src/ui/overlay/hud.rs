@@ -110,6 +110,34 @@ impl App {
         );
     }
 
+    pub fn draw_spectators_list(&self, painter: &Painter, data: &Data) {
+        if !self.config.hud.spectators_list || data.spectators.is_empty() {
+            return;
+        }
+
+        let position = pos2(
+            10.0,
+            data.window_size.y / 2.0 + self.config.hud.font_size * 3.0,
+        );
+        self.text(
+            painter,
+            "Spectators:",
+            position,
+            Align2::LEFT_TOP,
+            Some(Color32::WHITE),
+        );
+
+        for (i, name) in data.spectators.iter().enumerate() {
+            self.text(
+                painter,
+                format!("- {name}"),
+                position + egui::vec2(0.0, self.config.hud.font_size * (i as f32 + 1.0)),
+                Align2::LEFT_TOP,
+                Some(Color32::WHITE),
+            );
+        }
+    }
+
     fn get_current_fov(&self) -> f32 {
         (if self.config.misc.fov_changer {
             self.config.misc.desired_fov

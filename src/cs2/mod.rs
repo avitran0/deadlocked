@@ -42,6 +42,7 @@ pub struct CS2 {
     current_bvh: String,
     target: Target,
     players: Vec<Player>,
+    spectators: Vec<Player>,
     entities: Vec<Entity>,
     recoil: Recoil,
     aim: Aimbot,
@@ -124,6 +125,7 @@ impl CS2 {
     pub fn data(&self, config: &Config, data: &mut Data) {
         data.players.clear();
         data.friendlies.clear();
+        data.spectators.clear();
         data.entities.clear();
 
         let sdl_window = self.process.read::<u64>(self.offsets.direct.sdl_window);
@@ -148,6 +150,16 @@ impl CS2 {
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
+        }
+
+        for spectator in &self.spectators {
+            let Some(target) = spectator.spectator_target(self) else {
+                continue;
+            };
+
+            if target.pawn == local_player.pawn {
+                data.spectators.push(spectator.name(self));
+            }
         }
 
         for player in &self.players {
@@ -267,6 +279,7 @@ impl CS2 {
             current_bvh: String::new(),
             target: Target::default(),
             players: Vec::with_capacity(64),
+            spectators: Vec::with_capacity(64),
             entities: Vec::with_capacity(128),
             recoil: Recoil::default(),
             aim: Aimbot::default(),

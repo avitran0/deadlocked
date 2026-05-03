@@ -110,6 +110,10 @@ impl App {
             if checkbox(ui, "Keybinds", &mut self.config.hud.keybind_list) {
                 self.send_config();
             }
+
+            if checkbox(ui, "Spectators", &mut self.config.hud.spectators_list) {
+                self.send_config();
+            }
         });
     }
 

@@ -127,7 +127,6 @@ impl Player {
     }
 
     /// returns a pawn-only player
-    #[allow(unused)]
     pub fn spectator_target(&self, cs2: &CS2) -> Option<Self> {
         let observer_services: u64 = cs2
             .process
