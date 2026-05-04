@@ -42,7 +42,6 @@ pub struct CS2 {
     current_bvh: String,
     target: Target,
     players: Vec<Player>,
-    spectators: Vec<Player>,
     entities: Vec<Entity>,
     recoil: Recoil,
     aim: Aimbot,
@@ -152,17 +151,17 @@ impl CS2 {
             return;
         }
 
-        for spectator in &self.spectators {
-            let Some(target) = spectator.spectator_target(self) else {
-                continue;
-            };
-
-            if target.pawn == local_player.pawn {
-                data.spectators.push(spectator.name(self));
-            }
-        }
-
         for player in &self.players {
+            if !player.is_valid(self) {
+                if let Some(target) = player.spectator_target(self) {
+                    if target.pawn == local_player.pawn {
+                        data.spectators.push(player.name(self));
+                    }
+                }
+
+                continue;
+            }
+
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
@@ -279,7 +278,6 @@ impl CS2 {
             current_bvh: String::new(),
             target: Target::default(),
             players: Vec::with_capacity(64),
-            spectators: Vec::with_capacity(64),
             entities: Vec::with_capacity(128),
             recoil: Recoil::default(),
             aim: Aimbot::default(),

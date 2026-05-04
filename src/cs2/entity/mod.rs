@@ -70,7 +70,6 @@ impl GrenadeInfo {
 impl CS2 {
     pub fn cache_entities(&mut self) {
         self.players.clear();
-        self.spectators.clear();
         self.entities.clear();
         self.planted_c4 = None;
 
@@ -137,8 +136,6 @@ impl CS2 {
                         if player.is_valid(self) {
                             self.target.local_pawn_index = (handle as u64 & 0x7FFF) - 1;
                         }
-                    } else if !player.is_valid(self) {
-                        self.spectators.push(player);
                     } else {
                         self.players.push(player);
                     }
