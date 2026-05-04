@@ -97,6 +97,6 @@ impl GameManager {
     }
 
     fn loop_duration(&self) -> Duration {
-        Duration::from_secs_f32(1.0 / self.config.fps as f32)
+        Duration::from_millis(10)
     }
 }
