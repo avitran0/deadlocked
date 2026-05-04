@@ -126,12 +126,11 @@ impl ApplicationHandler for App {
     fn new_events(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
             if let Some(window) = &self.gui {
-                window.window().request_redraw();
+                window.request_redraw();
             }
             if let Some(window) = &self.overlay {
-                window.window().request_redraw();
+                window.request_redraw();
             }
-            self.next_frame_time += self.frame_duration();
         }
     }
 
@@ -175,11 +174,10 @@ impl ApplicationHandler for App {
                 window.resize(*new_size);
             }
             WindowEvent::RedrawRequested => {
+                self.next_frame_time += self.frame_duration();
                 event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                     self.next_frame_time,
                 ));
-                gui.request_redraw();
-                overlay.request_redraw();
                 self.render();
             }
             WindowEvent::KeyboardInput {
@@ -203,20 +201,16 @@ impl ApplicationHandler for App {
                         );
                     }
                 }
-                let event_response = self.gui.as_mut().unwrap().process_event(&window_event);
-
-                if event_response.repaint {
-                    self.gui.as_ref().unwrap().request_redraw();
-                    self.overlay.as_ref().unwrap().request_redraw();
-                }
+                let _ = self
+                    .gui
+                    .as_mut()
+                    .map(|gui| gui.process_event(&window_event));
             }
             _ => {
-                let event_response = self.gui.as_mut().unwrap().process_event(&window_event);
-
-                if event_response.repaint {
-                    self.gui.as_ref().unwrap().request_redraw();
-                    self.overlay.as_ref().unwrap().request_redraw();
-                }
+                let _ = self
+                    .gui
+                    .as_mut()
+                    .map(|gui| gui.process_event(&window_event));
             }
         }
     }
