@@ -174,7 +174,7 @@ impl ApplicationHandler for App {
                 window.resize(*new_size);
             }
             WindowEvent::RedrawRequested => {
-                self.next_frame_time += self.frame_duration();
+                self.next_frame_time = Instant::now() + self.frame_duration();
                 event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                     self.next_frame_time,
                 ));
