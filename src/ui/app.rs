@@ -123,7 +123,7 @@ impl App {
 }
 
 impl ApplicationHandler for App {
-    fn new_events(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, cause: StartCause) {
+    fn new_events(&mut self, event_loop: &winit::event_loop::ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
             self.next_frame_time += self.frame_duration();
 
@@ -131,13 +131,17 @@ impl ApplicationHandler for App {
             if self.next_frame_time < now {
                 self.next_frame_time = now + self.frame_duration();
             }
-            
+
             if let Some(window) = &self.gui {
                 window.request_redraw();
             }
             if let Some(window) = &self.overlay {
                 window.request_redraw();
             }
+
+            event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+                self.next_frame_time,
+            ));
         }
     }
 
@@ -189,9 +193,6 @@ impl ApplicationHandler for App {
                 {
                     return;
                 }
-                event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
-                    self.next_frame_time,
-                ));
                 self.render();
             }
             WindowEvent::KeyboardInput {
