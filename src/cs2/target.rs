@@ -57,7 +57,6 @@ impl CS2 {
         let aimbot_config = self.aimbot_config(config);
         let targeting_mode = &aimbot_config.targeting_mode;
         let max_fov = aimbot_config.fov;
-        let is_custom_mode = self.is_custom_game_mode();
 
         let mut best_fov = 360.0;
         let mut best_distance = f32::MAX;
@@ -80,7 +79,7 @@ impl CS2 {
         let target_friendlies = aimbot_config.target_friendlies;
 
         for player in &self.players {
-            if !(ffa || target_friendlies && is_custom_mode) && team == player.team(self) {
+            if !(ffa || target_friendlies) && team == player.team(self) {
                 continue;
             }
 

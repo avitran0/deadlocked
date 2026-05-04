@@ -19,7 +19,6 @@ pub enum SoundType {
 pub struct Data {
     pub in_game: bool,
     pub is_ffa: bool,
-    pub is_custom_mode: bool,
     pub weapon: Weapon,
     pub players: Vec<PlayerData>,
     pub friendlies: Vec<PlayerData>,

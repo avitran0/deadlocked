@@ -40,7 +40,7 @@ impl App {
             }
         }
 
-        if self.config.player.show_friendlies && data.is_custom_mode {
+        if self.config.player.show_friendlies {
             for player in &data.friendlies {
                 if data.esp_active {
                     self.draw_player(&painter, player, data);

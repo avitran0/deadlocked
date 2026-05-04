@@ -229,7 +229,6 @@ impl CS2 {
         data.weapon = local_player.weapon(self);
         data.in_game = true;
         data.is_ffa = self.is_ffa();
-        data.is_custom_mode = self.is_custom_game_mode();
         data.map_name = self.current_map();
         data.aimbot_active = if self.aimbot_config(config).mode == KeyMode::Toggle {
             self.aim.active
@@ -328,13 +327,6 @@ impl CS2 {
 
     fn is_ffa(&self) -> bool {
         self.process.read::<u8>(self.offsets.convar.ffa + 0x58) == 1
-    }
-
-    fn is_custom_game_mode(&self) -> bool {
-        let map = self.current_map();
-        map.starts_with("workshop/")
-            || map.starts_with("custom/")
-            || !map.starts_with("de_") && !map.starts_with("cs_")
     }
 
     fn current_time(&self) -> f32 {

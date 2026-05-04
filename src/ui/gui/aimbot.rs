@@ -78,10 +78,9 @@ impl App {
         });
 
         ui.collapsing("Targeting", |ui| {
-            if checkbox_hover(
+            if checkbox(
                 ui,
                 "Target Friendlies",
-                "Only active in custom game modes (workshop/custom maps)",
                 &mut self.weapon_config().aimbot.target_friendlies,
             ) {
                 self.send_config();
