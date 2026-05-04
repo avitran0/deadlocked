@@ -125,6 +125,13 @@ impl App {
 impl ApplicationHandler for App {
     fn new_events(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop, cause: StartCause) {
         if let StartCause::ResumeTimeReached { .. } = cause {
+            self.next_frame_time += self.frame_duration();
+
+            let now = Instant::now();
+            if self.next_frame_time < now {
+                self.next_frame_time = now + self.frame_duration();
+            }
+            
             if let Some(window) = &self.gui {
                 window.request_redraw();
             }
@@ -174,7 +181,14 @@ impl ApplicationHandler for App {
                 window.resize(*new_size);
             }
             WindowEvent::RedrawRequested => {
-                self.next_frame_time = Instant::now() + self.frame_duration();
+                if !self
+                    .gui
+                    .as_ref()
+                    .map(|window| window.window().id() == window_id)
+                    .unwrap_or_default()
+                {
+                    return;
+                }
                 event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                     self.next_frame_time,
                 ));
