@@ -124,6 +124,7 @@ impl CS2 {
     pub fn data(&self, config: &Config, data: &mut Data) {
         data.players.clear();
         data.friendlies.clear();
+        data.spectators.clear();
         data.entities.clear();
 
         let sdl_window = self.process.read::<u64>(self.offsets.direct.sdl_window);
@@ -151,6 +152,16 @@ impl CS2 {
         }
 
         for player in &self.players {
+            if !player.is_valid(self) {
+                if let Some(target) = player.spectator_target(self) {
+                    if target.pawn == local_player.pawn {
+                        data.spectators.push(player.name(self));
+                    }
+                }
+
+                continue;
+            }
+
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
