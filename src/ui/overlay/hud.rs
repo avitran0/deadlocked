@@ -196,25 +196,32 @@ impl App {
     }
 
     pub fn draw_sniper_crosshair(&self, painter: &Painter, data: &Data) {
-        if !self.config.hud.sniper_crosshair
+        if !self.config.hud.sniper_crosshair.enabled
             || WeaponClass::from_string(data.weapon.as_ref()) != WeaponClass::Sniper
         {
             return;
         }
 
+        let length = self.config.hud.sniper_crosshair.line_length;
         painter.line(
             vec![
-                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 - 50.0),
-                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 + 50.0),
+                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 - length),
+                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 + length),
             ],
-            Stroke::new(self.config.hud.line_width, self.config.hud.crosshair_color),
+            Stroke::new(
+                self.config.hud.sniper_crosshair.line_width,
+                self.config.hud.sniper_crosshair.color,
+            ),
         );
         painter.line(
             vec![
-                pos2(data.window_size.x / 2.0 - 50.0, data.window_size.y / 2.0),
-                pos2(data.window_size.x / 2.0 + 50.0, data.window_size.y / 2.0),
+                pos2(data.window_size.x / 2.0 - length, data.window_size.y / 2.0),
+                pos2(data.window_size.x / 2.0 + length, data.window_size.y / 2.0),
             ],
-            Stroke::new(self.config.hud.line_width, self.config.hud.crosshair_color),
+            Stroke::new(
+                self.config.hud.sniper_crosshair.line_width,
+                self.config.hud.sniper_crosshair.color,
+            ),
         );
     }
 }

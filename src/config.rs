@@ -321,8 +321,7 @@ impl Default for SoundConfig {
 pub struct HudConfig {
     pub bomb_timer: bool,
     pub fov_circle: bool,
-    pub sniper_crosshair: bool,
-    pub crosshair_color: Color32,
+    pub sniper_crosshair: CrosshairConfig,
     pub dropped_weapons: bool,
     pub keybind_list: bool,
     pub spectator_list: bool,
@@ -346,8 +345,7 @@ impl Default for HudConfig {
         Self {
             bomb_timer: true,
             fov_circle: false,
-            sniper_crosshair: true,
-            crosshair_color: Color32::WHITE,
+            sniper_crosshair: CrosshairConfig::default(),
             dropped_weapons: true,
             keybind_list: false,
             spectator_list: false,
@@ -364,6 +362,25 @@ impl Default for HudConfig {
             font_size: 16.0,
             icon_size: 20.0,
             debug: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CrosshairConfig {
+    pub enabled: bool,
+    pub color: Color32,
+    pub line_length: f32,
+    pub line_width: f32,
+}
+
+impl Default for CrosshairConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            color: Color32::WHITE,
+            line_length: 50.0,
+            line_width: 1.0,
         }
     }
 }

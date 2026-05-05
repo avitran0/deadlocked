@@ -20,7 +20,11 @@ impl App {
                     self.send_config();
                 }
 
-                if color_picker(ui, "Crosshair Color", &mut self.config.hud.crosshair_color) {
+                if color_picker(
+                    ui,
+                    "Crosshair Color",
+                    &mut self.config.hud.sniper_crosshair.color,
+                ) {
                     self.send_config();
                 }
             });
@@ -95,14 +99,6 @@ impl App {
                 self.send_config();
             }
 
-            if checkbox(
-                ui,
-                "Sniper Crosshair",
-                &mut self.config.hud.sniper_crosshair,
-            ) {
-                self.send_config();
-            }
-
             if checkbox(ui, "Dropped Weapons", &mut self.config.hud.dropped_weapons) {
                 self.send_config();
             }
@@ -112,6 +108,33 @@ impl App {
             }
 
             if checkbox(ui, "Spectator List", &mut self.config.hud.spectator_list) {
+                self.send_config();
+            }
+        });
+
+        ui.collapsing("Sniper Crosshair", |ui| {
+            if checkbox(ui, "Enabled", &mut self.config.hud.sniper_crosshair.enabled) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Line Length",
+                DragValue::new(&mut self.config.hud.sniper_crosshair.line_length)
+                    .max_decimals(1)
+                    .speed(0.2),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Line Width",
+                DragValue::new(&mut self.config.hud.sniper_crosshair.line_width)
+                    .range(0.1..=10.0)
+                    .max_decimals(1)
+                    .speed(0.005),
+            ) {
                 self.send_config();
             }
         });
