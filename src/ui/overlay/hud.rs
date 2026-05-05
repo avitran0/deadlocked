@@ -110,8 +110,8 @@ impl App {
         );
     }
 
-    pub fn draw_spectators_list(&self, painter: &Painter, data: &Data) {
-        if !self.config.hud.spectators_list || data.spectators.is_empty() {
+    pub fn draw_spectator_list(&self, painter: &Painter, data: &Data) {
+        if !self.config.hud.spectator_list {
             return;
         }
 
@@ -130,7 +130,7 @@ impl App {
         for (i, name) in data.spectators.iter().enumerate() {
             self.text(
                 painter,
-                format!("- {name}"),
+                format!("> {name}"),
                 position + egui::vec2(0.0, self.config.hud.font_size * (i as f32 + 1.0)),
                 Align2::LEFT_TOP,
                 Some(Color32::WHITE),

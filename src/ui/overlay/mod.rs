@@ -58,7 +58,7 @@ impl App {
         self.draw_fov_circle(&painter, data);
         self.draw_sniper_crosshair(&painter, data);
         self.draw_keybind_list(&painter, data);
-        self.draw_spectators_list(&painter, data);
+        self.draw_spectator_list(&painter, data);
 
         if data.aimbot_active {
             self.text(

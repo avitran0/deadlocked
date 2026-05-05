@@ -133,9 +133,7 @@ impl CS2 {
                     };
 
                     if player == *local_player {
-                        if player.is_valid(self) {
-                            self.target.local_pawn_index = (handle as u64 & 0x7FFF) - 1;
-                        }
+                        self.target.local_pawn_index = (handle as u64 & 0x7FFF) - 1;
                     } else {
                         self.players.push(player);
                     }

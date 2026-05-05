@@ -152,14 +152,10 @@ impl CS2 {
         }
 
         for player in &self.players {
-            if !player.is_valid(self) {
-                if let Some(target) = player.spectator_target(self) {
-                    if target.pawn == local_player.pawn {
-                        data.spectators.push(player.name(self));
-                    }
-                }
-
-                continue;
+            if let Some(target) = player.spectator_target(self)
+                && target.pawn == local_player.pawn
+            {
+                data.spectators.push(player.name(self));
             }
 
             let player_data = PlayerData {
