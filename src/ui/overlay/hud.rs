@@ -203,25 +203,41 @@ impl App {
         }
 
         let length = self.config.hud.sniper_crosshair.line_length;
-        painter.line(
-            vec![
-                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 - length),
-                pos2(data.window_size.x / 2.0, data.window_size.y / 2.0 + length),
-            ],
-            Stroke::new(
-                self.config.hud.sniper_crosshair.line_width,
-                self.config.hud.sniper_crosshair.color,
-            ),
+        let gap = self.config.hud.sniper_crosshair.gap / 2.0;
+        let center = data.window_size / 2.0;
+
+        let stroke = Stroke::new(
+            self.config.hud.sniper_crosshair.line_width,
+            self.config.hud.sniper_crosshair.color,
         );
-        painter.line(
-            vec![
-                pos2(data.window_size.x / 2.0 - length, data.window_size.y / 2.0),
-                pos2(data.window_size.x / 2.0 + length, data.window_size.y / 2.0),
+
+        painter.line_segment(
+            [
+                pos2(center.x + gap, center.y),
+                pos2(center.x + gap + length, center.y),
             ],
-            Stroke::new(
-                self.config.hud.sniper_crosshair.line_width,
-                self.config.hud.sniper_crosshair.color,
-            ),
+            stroke,
+        );
+        painter.line_segment(
+            [
+                pos2(center.x, center.y + gap),
+                pos2(center.x, center.y + gap + length),
+            ],
+            stroke,
+        );
+        painter.line_segment(
+            [
+                pos2(center.x - gap, center.y),
+                pos2(center.x - gap - length, center.y),
+            ],
+            stroke,
+        );
+        painter.line_segment(
+            [
+                pos2(center.x, center.y - gap),
+                pos2(center.x, center.y - gap - length),
+            ],
+            stroke,
         );
     }
 }

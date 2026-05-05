@@ -372,6 +372,7 @@ pub struct CrosshairConfig {
     pub color: Color32,
     pub line_length: f32,
     pub line_width: f32,
+    pub gap: f32,
 }
 
 impl Default for CrosshairConfig {
@@ -380,7 +381,8 @@ impl Default for CrosshairConfig {
             enabled: true,
             color: Color32::WHITE,
             line_length: 50.0,
-            line_width: 1.0,
+            line_width: 2.0,
+            gap: 20.0,
         }
     }
 }

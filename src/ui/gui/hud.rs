@@ -121,6 +121,7 @@ impl App {
                 ui,
                 "Line Length",
                 DragValue::new(&mut self.config.hud.sniper_crosshair.line_length)
+                    .range(0.1..=500.0)
                     .max_decimals(1)
                     .speed(0.2),
             ) {
@@ -134,6 +135,17 @@ impl App {
                     .range(0.1..=10.0)
                     .max_decimals(1)
                     .speed(0.005),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Gap",
+                DragValue::new(&mut self.config.hud.sniper_crosshair.gap)
+                    .range(0.0..=200.0)
+                    .max_decimals(1)
+                    .speed(0.2),
             ) {
                 self.send_config();
             }
