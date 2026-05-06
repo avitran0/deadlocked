@@ -5,10 +5,8 @@
     libxcursor
     libxkbcommon
     libGL
-    xorg.libXi
+    libxi
   ];
-
-  source2viewer = pkgs.callPackage ./source2viewer.nix {};
 in
   pkgs.mkShell {
     name = "deadlocked-dev-shell";
@@ -21,8 +19,6 @@ in
         scdoc
         # Runtime dependencies
         wayland
-        source2viewer
-        nodejs_24
         # Development tools
         cargo-audit
         cargo-deny

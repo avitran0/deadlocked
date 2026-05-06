@@ -20,11 +20,6 @@
         overlays = [];
       };
   in {
-    # ValveResourceFormat CLI package
-    packages = eachSystem (system: {
-      source2viewer = nixpkgs.legacyPackages.${system}.callPackage ./nix/source2viewer.nix {};
-    });
-
     # Development shell
     devShells = eachSystem (system: {
       default = (pkgsFor system).callPackage ./nix/shell.nix {};
