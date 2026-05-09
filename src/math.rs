@@ -91,3 +91,46 @@ pub fn world_to_screen(position: &Vec3, data: &crate::data::Data) -> Option<egui
 
     Some(egui::pos2(screen_position.x, screen_position.y))
 }
+
+pub fn weighted_average(history: &std::collections::VecDeque<f32>) -> f32 {
+    if history.is_empty() {
+        return 0.0;
+    }
+
+    let (sum, weight_sum) = history.iter().enumerate().fold((0.0, 0.0), |(s, w), (i, v)| {
+        let weight = 1.0 + i as f32 * 0.15;
+        (s + v * weight, w + weight)
+    });
+    sum / weight_sum
+}
+
+pub fn compute_max_acceleration(
+    history: &std::collections::VecDeque<f32>,
+    multiplier: f32,
+    range: (f32, f32),
+    fallback: f32,
+) -> f32 {
+    if history.len() < 3 {
+        return fallback;
+    }
+
+    (weighted_average(history) * multiplier).clamp(range.0, range.1)
+}
+
+pub fn soft_clamp_acceleration(accel: f32, max_accel: f32, decay_rate: f32) -> f32 {
+    if accel.abs() <= max_accel {
+        return accel;
+    }
+
+    let excess = accel.abs() - max_accel;
+    accel.signum() * (max_accel + excess * (-excess * decay_rate).exp())
+}
+
+pub fn record_acceleration(history: &mut std::collections::VecDeque<f32>, value: f32, max_size: usize) {
+    if value.abs() < 25.0 {
+        history.push_front(value.abs());
+        if history.len() > max_size {
+            history.pop_back();
+        }
+    }
+}

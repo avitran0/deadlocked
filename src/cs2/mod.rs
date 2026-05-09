@@ -111,7 +111,6 @@ impl CS2 {
 
         self.esp_toggle(config);
 
-        self.rcs(config, mouse);
         self.triggerbot(config);
 
         self.triggerbot_shoot(mouse);
@@ -119,6 +118,7 @@ impl CS2 {
         self.find_target(config);
 
         self.aimbot(config, mouse);
+        self.rcs(config, mouse);
     }
 
     pub fn data(&self, config: &Config, data: &mut Data) {

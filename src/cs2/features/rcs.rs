@@ -1,4 +1,7 @@
+use std::collections::VecDeque;
+
 use glam::Vec2;
+use rand::{rng, RngExt};
 
 use crate::{
     config::Config,
@@ -6,13 +9,37 @@ use crate::{
         CS2,
         entity::{player::Player, weapon_class::WeaponClass},
     },
+    math::{compute_max_acceleration, record_acceleration, soft_clamp_acceleration},
     os::mouse::Mouse,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Recoil {
     previous: Vec2,
     unaccounted: Vec2,
+    velocity: Vec2,
+    accel_history_x: VecDeque<f32>,
+    accel_history_y: VecDeque<f32>,
+}
+
+impl Default for Recoil {
+    fn default() -> Self {
+        Self {
+            previous: Vec2::ZERO,
+            unaccounted: Vec2::ZERO,
+            velocity: Vec2::ZERO,
+            accel_history_x: VecDeque::with_capacity(12),
+            accel_history_y: VecDeque::with_capacity(12),
+        }
+    }
+}
+
+impl Recoil {
+    fn reset_smoothing(&mut self) {
+        self.velocity = Vec2::ZERO;
+        self.accel_history_x.clear();
+        self.accel_history_y.clear();
+    }
 }
 
 impl CS2 {
@@ -49,6 +76,7 @@ impl CS2 {
         if shots_fired < 1 {
             self.recoil.previous = aim_punch;
             self.recoil.unaccounted = Vec2::ZERO;
+            self.recoil.reset_smoothing();
             return;
         }
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
@@ -56,25 +84,43 @@ impl CS2 {
         let mouse_angle = Vec2::new(
             (aim_punch.y - self.recoil.previous.y) / sensitivity * 100.0,
             -(aim_punch.x - self.recoil.previous.x) / sensitivity * 100.0,
-        ) + self.recoil.unaccounted;
-        let mouse_angle = mouse_angle * config.strength.clamp(Vec2::ZERO, Vec2::ONE);
+        );
 
-        self.recoil.unaccounted = Vec2::ZERO;
+        let desired =
+            mouse_angle * config.strength.clamp(Vec2::ZERO, Vec2::ONE) + self.recoil.unaccounted;
 
-        // only if the aimbot is not active
         self.recoil.previous = aim_punch;
-        if (0.0..1.0).contains(&mouse_angle.x) {
-            self.recoil.unaccounted.x = mouse_angle.x;
+        if self.aim.aimed_this_frame {
+            self.recoil.unaccounted = Vec2::ZERO;
+            self.recoil.reset_smoothing();
+            return;
         }
-        if (0.0..1.0).contains(&mouse_angle.y) {
-            self.recoil.unaccounted.y = mouse_angle.y;
-        }
+
+        let raw_acceleration = desired - self.recoil.velocity;
+
+        let track = Vec2::new(
+            raw_acceleration.x * rng().random_range(0.55..0.75), raw_acceleration.y * rng().random_range(0.45..0.65)
+        );
+
+        let clamp = Vec2::new(
+            soft_clamp_acceleration(track.x, compute_max_acceleration(&self.recoil.accel_history_x, 3.0, (4.0, 20.0), 10.0), 0.15),
+            soft_clamp_acceleration(track.y, compute_max_acceleration(&self.recoil.accel_history_y, 2.5, (1.5, 8.0), 5.0), 0.30),
+        );
+
+        self.recoil.velocity += clamp;
+
+        record_acceleration(&mut self.recoil.accel_history_x, clamp.x, 12);
+        record_acceleration(&mut self.recoil.accel_history_y, clamp.y, 12);
+
+        let ready = Vec2::new(self.recoil.velocity.x.trunc(), self.recoil.velocity.y.trunc());
+
+        self.recoil.unaccounted = desired - ready;
 
         utils::debug!(
             "rcs mouse movement: {:.2}/{:.2}",
             mouse_angle.x,
             mouse_angle.y
         );
-        mouse.move_rel(&mouse_angle)
+        mouse.move_rel(&ready)
     }
 }

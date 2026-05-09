@@ -13,10 +13,12 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Aimbot {
     pub active: bool,
+    pub aimed_this_frame: bool,
 }
 
 impl CS2 {
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
+        self.aim.aimed_this_frame = false;
         let hotkey = config.aim.aimbot_hotkey;
         let config = self.aimbot_config(config);
 
@@ -115,6 +117,8 @@ impl CS2 {
             aim_angles.y / sensitivity * 50.0,
             -aim_angles.x / sensitivity * 50.0,
         ) / (config.smooth + 1.0).clamp(1.0, 20.0);
+
+        self.aim.aimed_this_frame = true;
 
         utils::debug!(
             "aimbot mouse movement: {:.2}/{:.2}",
