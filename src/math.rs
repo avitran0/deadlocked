@@ -126,8 +126,8 @@ pub fn soft_clamp_acceleration(accel: f32, max_accel: f32, decay_rate: f32) -> f
     accel.signum() * (max_accel + excess * (-excess * decay_rate).exp())
 }
 
-pub fn record_acceleration(history: &mut std::collections::VecDeque<f32>, value: f32, max_size: usize) {
-    if value.abs() < 25.0 {
+pub fn record_acceleration(history: &mut std::collections::VecDeque<Vec2>, value: Vec2, max_size: usize) {
+    if value.x.abs() < 25.0 && value.y.abs() < 25.0 {
         history.push_front(value.abs());
         if history.len() > max_size {
             history.pop_back();

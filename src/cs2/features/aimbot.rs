@@ -13,23 +13,21 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Aimbot {
     pub active: bool,
-    pub aimed_this_frame: bool,
 }
 
 impl CS2 {
-    pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) {
-        self.aim.aimed_this_frame = false;
+    pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) -> bool {
         let hotkey = config.aim.aimbot_hotkey;
         let config = self.aimbot_config(config);
 
         if !config.enabled {
-            return;
+            return false;
         }
 
         match config.mode {
             KeyMode::Hold => {
                 if !self.input.is_key_pressed(hotkey) {
-                    return;
+                    return false;
                 }
             }
             KeyMode::Toggle => {
@@ -37,21 +35,21 @@ impl CS2 {
                     self.aim.active = !self.aim.active;
                 }
                 if !self.aim.active {
-                    return;
+                    return false;
                 }
             }
         }
 
         let Some(target) = &self.target.player else {
-            return;
+            return false;
         };
 
         if !target.is_valid(self) {
-            return;
+            return false;
         }
 
         let Some(local_player) = Player::local_player(self) else {
-            return;
+            return false;
         };
 
         let weapon_class = local_player.weapon_class(self);
@@ -61,19 +59,19 @@ impl CS2 {
             WeaponClass::Grenade,
         ];
         if disallowed_weapons.contains(&weapon_class) {
-            return;
+            return false;
         }
 
         if config.flash_check && local_player.is_flashed(self) {
-            return;
+            return false;
         }
 
         if config.visibility_check && !target.visible(self, &local_player) {
-            return;
+            return false;
         }
 
         if local_player.shots_fired(self) < config.start_bullet {
-            return;
+            return false;
         }
 
         let target_angle = {
@@ -102,7 +100,7 @@ impl CS2 {
                     1.0
                 })
         {
-            return;
+            return false;
         }
 
         let mut aim_angles = view_angles - target_angle;
@@ -118,13 +116,13 @@ impl CS2 {
             -aim_angles.x / sensitivity * 50.0,
         ) / (config.smooth + 1.0).clamp(1.0, 20.0);
 
-        self.aim.aimed_this_frame = true;
-
         utils::debug!(
             "aimbot mouse movement: {:.2}/{:.2}",
             mouse_angles.x,
             mouse_angles.y
         );
         mouse.move_rel(&mouse_angles);
+
+        true
     }
 }

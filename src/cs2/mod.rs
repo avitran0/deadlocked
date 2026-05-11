@@ -117,8 +117,9 @@ impl CS2 {
 
         self.find_target(config);
 
-        self.aimbot(config, mouse);
-        self.rcs(config, mouse);
+        if !self.aimbot(config, mouse) {
+            self.rcs(config, mouse);
+        }
     }
 
     pub fn data(&self, config: &Config, data: &mut Data) {

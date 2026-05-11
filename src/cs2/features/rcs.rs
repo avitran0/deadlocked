@@ -18,8 +18,7 @@ pub struct Recoil {
     previous: Vec2,
     unaccounted: Vec2,
     velocity: Vec2,
-    accel_history_x: VecDeque<f32>,
-    accel_history_y: VecDeque<f32>,
+    accel_history: VecDeque<Vec2>,
 }
 
 impl Default for Recoil {
@@ -28,8 +27,7 @@ impl Default for Recoil {
             previous: Vec2::ZERO,
             unaccounted: Vec2::ZERO,
             velocity: Vec2::ZERO,
-            accel_history_x: VecDeque::with_capacity(12),
-            accel_history_y: VecDeque::with_capacity(12),
+            accel_history: VecDeque::with_capacity(12),
         }
     }
 }
@@ -37,8 +35,7 @@ impl Default for Recoil {
 impl Recoil {
     fn reset_smoothing(&mut self) {
         self.velocity = Vec2::ZERO;
-        self.accel_history_x.clear();
-        self.accel_history_y.clear();
+        self.accel_history.clear();
     }
 }
 
@@ -90,27 +87,25 @@ impl CS2 {
             mouse_angle * config.strength.clamp(Vec2::ZERO, Vec2::ONE) + self.recoil.unaccounted;
 
         self.recoil.previous = aim_punch;
-        if self.aim.aimed_this_frame {
-            self.recoil.unaccounted = Vec2::ZERO;
-            self.recoil.reset_smoothing();
-            return;
-        }
 
         let raw_acceleration = desired - self.recoil.velocity;
 
         let track = Vec2::new(
-            raw_acceleration.x * rng().random_range(0.55..0.75), raw_acceleration.y * rng().random_range(0.45..0.65)
+            raw_acceleration.x * rng().random_range(0.55..0.75),
+            raw_acceleration.y * rng().random_range(0.45..0.65),
         );
 
+        let history_x: VecDeque<f32> = self.recoil.accel_history.iter().map(|v| v.x).collect();
+        let history_y: VecDeque<f32> = self.recoil.accel_history.iter().map(|v| v.y).collect();
+
         let clamp = Vec2::new(
-            soft_clamp_acceleration(track.x, compute_max_acceleration(&self.recoil.accel_history_x, 3.0, (4.0, 20.0), 10.0), 0.15),
-            soft_clamp_acceleration(track.y, compute_max_acceleration(&self.recoil.accel_history_y, 2.5, (1.5, 8.0), 5.0), 0.30),
+            soft_clamp_acceleration(track.x, compute_max_acceleration(&history_x, 3.0, (4.0, 20.0), 10.0), 0.15),
+            soft_clamp_acceleration(track.y, compute_max_acceleration(&history_y, 2.5, (1.5, 8.0), 5.0), 0.30),
         );
 
         self.recoil.velocity += clamp;
 
-        record_acceleration(&mut self.recoil.accel_history_x, clamp.x, 12);
-        record_acceleration(&mut self.recoil.accel_history_y, clamp.y, 12);
+        record_acceleration(&mut self.recoil.accel_history, clamp, 12);
 
         let ready = Vec2::new(self.recoil.velocity.x.trunc(), self.recoil.velocity.y.trunc());
 
