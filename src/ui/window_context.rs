@@ -193,10 +193,6 @@ impl WindowContext {
         });
     }
 
-    pub fn request_redraw(&self) {
-        self.window.request_redraw();
-    }
-
     pub fn run(&mut self, func: impl FnMut(&mut egui::Ui)) {
         self.egui_glow.run(&self.window, func);
     }

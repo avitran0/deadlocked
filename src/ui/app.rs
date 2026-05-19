@@ -132,12 +132,7 @@ impl ApplicationHandler for App {
                 self.next_frame_time = now + self.frame_duration();
             }
 
-            if let Some(window) = &self.gui {
-                window.request_redraw();
-            }
-            if let Some(window) = &self.overlay {
-                window.request_redraw();
-            }
+            self.render();
 
             event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                 self.next_frame_time,
