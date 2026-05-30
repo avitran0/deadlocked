@@ -1,4 +1,4 @@
-use glam::vec2;
+use glam::{Vec2, vec2};
 
 use crate::{
     config::{Config, KeyMode},
@@ -13,6 +13,7 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Aimbot {
     pub active: bool,
+    inertia: Vec2,
 }
 
 impl CS2 {
@@ -112,16 +113,13 @@ impl CS2 {
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
         let mouse_angles = vec2(
-            aim_angles.y / sensitivity * 50.0,
-            -aim_angles.x / sensitivity * 50.0,
+            aim_angles.y / sensitivity * 45.45,
+            -aim_angles.x / sensitivity * 45.45,
         ) / (config.smooth + 1.0).clamp(1.0, 20.0);
 
-        utils::debug!(
-            "aimbot mouse movement: {:.2}/{:.2}",
-            mouse_angles.x,
-            mouse_angles.y
-        );
-        mouse.move_rel(&mouse_angles);
+        let alpha = 1.0 - config.inertia.clamp(0.0, 1.0) * 0.5;
+        self.aim.inertia += (mouse_angles - self.aim.inertia) * alpha;
+        mouse.move_rel(self.aim.inertia);
 
         true
     }

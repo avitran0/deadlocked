@@ -9,7 +9,8 @@ impl App {
             .collapsible(false)
             .show(ctx, |ui| {
                 ui.vertical_centered(|ui| {
-                    ui.colored_label(self.config.accent_color, "deadlocked");
+                    ui.label("deadlocked");
+                    ui.label("author: avitrano");
                     ui.label(format!("Commit: #{COMMIT}"));
 
                     if ui.button("Close").clicked() {

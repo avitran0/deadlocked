@@ -125,7 +125,7 @@ impl Mouse {
         Ok(Self { file })
     }
 
-    pub fn move_rel(&mut self, coords: &Vec2) {
+    pub fn move_rel(&mut self, coords: Vec2) {
         let coords = IVec2::new(coords.x as i32, coords.y as i32);
 
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();

@@ -111,11 +111,6 @@ impl CS2 {
 
         self.recoil.unaccounted = desired - ready;
 
-        utils::debug!(
-            "rcs mouse movement: {:.2}/{:.2}",
-            mouse_angle.x,
-            mouse_angle.y
-        );
-        mouse.move_rel(&ready)
+        mouse.move_rel(ready)
     }
 }

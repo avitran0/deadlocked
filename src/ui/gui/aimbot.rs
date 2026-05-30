@@ -120,6 +120,17 @@ impl App {
 
             if drag(
                 ui,
+                "Inertia",
+                DragValue::new(&mut self.weapon_config().aimbot.inertia)
+                    .range(0.0..=1.0)
+                    .speed(0.005)
+                    .max_decimals(2),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
                 "Start Bullet",
                 DragValue::new(&mut self.weapon_config().aimbot.start_bullet)
                     .range(0..=10)
