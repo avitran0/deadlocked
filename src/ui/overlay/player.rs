@@ -193,10 +193,7 @@ impl App {
                     pos2(x, bl.y),
                     pos2(x, bl.y - (delta * player.armor as f32 / 100.0)),
                 ],
-                Stroke::new(
-                    line_width,
-                    Self::alpha(Color32::BLUE, alpha),
-                ),
+                Stroke::new(line_width, Self::alpha(Color32::BLUE, alpha)),
             );
         }
 
@@ -289,10 +286,10 @@ impl App {
         let stroke = Stroke::new(self.config.hud.line_width * esp_scale, color);
 
         for (a, b) in &Bones::CONNECTIONS {
-            let Some(a) = player.bones.get(a) else {
+            let Some(a) = player.bone(*a) else {
                 continue;
             };
-            let Some(b) = player.bones.get(b) else {
+            let Some(b) = player.bone(*b) else {
                 continue;
             };
 
@@ -310,10 +307,10 @@ impl App {
         if !self.config.player.head_circle {
             return;
         }
-        let Some(neck) = player.bones.get(&Bones::Neck) else {
+        let Some(neck) = player.bone(Bones::Neck) else {
             return;
         };
-        let Some(spine) = player.bones.get(&Bones::Spine3) else {
+        let Some(spine) = player.bone(Bones::Spine3) else {
             return;
         };
 

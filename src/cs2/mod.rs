@@ -152,8 +152,10 @@ impl CS2 {
             data.in_game = false;
             return;
         }
+        let is_ffa = self.is_ffa();
 
         for player in &self.players {
+            let (bones, bone_mask) = player.all_bones(self);
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
@@ -163,7 +165,8 @@ impl CS2 {
                 name: player.name(self),
                 weapon: player.weapon(self),
                 ammo: (player.clip_ammo(self), player.reserve_ammo(self)),
-                bones: player.all_bones(self),
+                bones,
+                bone_mask,
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
@@ -173,7 +176,7 @@ impl CS2 {
                 sound: player.is_making_sound(self),
             };
 
-            if !self.is_ffa() && player.team(self) == local_team {
+            if !is_ffa && player.team(self) == local_team {
                 data.friendlies.push(player_data);
             } else {
                 data.players.push(player_data);
@@ -188,6 +191,7 @@ impl CS2 {
             }
         }
 
+        let (local_bones, local_bone_mask) = local_player.all_bones(self);
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             health: local_player.health(self),
@@ -200,7 +204,8 @@ impl CS2 {
                 local_player.clip_ammo(self),
                 local_player.reserve_ammo(self),
             ),
-            bones: local_player.all_bones(self),
+            bones: local_bones,
+            bone_mask: local_bone_mask,
             has_defuser: local_player.has_defuser(self),
             has_helmet: local_player.has_helmet(self),
             has_bomb: local_player.has_bomb(self),
@@ -210,10 +215,9 @@ impl CS2 {
             sound: None,
         };
 
-        data.entities = self
-            .entities
-            .iter()
-            .map(|e| match e {
+        data.entities.clear();
+        for entity in &self.entities {
+            data.entities.push(match entity {
                 Entity::Weapon { weapon, entity } => EntityInfo::Weapon {
                     weapon: weapon.clone(),
                     position: Player::entity(*entity).position(self),
@@ -234,12 +238,12 @@ impl CS2 {
                 Entity::Decoy(entity) => {
                     EntityInfo::Decoy(GrenadeInfo::new(*entity, "Decoy", self))
                 }
-            })
-            .collect();
+            });
+        }
 
         data.weapon = local_player.weapon(self);
         data.in_game = true;
-        data.is_ffa = self.is_ffa();
+        data.is_ffa = is_ffa;
         data.map_name = self.current_map();
         data.aimbot_active = if self.aimbot_config(config).mode == KeyMode::Toggle {
             self.aim.active

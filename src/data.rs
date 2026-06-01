@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use glam::{Mat4, Vec2, Vec3};
 use serde::Serialize;
 
@@ -46,7 +44,8 @@ pub struct PlayerData {
     pub name: String,
     pub weapon: Weapon,
     pub ammo: (i32, i32),
-    pub bones: HashMap<Bones, Vec3>,
+    pub bones: [Vec3; 32],
+    pub bone_mask: u32,
     pub has_defuser: bool,
     pub has_helmet: bool,
     pub has_bomb: bool,
@@ -54,6 +53,18 @@ pub struct PlayerData {
     pub color: i32,
     pub rotation: f32,
     pub sound: Option<SoundType>,
+}
+
+impl PlayerData {
+    #[inline]
+    pub fn bone(&self, bone: Bones) -> Option<&Vec3> {
+        let index = bone.u64() as usize;
+        let mask = 1u32 << index;
+        if self.bone_mask & mask == 0 {
+            return None;
+        }
+        Some(&self.bones[index])
+    }
 }
 
 #[derive(Debug, Default, Serialize)]

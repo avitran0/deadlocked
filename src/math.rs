@@ -92,20 +92,27 @@ pub fn world_to_screen(position: &Vec3, data: &crate::data::Data) -> Option<egui
     Some(egui::pos2(screen_position.x, screen_position.y))
 }
 
-pub fn weighted_average(history: &std::collections::VecDeque<f32>) -> f32 {
+fn weighted_average_component(
+    history: &std::collections::VecDeque<Vec2>,
+    component: impl Fn(&Vec2) -> f32,
+) -> f32 {
     if history.is_empty() {
         return 0.0;
     }
 
-    let (sum, weight_sum) = history.iter().enumerate().fold((0.0, 0.0), |(s, w), (i, v)| {
-        let weight = 1.0 + i as f32 * 0.15;
-        (s + v * weight, w + weight)
-    });
+    let (sum, weight_sum) = history
+        .iter()
+        .enumerate()
+        .fold((0.0, 0.0), |(s, w), (i, v)| {
+            let weight = 1.0 + i as f32 * 0.15;
+            (s + component(v) * weight, w + weight)
+        });
     sum / weight_sum
 }
 
-pub fn compute_max_acceleration(
-    history: &std::collections::VecDeque<f32>,
+pub fn compute_max_acceleration_component(
+    history: &std::collections::VecDeque<Vec2>,
+    component: impl Fn(&Vec2) -> f32,
     multiplier: f32,
     range: (f32, f32),
     fallback: f32,
@@ -114,7 +121,7 @@ pub fn compute_max_acceleration(
         return fallback;
     }
 
-    (weighted_average(history) * multiplier).clamp(range.0, range.1)
+    (weighted_average_component(history, component) * multiplier).clamp(range.0, range.1)
 }
 
 pub fn soft_clamp_acceleration(accel: f32, max_accel: f32, decay_rate: f32) -> f32 {
@@ -126,7 +133,11 @@ pub fn soft_clamp_acceleration(accel: f32, max_accel: f32, decay_rate: f32) -> f
     accel.signum() * (max_accel + excess * (-excess * decay_rate).exp())
 }
 
-pub fn record_acceleration(history: &mut std::collections::VecDeque<Vec2>, value: Vec2, max_size: usize) {
+pub fn record_acceleration(
+    history: &mut std::collections::VecDeque<Vec2>,
+    value: Vec2,
+    max_size: usize,
+) {
     if value.x.abs() < 25.0 && value.y.abs() < 25.0 {
         history.push_front(value.abs());
         if history.len() > max_size {

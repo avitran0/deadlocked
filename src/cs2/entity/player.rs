@@ -1,5 +1,4 @@
 use super::weapon::Weapon;
-use std::collections::HashMap;
 
 use glam::{Vec2, Vec3, vec2};
 
@@ -292,10 +291,11 @@ impl Player {
         cs2.process.read(bone_data + (bone_index * 32))
     }
 
-    pub fn all_bones(&self, cs2: &CS2) -> HashMap<Bones, Vec3> {
+    pub fn all_bones(&self, cs2: &CS2) -> ([Vec3; 32], u32) {
         use strum::IntoEnumIterator as _;
 
-        let mut bones = HashMap::new();
+        let mut bones = [Vec3::ZERO; 32];
+        let mut bone_mask = 0u32;
         let gs_node = self.game_scene_node(cs2);
         let bone_data: u64 = cs2.process.read(
             gs_node
@@ -304,18 +304,20 @@ impl Player {
         );
 
         if bone_data == 0 {
-            return bones;
+            return (bones, bone_mask);
         }
 
         let bones_data: [u8; 32 * 32] = cs2.process.read_or_zeroed(bone_data);
 
         for bone in Bones::iter() {
-            let start = bone.u64() as usize * 32;
+            let index = bone.u64() as usize;
+            let start = index * 32;
             let pos = bytemuck::from_bytes(&bones_data[start..start + 3 * 4]);
-            bones.insert(bone, *pos);
+            bones[index] = *pos;
+            bone_mask |= 1u32 << index;
         }
 
-        bones
+        (bones, bone_mask)
     }
 
     pub fn shots_fired(&self, cs2: &CS2) -> i32 {
