@@ -5,6 +5,7 @@ use strum::EnumIter;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum KeyCode {
+    Unbound = 0,
     Num0 = 1,
     Num1,
     Num2,
@@ -115,6 +116,7 @@ impl KeyCode {
             "Mouse5" => KeyCode::Mouse5,
             "MouseWheelUp" => KeyCode::MouseWheelUp,
             "MouseWheelDown" => KeyCode::MouseWheelDown,
+            "Unbound" => KeyCode::Unbound,
             _ => return None,
         })
     }
