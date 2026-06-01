@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use glam::Vec2;
-use rand::{rng, RngExt};
+use rand::{RngExt, rng};
 
 use crate::{
     config::Config,
@@ -9,7 +9,7 @@ use crate::{
         CS2,
         entity::{player::Player, weapon_class::WeaponClass},
     },
-    math::{compute_max_acceleration, record_acceleration, soft_clamp_acceleration},
+    math::{compute_max_acceleration_component, record_acceleration, soft_clamp_acceleration},
     os::mouse::Mouse,
 };
 
@@ -95,19 +95,39 @@ impl CS2 {
             raw_acceleration.y * rng().random_range(0.45..0.65),
         );
 
-        let history_x: VecDeque<f32> = self.recoil.accel_history.iter().map(|v| v.x).collect();
-        let history_y: VecDeque<f32> = self.recoil.accel_history.iter().map(|v| v.y).collect();
-
         let clamp = Vec2::new(
-            soft_clamp_acceleration(track.x, compute_max_acceleration(&history_x, 3.0, (4.0, 20.0), 10.0), 0.15),
-            soft_clamp_acceleration(track.y, compute_max_acceleration(&history_y, 2.5, (1.5, 8.0), 5.0), 0.30),
+            soft_clamp_acceleration(
+                track.x,
+                compute_max_acceleration_component(
+                    &self.recoil.accel_history,
+                    |v| v.x,
+                    3.0,
+                    (4.0, 20.0),
+                    10.0,
+                ),
+                0.15,
+            ),
+            soft_clamp_acceleration(
+                track.y,
+                compute_max_acceleration_component(
+                    &self.recoil.accel_history,
+                    |v| v.y,
+                    2.5,
+                    (1.5, 8.0),
+                    5.0,
+                ),
+                0.30,
+            ),
         );
 
         self.recoil.velocity += clamp;
 
         record_acceleration(&mut self.recoil.accel_history, clamp, 12);
 
-        let ready = Vec2::new(self.recoil.velocity.x.trunc(), self.recoil.velocity.y.trunc());
+        let ready = Vec2::new(
+            self.recoil.velocity.x.trunc(),
+            self.recoil.velocity.y.trunc(),
+        );
 
         self.recoil.unaccounted = desired - ready;
 

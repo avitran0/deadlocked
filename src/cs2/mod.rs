@@ -152,6 +152,7 @@ impl CS2 {
             data.in_game = false;
             return;
         }
+        let is_ffa = self.is_ffa();
 
         for player in &self.players {
             let player_data = PlayerData {
@@ -173,7 +174,7 @@ impl CS2 {
                 sound: player.is_making_sound(self),
             };
 
-            if !self.is_ffa() && player.team(self) == local_team {
+            if !is_ffa && player.team(self) == local_team {
                 data.friendlies.push(player_data);
             } else {
                 data.players.push(player_data);
@@ -210,10 +211,9 @@ impl CS2 {
             sound: None,
         };
 
-        data.entities = self
-            .entities
-            .iter()
-            .map(|e| match e {
+        data.entities.clear();
+        for entity in &self.entities {
+            data.entities.push(match entity {
                 Entity::Weapon { weapon, entity } => EntityInfo::Weapon {
                     weapon: weapon.clone(),
                     position: Player::entity(*entity).position(self),
@@ -234,12 +234,12 @@ impl CS2 {
                 Entity::Decoy(entity) => {
                     EntityInfo::Decoy(GrenadeInfo::new(*entity, "Decoy", self))
                 }
-            })
-            .collect();
+            });
+        }
 
         data.weapon = local_player.weapon(self);
         data.in_game = true;
-        data.is_ffa = self.is_ffa();
+        data.is_ffa = is_ffa;
         data.map_name = self.current_map();
         data.aimbot_active = if self.aimbot_config(config).mode == KeyMode::Toggle {
             self.aim.active
