@@ -295,7 +295,7 @@ impl Player {
     pub fn all_bones(&self, cs2: &CS2) -> HashMap<Bones, Vec3> {
         use strum::IntoEnumIterator as _;
 
-        let mut bones = HashMap::new();
+        let mut bones = HashMap::with_capacity(20);
         let gs_node = self.game_scene_node(cs2);
         let bone_data: u64 = cs2.process.read(
             gs_node

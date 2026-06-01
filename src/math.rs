@@ -97,10 +97,13 @@ pub fn weighted_average(history: &std::collections::VecDeque<f32>) -> f32 {
         return 0.0;
     }
 
-    let (sum, weight_sum) = history.iter().enumerate().fold((0.0, 0.0), |(s, w), (i, v)| {
-        let weight = 1.0 + i as f32 * 0.15;
-        (s + v * weight, w + weight)
-    });
+    let (sum, weight_sum) = history
+        .iter()
+        .enumerate()
+        .fold((0.0, 0.0), |(s, w), (i, v)| {
+            let weight = 1.0 + i as f32 * 0.15;
+            (s + v * weight, w + weight)
+        });
     sum / weight_sum
 }
 
@@ -126,7 +129,11 @@ pub fn soft_clamp_acceleration(accel: f32, max_accel: f32, decay_rate: f32) -> f
     accel.signum() * (max_accel + excess * (-excess * decay_rate).exp())
 }
 
-pub fn record_acceleration(history: &mut std::collections::VecDeque<Vec2>, value: Vec2, max_size: usize) {
+pub fn record_acceleration(
+    history: &mut std::collections::VecDeque<Vec2>,
+    value: Vec2,
+    max_size: usize,
+) {
     if value.x.abs() < 25.0 && value.y.abs() < 25.0 {
         history.push_front(value.abs());
         if history.len() > max_size {

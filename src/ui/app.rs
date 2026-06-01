@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, VecDeque},
     path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
@@ -41,6 +41,7 @@ pub struct App {
     pub display_scale: f32,
     pub trails: HashMap<u64, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
+    pub frame_times: VecDeque<Duration>,
 
     pub grenades: GrenadeList,
     pub new_grenade: Grenade,
@@ -88,6 +89,7 @@ impl App {
             display_scale: 1.0,
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
+            frame_times: VecDeque::with_capacity(500),
 
             grenades,
             new_grenade: Grenade::new(),
@@ -151,7 +153,15 @@ impl ApplicationHandler for App {
         window_event: WindowEvent,
     ) {
         while let Ok(message) = self.channel.try_receive() {
-            self.game_status = message.0;
+            match message {
+                UiMessage::Status(status) => self.game_status = status,
+                UiMessage::FrameTime(time) => {
+                    if self.frame_times.len() >= 500 {
+                        self.frame_times.pop_front();
+                    }
+                    self.frame_times.push_back(time);
+                }
+            }
         }
 
         let Some(gui) = &self.gui else {
