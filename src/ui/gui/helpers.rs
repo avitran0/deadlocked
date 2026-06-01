@@ -165,7 +165,10 @@ impl<'gui> Widget for Keybind<'gui> {
             });
 
             if let Some(input) = input {
-                if input != KeyCode::Escape {
+                if input == KeyCode::Escape {
+                    *self.keycode = KeyCode::None;
+                    response.mark_changed();
+                } else {
                     *self.keycode = input;
                     response.mark_changed();
                 }
