@@ -32,7 +32,7 @@ impl Input {
     }
 
     pub fn is_key_pressed(&self, key: KeyCode) -> bool {
-        if key == KeyCode::Unbound {
+        if key == KeyCode::None {
             return false;
         }
         self.current_state.get(key.usize()).unwrap_or(false)
@@ -40,7 +40,7 @@ impl Input {
 
     #[allow(dead_code)]
     pub fn key_just_pressed(&self, key: KeyCode) -> bool {
-        if key == KeyCode::Unbound {
+        if key == KeyCode::None {
             return false;
         }
         !self.previous_state.get(key.usize()).unwrap_or(false)
