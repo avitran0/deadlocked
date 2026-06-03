@@ -51,6 +51,22 @@ impl Player {
         Self::get_entity(cs2, pawn_handle).map(|pawn| Self { controller, pawn })
     }
 
+    pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {
+        let index: i32 = cs2
+            .process
+            .read(self.pawn + cs2.offsets.pawn.crosshair_entity);
+        if index == -1 {
+            return None;
+        }
+
+        let entity = Player::get_client_entity(cs2, index as u64)?;
+        let player = Player {
+            controller: 0,
+            pawn: entity,
+        };
+        player.is_valid(cs2).then_some(player)
+    }
+
     pub fn pawn(pawn: u64) -> Self {
         Self {
             controller: 0,
@@ -484,25 +500,6 @@ impl Player {
             }
         }
         true
-    }
-
-    pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {
-        let index: i32 = cs2
-            .process
-            .read(self.pawn + cs2.offsets.pawn.crosshair_entity);
-        if index == -1 {
-            return None;
-        }
-
-        let entity = Player::get_client_entity(cs2, index as u64)?;
-        let player = Player {
-            controller: 0,
-            pawn: entity,
-        };
-        if !player.is_valid(cs2) {
-            return None;
-        }
-        Some(player)
     }
 
     pub fn velocity(&self, cs2: &CS2) -> Vec3 {

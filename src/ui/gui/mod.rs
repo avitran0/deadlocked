@@ -31,7 +31,10 @@ pub enum Tab {
 
 impl App {
     pub fn send_config(&self) {
-        self.send_message(GameMessage(Box::new(self.config.clone())));
+        self.send_message(GameMessage {
+            config: Box::new(self.config.clone()),
+            grenades: Box::new(self.grenades.clone()),
+        });
         self.save();
     }
 

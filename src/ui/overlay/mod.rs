@@ -1,4 +1,4 @@
-use egui::{Align2, Color32, Painter, Pos2, Shape, Stroke, Ui, pos2};
+use egui::{Align2, Color32, Painter, Pos2, Stroke, Ui, pos2};
 use glam::{Vec3, vec3};
 
 use crate::{
@@ -128,12 +128,12 @@ impl App {
                 continue;
             }
             let distance = (position - grenade.position).length();
-            if distance > 500.0 {
+            if distance > self.config.grenade.marker_draw_distance {
                 continue;
             }
             self.grenade_circle(data, grenade, painter);
 
-            if distance > 24.0 {
+            if distance > self.config.grenade.activation_distance {
                 continue;
             }
             self.grenade_indicator(data, grenade, painter);
@@ -144,42 +144,21 @@ impl App {
         let Some(center_screen) = world_to_screen(&grenade.position, data) else {
             return;
         };
-        let center = &grenade.position;
-
         // player hitbox width and length
         const WIDTH: f32 = 24.0;
-        const HALF_WIDTH: f32 = WIDTH / 2.0;
-
-        const V1: Vec3 = vec3(WIDTH, HALF_WIDTH, 0.0);
-        const V2: Vec3 = vec3(HALF_WIDTH, WIDTH, 0.0);
-        const V3: Vec3 = vec3(-HALF_WIDTH, WIDTH, 0.0);
-        const V4: Vec3 = vec3(-WIDTH, HALF_WIDTH, 0.0);
-
-        let points: Vec<Pos2> = [
-            center + V1,
-            center + V2,
-            center + V3,
-            center + V4,
-            center - V1,
-            center - V2,
-            center - V3,
-            center - V4,
-        ]
-        .iter()
-        .filter_map(|p| world_to_screen(p, data))
-        .collect();
-
-        let shape = Shape::convex_polygon(
-            points,
-            Color32::from_rgba_unmultiplied(0, 255, 0, 127),
-            Stroke::NONE,
-        );
-        painter.add(shape);
 
         painter.circle_filled(
             center_screen,
             WIDTH / 8.0,
             Color32::from_rgba_unmultiplied(255, 0, 0, 127),
+        );
+
+        self.text(
+            painter,
+            &grenade.name,
+            center_screen - egui::vec2(0.0, self.config.hud.font_size + 4.0),
+            Align2::CENTER_BOTTOM,
+            None,
         );
     }
 

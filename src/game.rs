@@ -12,12 +12,14 @@ use crate::{
     data::Data,
     message::{GameMessage, GameStatus, UiMessage},
     os::mouse::Mouse,
+    ui::grenades::GrenadeList,
 };
 
 pub struct GameManager {
     channel: Channel<UiMessage, GameMessage>,
     data: Arc<Mutex<Data>>,
     config: Config,
+    grenades: GrenadeList,
     mouse: Mouse,
     cs2: CS2,
 }
@@ -37,6 +39,7 @@ impl GameManager {
             channel,
             data,
             config: Config::default(),
+            grenades: GrenadeList::default(),
             mouse,
             cs2: CS2::new(),
         }
@@ -54,7 +57,8 @@ impl GameManager {
         loop {
             let start = Instant::now();
             while let Ok(message) = self.channel.try_receive() {
-                self.config = *message.0;
+                self.config = *message.config;
+                self.grenades = *message.grenades;
             }
 
             let mut is_valid = self.cs2.is_valid();
@@ -72,7 +76,7 @@ impl GameManager {
                     self.send_message(UiMessage::Status(GameStatus::Working));
                     previous_status = GameStatus::Working;
                 }
-                self.cs2.run(&self.config, &mut self.mouse);
+                self.cs2.run(&self.config, &self.grenades, &mut self.mouse);
                 let mut data = self.data.lock();
                 self.cs2.data(&self.config, &mut data);
             } else {

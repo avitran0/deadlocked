@@ -31,6 +31,21 @@ impl Input {
         self.current_state = DynamicBitSet::from(state);
     }
 
+    pub fn clear_game_keys(&self, process: &Process, offsets: &Offsets, keys: &[KeyCode]) {
+        let mut state = self.current_state.clone();
+        for key in keys {
+            if *key == KeyCode::None {
+                continue;
+            }
+            state.set(key.usize(), false);
+        }
+
+        process.write_bytes(
+            offsets.interface.input + offsets.direct.button_state,
+            state.as_bytes(),
+        );
+    }
+
     pub fn is_key_pressed(&self, key: KeyCode) -> bool {
         if key == KeyCode::None {
             return false;

@@ -1,6 +1,5 @@
 pub mod app;
 pub mod color;
-mod drag_range;
 pub mod grenades;
 mod gui;
 mod overlay;

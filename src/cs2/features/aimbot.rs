@@ -1,10 +1,10 @@
-use glam::{Vec2, vec2};
-
 use crate::{
-    config::{Config, KeyMode},
+    config::{AimbotConfig, Config, KeyMode},
     cs2::{
         CS2,
+        bones::Bones,
         entity::{player::Player, weapon_class::WeaponClass},
+        features::humanized_aim::{AimHumanizer, HumanizedAimConfig},
     },
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
@@ -13,13 +13,23 @@ use crate::{
 #[derive(Debug, Default)]
 pub struct Aimbot {
     pub active: bool,
-    inertia: Vec2,
+    humanizer: AimHumanizer,
+    target_pawn: Option<u64>,
+    bone_index: Option<u64>,
+}
+
+impl Aimbot {
+    fn reset_path(&mut self) {
+        self.humanizer.reset();
+        self.target_pawn = None;
+        self.bone_index = None;
+    }
 }
 
 impl CS2 {
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) -> bool {
         let hotkey = config.aim.aimbot_hotkey;
-        let config = self.aimbot_config(config);
+        let config = self.aimbot_config(config).clone();
 
         if !config.enabled {
             return false;
@@ -28,6 +38,7 @@ impl CS2 {
         match config.mode {
             KeyMode::Hold => {
                 if !self.input.is_key_pressed(hotkey) {
+                    self.aim.reset_path();
                     return false;
                 }
             }
@@ -36,16 +47,68 @@ impl CS2 {
                     self.aim.active = !self.aim.active;
                 }
                 if !self.aim.active {
+                    self.aim.reset_path();
                     return false;
                 }
             }
         }
 
-        let Some(target) = &self.target.player else {
+        self.aim_at_target(&config, mouse, true)
+    }
+
+    pub fn magnetized_triggerbot_aim(&mut self, config: &Config, mouse: &mut Mouse) -> bool {
+        let config = self.aimbot_config(config).clone();
+        self.aim_at_target(&config, mouse, false)
+    }
+
+    pub fn magnetized_triggerbot_aim_at(
+        &mut self,
+        config: &Config,
+        mouse: &mut Mouse,
+        target: Player,
+    ) -> bool {
+        let Some(local_player) = Player::local_player(self) else {
+            return false;
+        };
+
+        let previous_player = self.target.player;
+        let previous_angle = self.target.angle;
+        let previous_distance = self.target.distance;
+        let previous_bone_index = self.target.bone_index;
+
+        self.target.player = Some(target);
+        let distance_bone = if self.target.bone_index == 0 {
+            Bones::Head.u64()
+        } else {
+            self.target.bone_index
+        };
+        self.target.distance = local_player
+            .eye_position(self)
+            .distance(target.bone_position(self, distance_bone));
+
+        let moved = self.magnetized_triggerbot_aim(config, mouse);
+
+        self.target.player = previous_player;
+        self.target.angle = previous_angle;
+        self.target.distance = previous_distance;
+        self.target.bone_index = previous_bone_index;
+
+        moved
+    }
+
+    fn aim_at_target(
+        &mut self,
+        config: &AimbotConfig,
+        mouse: &mut Mouse,
+        check_start_bullet: bool,
+    ) -> bool {
+        let Some(target) = self.target.player else {
+            self.aim.reset_path();
             return false;
         };
 
         if !target.is_valid(self) {
+            self.aim.reset_path();
             return false;
         }
 
@@ -60,32 +123,53 @@ impl CS2 {
             WeaponClass::Grenade,
         ];
         if disallowed_weapons.contains(&weapon_class) {
+            self.aim.reset_path();
             return false;
         }
 
         if config.flash_check && local_player.is_flashed(self) {
+            self.aim.reset_path();
             return false;
         }
 
         if config.visibility_check && !target.visible(self, &local_player) {
+            self.aim.reset_path();
             return false;
         }
 
-        if local_player.shots_fired(self) < config.start_bullet {
+        if check_start_bullet && local_player.shots_fired(self) < config.start_bullet {
+            self.aim.reset_path();
             return false;
+        }
+
+        let target_changed = self.aim.target_pawn != Some(target.pawn);
+        if target_changed {
+            self.aim.target_pawn = Some(target.pawn);
+            self.aim.bone_index = None;
+            self.aim.humanizer.reset();
         }
 
         let target_angle = {
             let mut smallest_fov = 360.0;
             let mut smallest_angle = glam::Vec2::ZERO;
-            for bone in &config.bones {
-                let bone_pos = target.bone_position(self, bone.u64());
+
+            let stable_bone = self
+                .aim
+                .bone_index
+                .filter(|bone_index| config.bones.iter().any(|bone| bone.u64() == *bone_index));
+            let selected_bones: Vec<u64> = stable_bone
+                .map(|bone_index| vec![bone_index])
+                .unwrap_or_else(|| config.bones.iter().map(|bone| bone.u64()).collect());
+
+            for bone_index in selected_bones {
+                let bone_pos = target.bone_position(self, bone_index);
                 let angle =
                     self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
                 let fov = angles_to_fov(&local_player.view_angles(self), &angle);
                 if fov < smallest_fov {
                     smallest_fov = fov;
                     smallest_angle = angle;
+                    self.aim.bone_index = Some(bone_index);
                 }
             }
 
@@ -112,14 +196,21 @@ impl CS2 {
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
 
-        let mouse_angles = vec2(
+        let mouse_angles = glam::vec2(
             aim_angles.y / sensitivity * 45.45,
             -aim_angles.x / sensitivity * 45.45,
-        ) / (config.smooth + 1.0).clamp(1.0, 20.0);
+        );
 
-        let alpha = 1.0 - config.inertia.clamp(0.0, 1.0) * 0.5;
-        self.aim.inertia += (mouse_angles - self.aim.inertia) * alpha;
-        mouse.move_rel(self.aim.inertia);
+        mouse.move_rel(self.aim.humanizer.apply(
+            mouse_angles,
+            HumanizedAimConfig {
+                smooth: config.smooth,
+                inertia: config.inertia,
+                curve: config.curve,
+                humanization: config.humanization,
+                settle_radius: 2.0,
+            },
+        ));
 
         true
     }

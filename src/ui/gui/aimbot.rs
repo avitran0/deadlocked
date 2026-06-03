@@ -5,7 +5,6 @@ use crate::{
     cs2::bones::Bones,
     ui::{
         app::App,
-        drag_range::DragRange,
         gui::helpers::{
             checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, scroll,
         },
@@ -131,6 +130,28 @@ impl App {
 
             if drag(
                 ui,
+                "Curve",
+                DragValue::new(&mut self.weapon_config().aimbot.curve)
+                    .range(0.0..=1.0)
+                    .speed(0.005)
+                    .max_decimals(2),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Humanization",
+                DragValue::new(&mut self.weapon_config().aimbot.humanization)
+                    .range(0.0..=1.0)
+                    .speed(0.005)
+                    .max_decimals(2),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
                 "Start Bullet",
                 DragValue::new(&mut self.weapon_config().aimbot.start_bullet)
                     .range(0..=10)
@@ -208,23 +229,20 @@ impl App {
                 self.send_config();
             }
 
+            if checkbox(
+                ui,
+                "Magnetized Triggerbot",
+                &mut self.weapon_config().triggerbot.magnetized,
+            ) {
+                self.send_config();
+            }
+
             if keybind(
                 ui,
                 "triggerbot_hotkey",
                 "Hotkey",
                 &mut self.config.aim.triggerbot_hotkey,
             ) {
-                self.send_config();
-            }
-
-            if ui
-                .add(DragRange::new(
-                    "Delay (ms)",
-                    &mut self.weapon_config().triggerbot.delay,
-                    0..=999,
-                ))
-                .changed()
-            {
                 self.send_config();
             }
 
@@ -247,10 +265,56 @@ impl App {
 
             if drag(
                 ui,
-                "Hold Duration (ms)",
-                DragValue::new(&mut self.weapon_config().triggerbot.shot_duration)
-                    .range(0..=2000)
+                "Pixel Radius",
+                DragValue::new(&mut self.weapon_config().triggerbot.pixel_radius)
+                    .range(0.5..=25.0)
+                    .speed(0.1),
+            ) {
+                self.send_config();
+            }
+
+            if checkbox(
+                ui,
+                "Team Check",
+                &mut self.weapon_config().triggerbot.team_check,
+            ) {
+                self.send_config();
+            }
+
+            if checkbox(
+                ui,
+                "Visible Only",
+                &mut self.weapon_config().triggerbot.visible_only,
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Extra Reaction (ms)",
+                DragValue::new(&mut self.weapon_config().triggerbot.extra_reaction_delay_ms)
+                    .range(0..=999)
                     .speed(10.0),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Extra Cooldown (ms)",
+                DragValue::new(&mut self.weapon_config().triggerbot.extra_min_interval_ms)
+                    .range(0..=999)
+                    .speed(10.0),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Extra Hold (us)",
+                DragValue::new(&mut self.weapon_config().triggerbot.extra_hold_us)
+                    .range(0..=1_000_000)
+                    .speed(1000.0),
             ) {
                 self.send_config();
             }

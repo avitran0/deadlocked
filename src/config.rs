@@ -28,9 +28,7 @@ pub struct ApplicationConfig {
 
 impl Default for ApplicationConfig {
     fn default() -> Self {
-        Self {
-            first_launch: true,
-        }
+        Self { first_launch: true }
     }
 }
 
@@ -59,6 +57,7 @@ pub struct Config {
     pub aim: AimConfig,
     pub player: PlayerConfig,
     pub hud: HudConfig,
+    pub grenade: GrenadeConfig,
     pub misc: UnsafeConfig,
     pub accent_color: Color32,
     pub fps: u32,
@@ -70,9 +69,44 @@ impl Default for Config {
             aim: AimConfig::default(),
             player: PlayerConfig::default(),
             hud: HudConfig::default(),
+            grenade: GrenadeConfig::default(),
             misc: UnsafeConfig::default(),
             accent_color: Colors::BLUE,
             fps: 120,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct GrenadeConfig {
+    pub automation_enabled: bool,
+    pub automation_hotkey: KeyCode,
+    pub activation_distance: f32,
+    pub marker_draw_distance: f32,
+    pub position_tolerance: f32,
+    pub aim_fov: f32,
+    pub aim_smooth: f32,
+    pub aim_inertia: f32,
+    pub aim_curve: f32,
+    pub aim_humanization: f32,
+    pub aim_tolerance: f32,
+}
+
+impl Default for GrenadeConfig {
+    fn default() -> Self {
+        Self {
+            automation_enabled: true,
+            automation_hotkey: KeyCode::G,
+            activation_distance: 24.0,
+            marker_draw_distance: 500.0,
+            position_tolerance: 2.0,
+            aim_fov: 25.0,
+            aim_smooth: 8.0,
+            aim_inertia: 0.0,
+            aim_curve: 0.0,
+            aim_humanization: 0.0,
+            aim_tolerance: 0.2,
         }
     }
 }
@@ -113,6 +147,8 @@ pub struct AimbotConfig {
     pub fov: f32,
     pub smooth: f32,
     pub inertia: f32,
+    pub curve: f32,
+    pub humanization: f32,
     pub bones: Vec<Bones>,
     pub targeting_mode: TargetingMode,
 }
@@ -131,6 +167,8 @@ impl Default for AimbotConfig {
             fov: 2.5,
             smooth: 5.0,
             inertia: 1.0,
+            curve: 0.0,
+            humanization: 0.0,
             bones: vec![
                 Bones::Head,
                 Bones::Neck,
@@ -180,6 +218,13 @@ pub enum TargetingMode {
 pub struct TriggerbotConfig {
     pub enable_override: bool,
     pub enabled: bool,
+    pub magnetized: bool,
+    pub pixel_radius: f32,
+    pub visible_only: bool,
+    pub team_check: bool,
+    pub extra_hold_us: u32,
+    pub extra_min_interval_ms: u32,
+    pub extra_reaction_delay_ms: u32,
     pub delay: RangeInclusive<u64>,
     pub shot_duration: u64,
     pub mode: KeyMode,
@@ -195,6 +240,13 @@ impl Default for TriggerbotConfig {
         Self {
             enable_override: false,
             enabled: false,
+            magnetized: false,
+            pixel_radius: 2.5,
+            visible_only: true,
+            team_check: true,
+            extra_hold_us: 0,
+            extra_min_interval_ms: 0,
+            extra_reaction_delay_ms: 0,
             delay: 100..=200,
             shot_duration: 200,
             mode: KeyMode::Hold,

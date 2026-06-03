@@ -10,6 +10,7 @@ use crate::{
         entity::{
             Entity, EntityInfo, GrenadeInfo, planted_c4::PlantedC4, player::Player, weapon::Weapon,
         },
+        features::grenade_automation::GrenadeAutomationState,
         features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
         input::Input,
         offsets::Offsets,
@@ -19,6 +20,7 @@ use crate::{
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
     parser::{bvh::Bvh, read_map},
+    ui::grenades::GrenadeList,
 };
 
 pub mod bones;
@@ -47,6 +49,7 @@ pub struct CS2 {
     recoil: Recoil,
     aim: Aimbot,
     trigger: Triggerbot,
+    grenade_automation: GrenadeAutomationState,
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
@@ -79,7 +82,7 @@ impl CS2 {
         self.is_valid = true;
     }
 
-    pub fn run(&mut self, config: &Config, mouse: &mut Mouse) {
+    pub fn run(&mut self, config: &Config, grenades: &GrenadeList, mouse: &mut Mouse) {
         if !self.process.is_valid() {
             self.is_valid = false;
             utils::debug!("process is no longer valid");
@@ -112,11 +115,15 @@ impl CS2 {
 
         self.esp_toggle(config);
 
-        self.triggerbot(config);
-
-        self.triggerbot_shoot(mouse);
+        if self.grenade_automation(config, grenades, mouse) {
+            return;
+        }
 
         self.find_target(config);
+
+        self.triggerbot(config, mouse);
+
+        self.triggerbot_shoot(mouse);
 
         if !self.aimbot(config, mouse) {
             self.rcs(config, mouse);
@@ -282,6 +289,7 @@ impl CS2 {
             recoil: Recoil::default(),
             aim: Aimbot::default(),
             trigger: Triggerbot::default(),
+            grenade_automation: GrenadeAutomationState::default(),
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,

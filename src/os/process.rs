@@ -191,6 +191,25 @@ impl Process {
         unsafe { nix::libc::process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0) };
     }
 
+    #[cfg(feature = "read-only")]
+    pub fn write_bytes(&self, _address: u64, _bytes: &[u8]) {}
+
+    #[cfg(not(feature = "read-only"))]
+    pub fn write_bytes(&self, address: u64, bytes: &[u8]) {
+        let mut buffer = bytes.to_vec();
+
+        let local_iov = iovec {
+            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+        let remote_iov = iovec {
+            iov_base: address as *mut libc::c_void,
+            iov_len: buffer.len(),
+        };
+
+        unsafe { nix::libc::process_vm_writev(self.pid, &local_iov, 1, &remote_iov, 1, 0) };
+    }
+
     pub fn read_string(&self, address: u64) -> String {
         if let Some(cached) = self.string_cache.borrow().get(&address).cloned() {
             return cached;
