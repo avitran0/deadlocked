@@ -3,7 +3,7 @@ use std::time::Duration;
 use egui::{Align, Ui};
 
 use crate::{
-    config::{WeaponConfig, write_config},
+    config::{aim::WeaponConfig, write_config},
     message::{GameMessage, GameStatus},
     ui::{app::App, color::Colors, gui::aimbot::AimbotTab},
 };

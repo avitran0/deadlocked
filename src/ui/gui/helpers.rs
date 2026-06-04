@@ -144,7 +144,6 @@ impl<'gui> Widget for Keybind<'gui> {
                         ..
                     } = event
                     {
-                        dbg!(key);
                         if *key == egui::Key::F35 {
                             return KeyCode::from_egui_modifiers(*modifiers);
                         } else {

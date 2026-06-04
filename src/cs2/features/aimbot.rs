@@ -1,7 +1,7 @@
 use glam::{Vec2, vec2};
 
 use crate::{
-    config::{Config, KeyMode},
+    config::Config,
     cs2::{
         CS2,
         entity::{player::Player, weapon_class::WeaponClass},
@@ -25,20 +25,8 @@ impl CS2 {
             return false;
         }
 
-        match config.mode {
-            KeyMode::Hold => {
-                if !self.input.is_key_pressed(hotkey) {
-                    return false;
-                }
-            }
-            KeyMode::Toggle => {
-                if self.input.key_just_pressed(hotkey) {
-                    self.aim.active = !self.aim.active;
-                }
-                if !self.aim.active {
-                    return false;
-                }
-            }
+        if !Self::check_hotkey(&self.input, config.mode, hotkey, &mut self.aim.active) {
+            return false;
         }
 
         let Some(target) = &self.target.player else {

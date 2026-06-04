@@ -1,4 +1,7 @@
-use crate::{config::Config, cs2::CS2};
+use crate::{
+    config::{Config, aim::KeyMode},
+    cs2::CS2,
+};
 
 #[derive(Debug)]
 pub struct EspToggle {
@@ -15,9 +18,7 @@ impl CS2 {
     pub fn esp_toggle(&mut self, config: &Config) {
         let hotkey = config.player.esp_hotkey;
 
-        if self.input.key_just_pressed(hotkey) {
-            self.esp.active = !self.esp.active;
-        }
+        Self::check_hotkey(&self.input, KeyMode::Toggle, hotkey, &mut self.esp.active);
     }
 
     pub fn esp_enabled(&self, config: &Config) -> bool {

@@ -1,8 +1,8 @@
 use egui::{Align2, Color32, Painter, Stroke, pos2};
 
 use crate::{
-    config::KeyMode, cs2::entity::weapon_class::WeaponClass, data::Data, math::world_to_screen,
-    ui::app::App,
+    config::aim::KeyMode, cs2::entity::weapon_class::WeaponClass, data::Data,
+    math::world_to_screen, ui::app::App,
 };
 
 impl App {

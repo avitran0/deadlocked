@@ -2,7 +2,7 @@ use glam::Vec2;
 use strum::IntoEnumIterator;
 
 use crate::{
-    config::{Config, TargetingMode},
+    config::{Config, aim::TargetingMode},
     constants::cs2,
     cs2::{
         CS2,

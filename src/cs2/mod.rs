@@ -3,7 +3,10 @@ use std::time::{Duration, Instant};
 use glam::{IVec2, Mat4, Vec2, Vec3};
 
 use crate::{
-    config::{AimbotConfig, Config, KeyMode, RcsConfig, TriggerbotConfig},
+    config::{
+        Config,
+        aim::{AimbotConfig, KeyMode, RcsConfig, TriggerbotConfig},
+    },
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
         bones::Bones,
@@ -12,6 +15,7 @@ use crate::{
         },
         features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
         input::Input,
+        key_codes::KeyCode,
         offsets::Offsets,
         target::Target,
     },
@@ -88,7 +92,6 @@ impl CS2 {
 
         self.input.update(&self.process, &self.offsets);
 
-        // self.cache_players();
         if self.last_cache.elapsed() > Duration::from_millis(200) {
             self.cache_entities();
             self.check_bvh();
@@ -367,6 +370,18 @@ impl CS2 {
             if self.bvh.is_some() {
                 utils::info!("loaded bvh for {current_map}");
                 self.current_bvh = current_map;
+            }
+        }
+    }
+
+    fn check_hotkey(input: &Input, mode: KeyMode, key: KeyCode, active: &mut bool) -> bool {
+        match mode {
+            KeyMode::Hold => input.is_key_pressed(key),
+            KeyMode::Toggle => {
+                if input.key_just_pressed(key) {
+                    *active = !*active;
+                }
+                *active
             }
         }
     }

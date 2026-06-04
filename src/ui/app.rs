@@ -14,8 +14,9 @@ use winit::{
 
 use crate::{
     config::{
-        ApplicationConfig, CONFIG_PATH, Config, DEFAULT_CONFIG_NAME, available_configs,
-        parse_config, read_app_config, write_config,
+        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME,
+        application::{ApplicationConfig, read_app_config},
+        available_configs, parse_config, write_config,
     },
     cs2::entity::weapon::Weapon,
     data::{Data, SoundType},

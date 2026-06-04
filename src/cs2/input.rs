@@ -38,7 +38,6 @@ impl Input {
         self.current_state.get(key.usize()).unwrap_or(false)
     }
 
-    #[allow(dead_code)]
     pub fn key_just_pressed(&self, key: KeyCode) -> bool {
         if key == KeyCode::None {
             return false;

@@ -4,7 +4,7 @@ use egui::{Align2, Color32, FontId, Painter, Stroke, pos2};
 use glam::vec3;
 
 use crate::{
-    config::{BoxMode, DrawMode},
+    config::player::{BoxMode, DrawMode},
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
     math::world_to_screen,
@@ -78,8 +78,6 @@ impl App {
     }
 
     fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
-        use crate::config::DrawMode;
-
         let alpha = match alpha {
             Some(alpha) => alpha.clamp(0.0, 1.0),
             None => 1.0,

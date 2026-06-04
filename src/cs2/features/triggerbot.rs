@@ -4,7 +4,7 @@ use glam::Vec2;
 use rand::rng;
 
 use crate::{
-    config::{Config, KeyMode},
+    config::Config,
     cs2::{
         CS2,
         bones::Bones,
@@ -30,20 +30,8 @@ impl CS2 {
             return;
         }
 
-        match config.mode {
-            KeyMode::Hold => {
-                if !self.input.is_key_pressed(hotkey) {
-                    return;
-                }
-            }
-            KeyMode::Toggle => {
-                if self.input.key_just_pressed(hotkey) {
-                    self.trigger.active = !self.trigger.active;
-                }
-                if !self.trigger.active {
-                    return;
-                }
-            }
+        if !Self::check_hotkey(&self.input, config.mode, hotkey, &mut self.trigger.active) {
+            return;
         }
 
         if self.trigger.shot_start.is_some() || self.trigger.shot_end.is_some() {

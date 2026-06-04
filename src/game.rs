@@ -7,7 +7,7 @@ use std::{
 use utils::{channel::Channel, sync::Mutex};
 
 use crate::{
-    config::{Config, SLEEP_DURATION},
+    config::Config,
     cs2::CS2,
     data::Data,
     message::{GameMessage, GameStatus, UiMessage},
@@ -92,7 +92,7 @@ impl GameManager {
                 }
                 self.send_message(UiMessage::FrameTime(elapsed));
             } else {
-                sleep(SLEEP_DURATION);
+                sleep(Duration::from_secs(5));
             }
         }
     }

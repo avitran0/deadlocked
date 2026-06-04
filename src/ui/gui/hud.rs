@@ -33,7 +33,7 @@ impl App {
                 if checkbox(
                     ui,
                     "Enable Grenade Trails",
-                    &mut self.config.hud.grenade_trails,
+                    &mut self.config.hud.grenade_trails.enabled,
                 ) {
                     self.send_config();
                 }
@@ -41,7 +41,7 @@ impl App {
                 if color_picker(
                     ui,
                     "Smoke Trail Color",
-                    &mut self.config.hud.smoke_trail_color,
+                    &mut self.config.hud.grenade_trails.smoke,
                 ) {
                     self.send_config();
                 }
@@ -49,7 +49,7 @@ impl App {
                 if color_picker(
                     ui,
                     "Molotov Trail Color",
-                    &mut self.config.hud.molotov_trail_color,
+                    &mut self.config.hud.grenade_trails.molotov,
                 ) {
                     self.send_config();
                 }
@@ -57,7 +57,7 @@ impl App {
                 if color_picker(
                     ui,
                     "Incendiary Trail Color",
-                    &mut self.config.hud.incendiary_trail_color,
+                    &mut self.config.hud.grenade_trails.incendiary,
                 ) {
                     self.send_config();
                 }
@@ -65,7 +65,7 @@ impl App {
                 if color_picker(
                     ui,
                     "Flash Trail Color",
-                    &mut self.config.hud.flash_trail_color,
+                    &mut self.config.hud.grenade_trails.flash,
                 ) {
                     self.send_config();
                 }
@@ -73,7 +73,7 @@ impl App {
                 if color_picker(
                     ui,
                     "HE Grenade Trail Color",
-                    &mut self.config.hud.he_trail_color,
+                    &mut self.config.hud.grenade_trails.he,
                 ) {
                     self.send_config();
                 }
@@ -81,7 +81,7 @@ impl App {
                 if color_picker(
                     ui,
                     "Decoy Trail Color",
-                    &mut self.config.hud.decoy_trail_color,
+                    &mut self.config.hud.grenade_trails.decoy,
                 ) {
                     self.send_config();
                 }

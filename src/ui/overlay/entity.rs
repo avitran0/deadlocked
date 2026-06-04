@@ -46,13 +46,13 @@ impl App {
             EntityInfo::Smoke(smoke) => self.smoke(painter, data, smoke),
             EntityInfo::Molotov(molotov) => self.molotov(painter, data, molotov),
             EntityInfo::Flashbang(info) => {
-                self.draw_grenade(painter, data, info, self.config.hud.flash_trail_color)
+                self.draw_grenade(painter, data, info, self.config.hud.grenade_trails.flash)
             }
             EntityInfo::HeGrenade(info) => {
-                self.draw_grenade(painter, data, info, self.config.hud.he_trail_color)
+                self.draw_grenade(painter, data, info, self.config.hud.grenade_trails.he)
             }
             EntityInfo::Decoy(info) => {
-                self.draw_grenade(painter, data, info, self.config.hud.decoy_trail_color)
+                self.draw_grenade(painter, data, info, self.config.hud.grenade_trails.decoy)
             }
         };
     }
@@ -64,7 +64,7 @@ impl App {
         info: &GrenadeInfo,
         trail_color: Color32,
     ) {
-        if !self.config.hud.grenade_trails {
+        if !self.config.hud.grenade_trails.enabled {
             return;
         }
         let Some(position) = world_to_screen(&info.position, data) else {
@@ -72,7 +72,7 @@ impl App {
         };
         self.text(painter, info.name, position, Align2::CENTER_CENTER, None);
 
-        if !self.config.hud.grenade_trails {
+        if !self.config.hud.grenade_trails.enabled {
             return;
         }
 
@@ -98,7 +98,7 @@ impl App {
     fn inferno(&self, painter: &Painter, data: &Data, inferno: &InfernoInfo) {
         use egui::Shape;
 
-        if !self.config.hud.grenade_trails {
+        if !self.config.hud.grenade_trails.enabled {
             return;
         }
         let hull: Vec<Pos2> = convex_hull(&inferno.hull)
@@ -125,19 +125,19 @@ impl App {
     }
 
     fn smoke(&self, painter: &Painter, data: &Data, smoke: &SmokeInfo) {
-        if !self.config.hud.grenade_trails {
+        if !self.config.hud.grenade_trails.enabled {
             return;
         }
         self.draw_grenade(
             painter,
             data,
             &smoke.grenade(),
-            self.config.hud.smoke_trail_color,
+            self.config.hud.grenade_trails.smoke,
         );
     }
 
     fn molotov(&self, painter: &Painter, data: &Data, molotov: &MolotovInfo) {
-        if !self.config.hud.grenade_trails {
+        if !self.config.hud.grenade_trails.enabled {
             return;
         }
         if molotov.is_incendiary {
@@ -145,14 +145,14 @@ impl App {
                 painter,
                 data,
                 &molotov.grenade(),
-                self.config.hud.incendiary_trail_color,
+                self.config.hud.grenade_trails.incendiary,
             );
         } else {
             self.draw_grenade(
                 painter,
                 data,
                 &molotov.grenade(),
-                self.config.hud.molotov_trail_color,
+                self.config.hud.grenade_trails.molotov,
             );
         }
     }
