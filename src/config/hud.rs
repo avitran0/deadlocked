@@ -42,6 +42,7 @@ impl Default for HudConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CrosshairConfig {
     pub enabled: bool,
     pub color: Color32,
@@ -63,6 +64,7 @@ impl Default for CrosshairConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct TrailConfig {
     pub enabled: bool,
     pub smoke: Color32,
