@@ -4,6 +4,8 @@ UDEV_RULE_FILE="/etc/udev/rules.d/99-uinput.rules"
 UINPUT_GROUP="uinput"
 CURRENT_USER=$(whoami)
 
+git config core.hooksPath .hooks
+
 echo 'KERNEL=="uinput", MODE="0660", GROUP="uinput"' | sudo tee "$UDEV_RULE_FILE" > /dev/null
 echo "created udev file: $UDEV_RULE_FILE"
 
@@ -21,7 +23,7 @@ echo "reloaded udev rules"
 
 if [ "$XDG_CURRENT_DESKTOP" = "Hyprland" ]; then
     echo "detected Hyprland as window manager"
-    
+
     RULE="windowrule = no_blur 1, match:title ^(deadlocked_overlay)$"
     CONF_FILE="$HOME/.config/hypr/hyprland.conf"
 

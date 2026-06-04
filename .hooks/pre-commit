@@ -1,0 +1,8 @@
+#!/bin/sh
+
+set -e
+
+cargo fmt --all
+cargo clippy --all-targets --all-features -- -D warnings
+
+echo "pre-commit checks passed"
