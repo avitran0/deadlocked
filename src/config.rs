@@ -28,9 +28,7 @@ pub struct ApplicationConfig {
 
 impl Default for ApplicationConfig {
     fn default() -> Self {
-        Self {
-            first_launch: true,
-        }
+        Self { first_launch: true }
     }
 }
 

@@ -23,7 +23,7 @@ impl Display for GameStatus {
 pub struct GameMessage(pub Box<Config>);
 
 #[derive(Debug, Clone)]
-pub enum UiMessage{
+pub enum UiMessage {
     Status(GameStatus),
     FrameTime(Duration),
 }

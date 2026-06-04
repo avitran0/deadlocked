@@ -193,10 +193,7 @@ impl App {
                     pos2(x, bl.y),
                     pos2(x, bl.y - (delta * player.armor as f32 / 100.0)),
                 ],
-                Stroke::new(
-                    line_width,
-                    Self::alpha(Color32::BLUE, alpha),
-                ),
+                Stroke::new(line_width, Self::alpha(Color32::BLUE, alpha)),
             );
         }
 

@@ -110,9 +110,7 @@ impl CS2 {
             return None;
         };
         // 0x0D + 4, 12, 20, 28
-        let vphys_world_global_ptr = self
-            .process
-            .get_relative_address(vphys_world, 3, 7);
+        let vphys_world_global_ptr = self.process.get_relative_address(vphys_world, 3, 7);
         let vphys_world_global: u64 = self.process.read(vphys_world_global_ptr);
         offsets.direct.vphys_world = vphys_world_global;
 
