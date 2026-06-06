@@ -109,6 +109,8 @@ impl CS2 {
         self.aim.inertia += (mouse_angles - self.aim.inertia) * alpha;
         mouse.move_rel(self.aim.inertia);
 
+        self.recoil.previous = local_player.aim_punch(self);
+
         true
     }
 }

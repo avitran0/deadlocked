@@ -15,7 +15,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Recoil {
-    previous: Vec2,
+    pub previous: Vec2,
     unaccounted: Vec2,
     velocity: Vec2,
     accel_history: VecDeque<Vec2>,
