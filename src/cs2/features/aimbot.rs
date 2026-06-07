@@ -1,9 +1,10 @@
 use glam::{Vec2, vec2};
 
 use crate::{
-    config::Config,
+    config::{Config, aim::AimbotConfig},
     cs2::{
         CS2,
+        bones::Bones,
         entity::{player::Player, weapon_class::WeaponClass},
     },
     math::{angles_to_fov, vec2_clamp},
@@ -63,34 +64,13 @@ impl CS2 {
             return false;
         }
 
-        let target_angle = {
-            let mut smallest_fov = 360.0;
-            let mut smallest_angle = glam::Vec2::ZERO;
-            for bone in &config.bones {
-                let bone_pos = target.bone_position(self, bone.u64());
-                let angle =
-                    self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
-                let fov = angles_to_fov(&local_player.view_angles(self), &angle);
-                if fov < smallest_fov {
-                    smallest_fov = fov;
-                    smallest_angle = angle;
-                }
-            }
-
-            smallest_angle
+        let Some((target_angle, _target_distance)) =
+            self.best_aim_bone(config, target, &local_player)
+        else {
+            return false;
         };
 
         let view_angles = local_player.view_angles(self);
-        if angles_to_fov(&view_angles, &target_angle)
-            > (config.fov
-                * if config.distance_adjusted_fov {
-                    self.distance_scale(self.target.distance)
-                } else {
-                    1.0
-                })
-        {
-            return false;
-        }
 
         let mut aim_angles = view_angles - target_angle;
         if aim_angles.y < -180.0 {
@@ -112,5 +92,61 @@ impl CS2 {
         self.recoil.previous = local_player.aim_punch(self);
 
         true
+    }
+
+    fn best_aim_bone(
+        &self,
+        config: &AimbotConfig,
+        target: &Player,
+        local_player: &Player,
+    ) -> Option<(Vec2, f32)> {
+        self.best_aim_bone_from(config, target, local_player, &config.prioritized_bones)
+            .or_else(|| self.best_aim_bone_from(config, target, local_player, &config.bones))
+    }
+
+    fn best_aim_bone_from(
+        &self,
+        config: &AimbotConfig,
+        target: &Player,
+        local_player: &Player,
+        bones: &[Bones],
+    ) -> Option<(Vec2, f32)> {
+        let view_angles = local_player.view_angles(self);
+        let eye_position = local_player.eye_position(self);
+        let mut best = None;
+        let mut smallest_fov = 360.0;
+
+        for bone in bones {
+            if !config.bones.contains(bone) {
+                continue;
+            }
+
+            if config.visibility_check && !target.bone_visible(self, local_player, *bone) {
+                continue;
+            }
+
+            let bone_pos = target.bone_position(self, bone.u64());
+            let angle =
+                self.angle_to_target(local_player, &bone_pos, &self.target.previous_aim_punch);
+            let fov = angles_to_fov(&view_angles, &angle);
+            let distance = eye_position.distance(bone_pos);
+            let fov_limit = config.fov
+                * if config.distance_adjusted_fov {
+                    self.distance_scale(distance)
+                } else {
+                    1.0
+                };
+
+            if fov > fov_limit {
+                continue;
+            }
+
+            if fov < smallest_fov {
+                smallest_fov = fov;
+                best = Some((angle, distance));
+            }
+        }
+
+        best
     }
 }

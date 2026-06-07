@@ -1,4 +1,4 @@
-use egui::{DragValue, Ui};
+use egui::{Button, DragValue, Ui};
 use strum::IntoEnumIterator as _;
 
 use crate::{
@@ -179,8 +179,38 @@ impl App {
                 if ui.selectable_label(index.is_some(), text).clicked() {
                     if let Some(index) = index {
                         self.weapon_config().aimbot.bones.remove(index);
+                        self.weapon_config()
+                            .aimbot
+                            .prioritized_bones
+                            .retain(|b| *b != bone);
                     } else {
                         self.weapon_config().aimbot.bones.push(bone);
+                    }
+                    self.send_config();
+                }
+            }
+        });
+
+        ui.collapsing("Prioritized Bones", |ui| {
+            for bone in Bones::iter() {
+                let text = format!("{:?}", bone);
+                let selected = self.weapon_config().aimbot.bones.contains(&bone);
+                let index = self
+                    .weapon_config()
+                    .aimbot
+                    .prioritized_bones
+                    .iter()
+                    .position(|b| *b == bone);
+
+                let clicked = ui
+                    .add_enabled(selected, Button::selectable(index.is_some(), text))
+                    .clicked();
+
+                if clicked {
+                    if let Some(index) = index {
+                        self.weapon_config().aimbot.prioritized_bones.remove(index);
+                    } else {
+                        self.weapon_config().aimbot.prioritized_bones.push(bone);
                     }
                     self.send_config();
                 }

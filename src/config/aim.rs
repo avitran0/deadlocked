@@ -43,6 +43,7 @@ pub struct AimbotConfig {
     pub smooth: f32,
     pub inertia: f32,
     pub bones: Vec<Bones>,
+    pub prioritized_bones: Vec<Bones>,
     pub targeting_mode: TargetingMode,
 }
 
@@ -69,6 +70,7 @@ impl Default for AimbotConfig {
                 Bones::Spine1,
                 Bones::Hip,
             ],
+            prioritized_bones: vec![Bones::Head],
             targeting_mode: TargetingMode::Fov,
         }
     }

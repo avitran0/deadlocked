@@ -486,6 +486,18 @@ impl Player {
         true
     }
 
+    pub fn bone_visible(&self, cs2: &CS2, local_player: &Player, bone: Bones) -> bool {
+        if let Some(bvh) = &cs2.bvh {
+            return bvh.has_line_of_sight(
+                local_player.eye_position(cs2),
+                self.bone_position(cs2, bone.u64()),
+            );
+        }
+
+        let spotted_mask = self.spotted_mask(cs2);
+        (spotted_mask & (1 << cs2.target.local_pawn_index)) != 0
+    }
+
     pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {
         let index: i32 = cs2
             .process
