@@ -156,8 +156,18 @@ impl CS2 {
             return;
         }
         let is_ffa = self.is_ffa();
+        let spectator_target = local_player.spectator_target(self);
+        let active_pawn = if let Some(target) = spectator_target {
+            target.pawn
+        } else {
+            local_player.pawn
+        };
 
         for player in &self.players {
+            if spectator_target.is_some() && player.pawn == active_pawn {
+                continue;
+            }
+
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
@@ -183,12 +193,6 @@ impl CS2 {
                 data.players.push(player_data);
             }
         }
-
-        let active_pawn = if let Some(target) = local_player.spectator_target(self) {
-            target.pawn
-        } else {
-            local_player.pawn
-        };
 
         for player in &self.dead_players {
             if let Some(target) = player.spectator_target(self)
