@@ -184,9 +184,15 @@ impl CS2 {
             }
         }
 
+        let active_pawn = if let Some(target) = local_player.spectator_target(self) {
+            target.pawn
+        } else {
+            local_player.pawn
+        };
+
         for player in &self.dead_players {
             if let Some(target) = player.spectator_target(self)
-                && target.pawn == local_player.pawn
+                && target.pawn == active_pawn
             {
                 data.spectators.push(player.name(self));
             }
