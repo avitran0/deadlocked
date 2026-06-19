@@ -34,7 +34,7 @@ overflow-checks = false
 
 [profile.release]
 debug = true
-lto = true
+lto = "thin"
 
 [features]
 read-only = []
