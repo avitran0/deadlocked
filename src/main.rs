@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use utils::{channel::Channel, log::LoggerOptions, sync::Mutex};
+use utils::{Channel, Mutex, log::LoggerOptions};
 
 use crate::{config::BASE_PATH, data::Data, os::mouse::check_uinput, ui::app::App};
 

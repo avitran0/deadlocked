@@ -1,4 +1,4 @@
-use utils::bitset::DynamicBitSet;
+use utils::DynamicBitSet;
 
 use crate::{
     cs2::{key_codes::KeyCode, offsets::Offsets},

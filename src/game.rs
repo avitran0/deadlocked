@@ -4,7 +4,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use utils::{channel::Channel, sync::Mutex};
+use utils::{Channel, Mutex};
 
 use crate::{
     config::Config,

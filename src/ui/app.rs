@@ -5,7 +5,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use utils::{channel::Channel, sync::Mutex};
+use utils::{Channel, Mutex};
 use winit::{
     application::ApplicationHandler,
     event::{ElementState, StartCause, WindowEvent},
