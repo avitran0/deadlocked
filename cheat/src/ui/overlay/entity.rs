@@ -72,7 +72,7 @@ impl App {
         let Some(position) = world_to_screen(&info.position, data) else {
             return;
         };
-        self.text(painter, info.name, position, Align2::CENTER_CENTER, None);
+        self.text(painter, &info.name, position, Align2::CENTER_CENTER, None);
 
         if !self.config.hud.grenade_trails.enabled {
             return;

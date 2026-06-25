@@ -34,7 +34,7 @@ pub fn grenade_info(entity: u64, name: &'static str, cs2: &CS2) -> GrenadeInfo {
     GrenadeInfo {
         entity,
         position: Player::entity(entity).position(cs2),
-        name,
+        name: name.to_owned(),
     }
 }
 

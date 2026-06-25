@@ -10,15 +10,13 @@ use axum::{
     routing::any,
 };
 use serde::{Serialize, de::DeserializeOwned};
+use shared::data::Data;
 use tokio::{net::TcpListener, time::sleep};
 use tower_http::services::ServeDir;
 use utils::log::LoggerOptions;
 use uuid::Uuid;
 
-use crate::{
-    game::{Game, Games},
-    message::UuidMessage,
-};
+use crate::{game::Games, message::UuidMessage};
 
 mod game;
 mod message;
@@ -62,7 +60,18 @@ async fn server(state: Games, mut ws: WebSocket) {
         return;
     }
 
-    state.write().await.insert(uuid, Game::default());
+    state.write().await.insert(uuid, Data::default());
+
+    while let Some(data) = recv_json::<Data>(&mut ws).await {
+        let mut games = state.write().await;
+        let Some(data_mut) = games.get_mut(&uuid) else {
+            break;
+        };
+
+        *data_mut = data;
+    }
+
+    state.write().await.remove(&uuid);
 }
 
 async fn client_handler(
@@ -84,10 +93,10 @@ async fn client(state: Games, mut ws: WebSocket) {
 
     loop {
         let games = state.read().await;
-        let Some(game) = games.get(&uuid.uuid) else {
+        let Some(data) = games.get(&uuid.uuid) else {
             return;
         };
-        if send_json(&mut ws, game).await.is_none() {
+        if send_json(&mut ws, data).await.is_none() {
             return;
         }
         drop(games);

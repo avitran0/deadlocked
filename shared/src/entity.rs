@@ -1,9 +1,9 @@
 use glam::Vec3;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::weapon::Weapon;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EntityInfo {
     Weapon {
         weapon: Weapon,
@@ -18,14 +18,14 @@ pub enum EntityInfo {
     Decoy(GrenadeInfo),
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GrenadeInfo {
     pub entity: u64,
     pub position: Vec3,
-    pub name: &'static str,
+    pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InfernoInfo {
     pub entity: u64,
     pub position: Vec3,
@@ -37,12 +37,12 @@ impl InfernoInfo {
         GrenadeInfo {
             entity: self.entity,
             position: self.position,
-            name: "Inferno",
+            name: "Inferno".to_owned(),
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolotovInfo {
     pub entity: u64,
     pub position: Vec3,
@@ -58,7 +58,8 @@ impl MolotovInfo {
                 "Incendiary"
             } else {
                 "Molotov"
-            },
+            }
+            .to_owned(),
         }
     }
 }

@@ -2,7 +2,7 @@ use egui::{Color32, Rgba};
 use serde::Serialize;
 use shared::entity::GrenadeInfo;
 
-use crate::cs2::{CS2, entity::player::Player};
+use crate::cs2::{CS2, entity::grenade_info};
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Smoke {
@@ -15,11 +15,7 @@ impl Smoke {
     }
 
     pub fn info(&self, cs2: &CS2) -> GrenadeInfo {
-        GrenadeInfo {
-            entity: self.controller,
-            position: Player::entity(self.controller).position(cs2),
-            name: "Smoke",
-        }
+        grenade_info(self.controller, "Smoke", cs2)
     }
 
     pub fn disable(&self, cs2: &CS2) {

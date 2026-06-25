@@ -1,5 +1,7 @@
 # Protocol
 
+port: `6346`
+
 ## Game to Server
 
 Endpoint: `/server`
