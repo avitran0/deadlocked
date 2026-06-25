@@ -1,0 +1,14 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared.workspace = true
+utils.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1.52", features = ["full"] }
+tower-http = { version = "0.7", features = ["fs"] }
+uuid = { version = "1.23", features = ["v4", "serde"] }
