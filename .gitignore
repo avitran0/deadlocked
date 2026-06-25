@@ -2,8 +2,4 @@
 .vscode
 .direnv
 
-/result
 /target
-/radar/node_modules
-
-config.toml

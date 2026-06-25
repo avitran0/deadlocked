@@ -6,7 +6,8 @@
     let errorDialog: HTMLDialogElement;
 
     let data: Data = defaultData();
-    let uuid = null;
+    let uuid: string | null = null;
+    let ws: WebSocket | null = null;
 
     onMount(() => {
         const ctx = canvas.getContext("2d")!;
@@ -17,7 +18,32 @@
         if (!uuid) {
             errorDialog.showModal();
         }
+
+        const origin = window.location.origin;
+        const url = new URL(origin);
+        url.pathname = "client";
+        ws = new WebSocket(url);
+        ws.onopen = wsOpen;
+        ws.onmessage = wsMessage;
+        ws.onclose = wsClose;
     });
+
+    function wsOpen() {
+        console.info("opened websocket connection");
+    }
+
+    function wsMessage(event: MessageEvent) {
+        if (typeof event.data !== "string") {
+            return;
+        }
+
+        const msg = event.data;
+        const json: Data = JSON.parse(msg);
+    }
+
+    function wsClose() {
+        console.info("closed websocket connection");
+    }
 
     function render(ctx: CanvasRenderingContext2D) {
         const dpr = window.devicePixelRatio;
