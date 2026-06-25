@@ -30,12 +30,5 @@ toml = "1.0"
 uuid = { version = "1.18", features = ["v4", "serde"] }
 winit = { version = "0.30", default-features = false, features = ["x11"] }
 
-[profile.dev]
-overflow-checks = false
-
-[profile.release]
-debug = true
-lto = "thin"
-
 [features]
 read-only = []

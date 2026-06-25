@@ -3,15 +3,17 @@
     import { type Data, defaultData } from "./lib/data";
 
     let canvas: HTMLCanvasElement;
+    let offscreenCanvas = new OffscreenCanvas(1024, 1024);
     let errorDialog: HTMLDialogElement;
 
-    let data: Data = defaultData();
+    let data: Data = $state(defaultData());
     let uuid: string | null = null;
     let ws: WebSocket | null = null;
 
     onMount(() => {
         const ctx = canvas.getContext("2d")!;
-        requestAnimationFrame(() => render(ctx));
+        const offscreen = offscreenCanvas.getContext("2d")!;
+        requestAnimationFrame(() => render(ctx, offscreen));
 
         const query = new URLSearchParams(window.location.search);
         uuid = query.get("uuid");
@@ -39,19 +41,22 @@
 
         const msg = event.data;
         const json: Data = JSON.parse(msg);
+        data = json;
     }
 
     function wsClose() {
         console.info("closed websocket connection");
     }
 
-    function render(ctx: CanvasRenderingContext2D) {
+    function render(ctx: CanvasRenderingContext2D, offscreen: OffscreenCanvasRenderingContext2D) {
         const dpr = window.devicePixelRatio;
         canvas.width = canvas.clientWidth * dpr;
         canvas.height = canvas.clientHeight * dpr;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        requestAnimationFrame(() => render(ctx));
+        // todo: rendering?
+
+        requestAnimationFrame(() => render(ctx, offscreen));
     }
 </script>
 
