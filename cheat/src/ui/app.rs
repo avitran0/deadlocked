@@ -110,6 +110,9 @@ impl App {
         let gui = WindowContext::new(event_loop, false, self.config.accent_color);
         let overlay = WindowContext::new(event_loop, true, self.config.accent_color);
 
+        self.config.font.set(gui.egui());
+        self.config.font.set(overlay.egui());
+
         self.display_scale = gui.window().scale_factor() as f32;
         utils::info!("detected display scale: {}", self.display_scale);
 

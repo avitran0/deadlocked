@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use egui::{Align2, Color32, FontId, Painter, Stroke, pos2};
+use egui::{Align2, Color32, Painter, Stroke, pos2};
 use glam::vec3;
 use shared::{
     bones::Bones,
@@ -111,7 +111,7 @@ impl App {
         color = Self::alpha(color, alpha);
 
         let stroke = Stroke::new(line_width, color);
-        let icon_font = FontId::monospace(self.config.hud.icon_size * esp_scale);
+        let icon_size = self.config.hud.icon_size * esp_scale;
 
         let midpoint = (player.position + player.head) / 2.0;
         let height = player.head.z - player.position.z + 24.0;
@@ -214,44 +214,48 @@ impl App {
         }
 
         if self.config.player.tags && player.has_defuser {
-            painter.text(
+            self.text_sized(
+                painter,
+                "\u{e00f}",
                 pos2(tr.x + ew, tr.y + offset),
                 Align2::LEFT_TOP,
-                "\u{e00f}",
-                icon_font.clone(),
-                text_color,
+                None,
+                icon_size,
             );
             offset += font_size;
         }
 
         if self.config.player.tags && player.has_helmet {
-            painter.text(
+            self.text_sized(
+                painter,
+                "\u{e017}",
                 pos2(tr.x + ew, tr.y + offset),
                 Align2::LEFT_TOP,
-                "\u{e017}",
-                icon_font.clone(),
-                text_color,
+                None,
+                icon_size,
             );
             offset += font_size;
         }
 
         if self.config.player.tags && player.has_bomb {
-            painter.text(
+            self.text_sized(
+                painter,
+                "\u{e01e}",
                 pos2(tr.x + ew, tr.y + offset),
                 Align2::LEFT_TOP,
-                "\u{e01e}",
-                icon_font.clone(),
-                text_color,
+                None,
+                icon_size,
             );
         }
 
         if self.config.player.weapon_icon {
-            painter.text(
+            self.text_sized(
+                painter,
+                weapon_to_icon(&player.weapon),
                 pos2(bl.x + half_width, bl.y),
                 Align2::CENTER_TOP,
-                weapon_to_icon(&player.weapon),
-                icon_font.clone(),
-                text_color,
+                None,
+                icon_size,
             );
             if player.ammo.0 >= 0 {
                 self.text_sized(

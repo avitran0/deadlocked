@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     config::{aim::AimConfig, hud::HudConfig, player::PlayerConfig, r#unsafe::UnsafeConfig},
+    font::Font,
     ui::color::Colors,
 };
 
@@ -26,6 +27,7 @@ pub struct Config {
     pub misc: UnsafeConfig,
     pub accent_color: Color32,
     pub fps: u32,
+    pub font: Font,
 }
 
 impl Default for Config {
@@ -37,6 +39,7 @@ impl Default for Config {
             misc: UnsafeConfig::default(),
             accent_color: Colors::BLUE,
             fps: 120,
+            font: Font::FiraSans,
         }
     }
 }

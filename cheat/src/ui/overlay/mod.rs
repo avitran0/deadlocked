@@ -344,22 +344,10 @@ impl App {
     }
 }
 
-const OUTLINE_WIDTH: f32 = 1.0;
-fn outline(pos: Pos2, color: Color32) -> [(Pos2, Color32); 5] {
+const OUTLINE_WIDTH: f32 = 2.0;
+fn outline(pos: Pos2, color: Color32) -> [(Pos2, Color32); 2] {
     let outline_color = Color32::from_rgba_unmultiplied(0, 0, 0, color.a());
     [
-        (
-            pos2(pos.x - OUTLINE_WIDTH, pos.y - OUTLINE_WIDTH),
-            outline_color,
-        ),
-        (
-            pos2(pos.x + OUTLINE_WIDTH, pos.y - OUTLINE_WIDTH),
-            outline_color,
-        ),
-        (
-            pos2(pos.x - OUTLINE_WIDTH, pos.y + OUTLINE_WIDTH),
-            outline_color,
-        ),
         (
             pos2(pos.x + OUTLINE_WIDTH, pos.y + OUTLINE_WIDTH),
             outline_color,

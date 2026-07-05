@@ -1,8 +1,7 @@
 use egui::{DragValue, Ui};
 
 use crate::ui::{
-    app::App,
-    gui::helpers::{checkbox, collapsing_open, color_picker, drag, scroll},
+    app::App, gui::helpers::{checkbox, collapsing_open, color_picker, combo_box, drag, scroll},
 };
 
 impl App {
@@ -188,6 +187,14 @@ impl App {
                     .speed(0.2)
                     .max_decimals(1),
             ) {
+                self.send_config();
+            }
+
+            if combo_box(ui, "font", "Font", &mut self.config.font) {
+                self.config.font.set(ui.ctx());
+                if let Some(overlay) = &self.overlay {
+                    self.config.font.set(overlay.egui());
+                }
                 self.send_config();
             }
         });

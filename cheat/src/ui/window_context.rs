@@ -1,11 +1,11 @@
 use std::{num::NonZeroU32, sync::Arc};
 
-use egui::{Color32, FontData, FontDefinitions, Stroke, Style};
+use egui::{Color32, Stroke, Style};
 use egui_glow::glow::{self, HasContext as _};
 use glutin::prelude::PossiblyCurrentGlContext;
 use winit::platform::x11::{WindowAttributesExtX11, WindowType};
 
-use crate::ui::color::Colors;
+use crate::{font::Font, ui::color::Colors};
 
 pub struct WindowContext {
     window: winit::window::Window,
@@ -137,8 +137,8 @@ impl WindowContext {
         };
 
         let glow = Arc::new(glow);
-        let mut egui_glow = egui_glow::EguiGlow::new(event_loop, glow.clone(), None, None, true);
-        prep_ctx(&mut egui_glow.egui_ctx, accent_color);
+        let egui_glow = egui_glow::EguiGlow::new(event_loop, glow.clone(), None, None, true);
+        prep_ctx(&egui_glow.egui_ctx, accent_color);
 
         let clear_color = if overlay {
             Color32::TRANSPARENT
@@ -208,6 +208,10 @@ impl WindowContext {
     pub fn paint(&mut self) {
         self.egui_glow.paint(&self.window);
     }
+
+    pub fn egui(&self) -> &egui::Context {
+        &self.egui_glow.egui_ctx
+    }
 }
 
 impl Drop for WindowContext {
@@ -216,33 +220,8 @@ impl Drop for WindowContext {
     }
 }
 
-fn prep_ctx(ctx: &mut egui::Context, accent_color: egui::Color32) {
-    // add font
-    let fira_sans = include_bytes!("../../resources/FiraSansIcons.ttf");
-    let cs2_icons = include_bytes!("../../resources/CS2EquipmentIcons.ttf");
-    let mut font_definitions = FontDefinitions::default();
-    font_definitions.font_data.insert(
-        String::from("fira_sans"),
-        Arc::new(FontData::from_static(fira_sans)),
-    );
-    font_definitions.font_data.insert(
-        String::from("cs2_icons"),
-        Arc::new(FontData::from_static(cs2_icons)),
-    );
-
-    // insert into font definitions, so it gets chosen as default
-    font_definitions
-        .families
-        .get_mut(&egui::FontFamily::Proportional)
-        .unwrap()
-        .insert(0, String::from("fira_sans"));
-    font_definitions
-        .families
-        .get_mut(&egui::FontFamily::Monospace)
-        .unwrap()
-        .insert(0, String::from("cs2_icons"));
-
-    ctx.set_fonts(font_definitions);
+fn prep_ctx(ctx: &egui::Context, accent_color: egui::Color32) {
+    Font::install(ctx);
 
     ctx.style_mut_of(egui::Theme::Dark, |style| {
         gui_style(style, accent_color);

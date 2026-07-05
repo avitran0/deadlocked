@@ -8,6 +8,7 @@ use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
 mod config;
 mod constants;
 mod cs2;
+mod font;
 mod game;
 mod math;
 mod message;
