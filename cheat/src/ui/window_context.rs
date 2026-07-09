@@ -239,9 +239,9 @@ fn gui_style(style: &mut Style, accent_color: egui::Color32) {
     style.visuals.panel_fill = Colors::BASE;
     style.visuals.extreme_bg_color = Colors::BACKDROP;
 
-    let bg_stroke = Stroke::new(1.0, Colors::SUBTEXT);
-    let fg_stroke = Stroke::new(1.0, Colors::TEXT);
-    let dark_stroke = Stroke::new(1.0, Colors::BASE);
+    let bg_stroke = Stroke::new(1.0f32, Colors::SUBTEXT);
+    let fg_stroke = Stroke::new(1.0f32, Colors::TEXT);
+    let dark_stroke = Stroke::new(1.0f32, Colors::BASE);
 
     style.visuals.selection.bg_fill = accent_color;
     style.visuals.selection.stroke = dark_stroke;

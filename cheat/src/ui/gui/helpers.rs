@@ -48,7 +48,7 @@ pub fn combo_box<T: std::fmt::Debug + strum::IntoEnumIterator + PartialEq>(
         .selected_text(format!("{:?}", *value))
         .show_ui(ui, |ui| {
             for mode in T::iter() {
-                let text = format!("{:?}", &mode);
+                let text = format!("{:?}", mode);
                 if ui.selectable_value(value, mode, text).clicked() {
                     changed = true;
                 }
