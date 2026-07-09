@@ -23,7 +23,7 @@ cheat() {
     cargo run --bin deadlocked --release
 }
 
-# git pull
+git pull
 
 if [[ $1 == "radar" ]]; then
     radar
