@@ -396,7 +396,7 @@ impl Process {
             return None;
         }
 
-        let objects = self.read::<u64>(convar_interface + 0x48);
+        let objects = self.read::<u64>(convar_interface + 0x50);
         for i in 0..self.read::<u32>(convar_interface + 160) as u64 {
             let object = self.read(objects + i * 16);
             if object == 0 {
