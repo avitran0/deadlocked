@@ -252,50 +252,6 @@ impl Process {
         self.read_bytes(address, module_size)
     }
 
-    pub fn scan(&self, pattern: &str, base_address: u64) -> Option<u64> {
-        let mut bytes = Vec::with_capacity(8);
-        let mut mask = Vec::with_capacity(8);
-
-        for token in pattern.split_whitespace() {
-            if token == "?" || token == "??" {
-                bytes.push(0x00);
-                mask.push(0x00);
-            } else if token.len() == 2 {
-                match u8::from_str_radix(token, 16) {
-                    Ok(b) => {
-                        bytes.push(b);
-                        mask.push(0xFF);
-                    }
-                    Err(_) => {
-                        utils::warn!("unrecognized pattern token \"{token}\" in pattern {pattern}");
-                    }
-                }
-            } else {
-                utils::warn!("unrecognized pattern token \"{token}\" in pattern {pattern}");
-            }
-        }
-
-        let module = self.dump_module(base_address);
-        if module.len() < 500 {
-            return None;
-        }
-
-        let scan_func = if bytes.len() <= 32 && is_x86_feature_detected!("avx2") {
-            scan_simd
-        } else {
-            scan_normal
-        };
-
-        if let Some(address) =
-            scan_func(&bytes, &mask, &module).map(|address| base_address + address)
-        {
-            return Some(address);
-        }
-
-        utils::info!("pattern {pattern} not found, might be outdated");
-        None
-    }
-
     pub fn get_relative_address(
         &self,
         instruction: u64,
@@ -396,20 +352,62 @@ impl Process {
             return None;
         }
 
-        let objects = self.read::<u64>(convar_interface + 0x48);
-        for i in 0..self.read::<u32>(convar_interface + 160) as u64 {
-            let object = self.read(objects + i * 16);
+        const LAYOUTS: [(u64, u64, u64); 3] = [
+            (0x40, 0xA0, 2),
+            (0x48, 0xA0, 4),
+            (0x48, 160, 4),
+        ];
+
+        for (list_off, count_off, count_size) in LAYOUTS {
+            if let Some(found) =
+                self.find_convar(convar_interface, convar_name, list_off, count_off, count_size)
+            {
+                return Some(found);
+            }
+        }
+
+        utils::debug!("did not find convar {convar_name}");
+        None
+    }
+
+    fn find_convar(
+        &self,
+        convar_interface: u64,
+        convar_name: &str,
+        list_off: u64,
+        count_off: u64,
+        count_size: u64,
+    ) -> Option<u64> {
+        let list = self.read::<u64>(convar_interface + list_off);
+        if list == 0 {
+            return None;
+        }
+
+        let count = match count_size {
+            2 => self.read::<u16>(convar_interface + count_off) as u64,
+            _ => self.read::<u32>(convar_interface + count_off) as u64,
+        };
+        if count == 0 || count > 20_000 {
+            return None;
+        }
+
+        for i in 0..count {
+            let object = self.read(list + i * 16);
             if object == 0 {
                 break;
             }
 
             let name_address = self.read(object);
+            if name_address == 0 {
+                continue;
+            }
+
             let name = self.read_string_uncached(name_address);
             if name == convar_name {
                 return Some(object);
             }
         }
-        utils::warn!("did not find convar {convar_name}");
+
         None
     }
 
@@ -468,7 +466,7 @@ impl Process {
     }
 }
 
-fn scan_normal(bytes: &[u8], mask: &[u8], module: &[u8]) -> Option<u64> {
+pub(crate) fn scan_normal(bytes: &[u8], mask: &[u8], module: &[u8]) -> Option<u64> {
     let pattern_length = bytes.len();
     let stop_index = module.len() - pattern_length;
     'outer: for i in 0..stop_index {
@@ -482,7 +480,7 @@ fn scan_normal(bytes: &[u8], mask: &[u8], module: &[u8]) -> Option<u64> {
     None
 }
 
-fn scan_simd(bytes: &[u8], mask: &[u8], module: &[u8]) -> Option<u64> {
+pub(crate) fn scan_simd(bytes: &[u8], mask: &[u8], module: &[u8]) -> Option<u64> {
     use std::arch::x86_64::{
         __m256i, _mm256_and_si256, _mm256_loadu_si256, _mm256_testz_si256, _mm256_xor_si256,
     };

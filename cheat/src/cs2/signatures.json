@@ -1,0 +1,125 @@
+{
+  "signatures": [
+    {
+      "name": "local_player",
+      "module": "libclient.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "4C 89 2D ? ? ? ? E8 ? ? ? ? 48 8B 45",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "4C 89 25 ? ? ? ? E8 ? ? ? ? 48 8B 45",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "48 83 3D ? ? ? ? 00 0F 95 C0 C3",
+          "operations": [{ "type": "rip", "offset": 3, "len": 8 }]
+        }
+      ]
+    },
+    {
+      "name": "view_matrix",
+      "module": "libclient.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "48 8D 05 ? ? ? ? C3 0F 1F 84 00 ? ? ? ? 83 FF",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "C6 83 ? ? 00 00 01 4C 8D 05",
+          "match_offset": 10,
+          "operations": [{ "type": "rip", "offset": 0, "len": 4 }]
+        }
+      ]
+    },
+    {
+      "name": "global_vars",
+      "module": "libclient.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "48 89 35 ? ? ? ? 48 89 46",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "4C 8D 25 ? ? ? ? 44 8B 5F",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "48 8D 05 ? ? ? ? 48 8B 00 8B 48 ? E9",
+          "operations": [{ "type": "rip" }]
+        }
+      ]
+    },
+    {
+      "name": "planted_c4",
+      "module": "libclient.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "48 8B 05 ? ? ? ? 4C 89 24 D8 49 8B 44 24",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "48 8D 35 ? ? ? ? 66 0F EF C0 C6 05 ? ? ? ? 01 48 8D 3D",
+          "operations": [{ "type": "rip", "offset": 3, "len": 14 }]
+        }
+      ]
+    },
+    {
+      "name": "entity_system",
+      "module": "libclient.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "48 89 3D ? ? ? ? E9 ? ? ? ? 55",
+          "operations": [{ "type": "rip" }, { "type": "read" }]
+        },
+        {
+          "pattern": "4C 89 25 ? ? ? ? 48 89 05 ? ? ? ? 49 8B 5D",
+          "operations": [{ "type": "rip" }, { "type": "read" }]
+        }
+      ]
+    },
+    {
+      "name": "schema_system",
+      "module": "libschemasystem.so",
+      "required": true,
+      "variants": [
+        {
+          "pattern": "48 8D 05 ? ? ? ? 49 89 04 24",
+          "operations": [{ "type": "rip" }]
+        },
+        {
+          "pattern": "48 8D 3D ? ? ? ? E8 ? ? ? ? 48 8B BD ? ? ? ? 31 F6 E8 ? ? ? ? E9",
+          "operations": [{ "type": "rip" }]
+        }
+      ]
+    },
+    {
+      "name": "sensitivity",
+      "module": "libclient.so",
+      "required": false,
+      "variants": [
+        {
+          "pattern": "48 8B 05 ? ? ? ? 48 8B 40 ? E9 ? ? ? ? 48 8B 05 ? ? ? ? 48 8B 40 ? EB ? 0F 1F 00 55 48 89 E5 41 57 66 41 0F 7E DF",
+          "operations": [{ "type": "rip" }]
+        }
+      ]
+    },
+    {
+      "name": "vphys_world",
+      "module": "libclient.so",
+      "required": false,
+      "variants": [
+        {
+          "pattern": "4C 8D 3D ? ? ? ? 49 8B 3F E8 ? ? ? ? 48 89 C2",
+          "operations": [{ "type": "rip" }, { "type": "read" }]
+        }
+      ]
+    }
+  ]
+}
