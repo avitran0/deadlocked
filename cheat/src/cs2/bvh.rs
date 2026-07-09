@@ -150,11 +150,11 @@ fn process_hull(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
 
     let scale: f32 = cs2.process.read(shape + 0xB0);
 
-    let vertices: UtlVector = cs2.process.read(data + 136);
+    let vertices: UtlVector = cs2.process.read(data + 112);
 
-    let edges: UtlVector = cs2.process.read(data + 160);
+    let edges: UtlVector = cs2.process.read(data + 200);
 
-    let faces: UtlVector = cs2.process.read(data + 184);
+    let faces: UtlVector = cs2.process.read(data + 224);
 
     let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
         vertices.data,
