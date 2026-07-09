@@ -1,8 +1,4 @@
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    sync::OnceLock,
-};
+use std::{collections::HashMap, path::PathBuf, sync::OnceLock};
 
 use serde::Deserialize;
 
@@ -54,13 +50,6 @@ enum Operation {
         #[serde(default = "default_rip_len")]
         len: u8,
     },
-    Add {
-        value: u64,
-    },
-    Slice {
-        start: u8,
-        end: u8,
-    },
     Read,
 }
 
@@ -90,7 +79,10 @@ pub fn resolve(process: &Process, libraries: &LibraryOffsets) -> Option<Resolved
     let mut modules = ModuleCache::new(process);
 
     let schema_system = {
-        let sig = manifest.signatures.iter().find(|s| s.name == "schema_system")?;
+        let sig = manifest
+            .signatures
+            .iter()
+            .find(|s| s.name == "schema_system")?;
         let base = module_base(libraries, &sig.module)?;
         resolve_validated(process, base, sig, &mut modules, always_valid)?
     };
@@ -108,23 +100,13 @@ pub fn resolve(process: &Process, libraries: &LibraryOffsets) -> Option<Resolved
 
         let base = module_base(libraries, &sig.module)?;
         let resolved = match sig.name.as_str() {
-            "local_player" => resolve_local_player(
-                process,
-                base,
-                sig,
-                &mut modules,
-                controller_name,
-            )?,
-            "view_matrix" => resolve_validated(
-                process,
-                base,
-                sig,
-                &mut modules,
-                validate_view_matrix,
-            )?,
-            _ if sig.required => {
-                resolve_validated(process, base, sig, &mut modules, always_valid)?
+            "local_player" => {
+                resolve_local_player(process, base, sig, &mut modules, controller_name)?
             }
+            "view_matrix" => {
+                resolve_validated(process, base, sig, &mut modules, validate_view_matrix)?
+            }
+            _ if sig.required => resolve_validated(process, base, sig, &mut modules, always_valid)?,
             _ => resolve_signature(process, base, sig, &mut modules).unwrap_or(0),
         };
 
@@ -225,15 +207,6 @@ fn apply_ops(process: &Process, mut addr: u64, ops: &[Operation]) -> Option<u64>
             Operation::Rip { offset, len } => {
                 process.get_relative_address(addr, *offset as u64, *len as u64)
             }
-            Operation::Add { value } => addr.wrapping_add(*value),
-            Operation::Slice { start, end } => {
-                let bytes = process.read_bytes(addr + *start as u64, (*end - *start) as u64);
-                let mut value = 0u64;
-                for (i, byte) in bytes.iter().enumerate() {
-                    value |= (*byte as u64) << (i * 8);
-                }
-                value
-            }
             Operation::Read => process.read(addr),
         };
     }
@@ -298,29 +271,30 @@ fn manifest() -> &'static Manifest {
         let mut manifest: Manifest =
             serde_json::from_str(EMBEDDED).expect("embedded signatures.json");
 
-        if let Ok(path) = override_path() {
-            if let Ok(content) = std::fs::read_to_string(path) {
-                if let Ok(overlay) = serde_json::from_str::<Manifest>(&content) {
-                    merge_manifest(&mut manifest, overlay);
-                }
-            }
+        if let Ok(content) = std::fs::read_to_string(override_path())
+            && let Ok(overlay) = serde_json::from_str::<Manifest>(&content)
+        {
+            merge_manifest(&mut manifest, overlay);
         }
 
         manifest
     })
 }
 
-fn override_path() -> Result<PathBuf, std::env::VarError> {
+fn override_path() -> PathBuf {
     let config = std::env::var("XDG_CONFIG_HOME").unwrap_or_else(|_| {
         let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".into());
         format!("{home}/.config")
     });
-    Ok(PathBuf::from(config).join("deadlocked/signatures.json"))
+    PathBuf::from(config).join("deadlocked/signatures.json")
 }
 
 fn merge_manifest(base: &mut Manifest, overlay: Manifest) {
     for overlay_sig in overlay.signatures {
-        let Some(local) = base.signatures.iter_mut().find(|s| s.name == overlay_sig.name)
+        let Some(local) = base
+            .signatures
+            .iter_mut()
+            .find(|s| s.name == overlay_sig.name)
         else {
             base.signatures.push(overlay_sig);
             continue;
@@ -379,7 +353,11 @@ fn parse_pattern(pattern: &str) -> Option<(Vec<u8>, Vec<u8>)> {
         }
     }
 
-    if bytes.is_empty() { None } else { Some((bytes, mask)) }
+    if bytes.is_empty() {
+        None
+    } else {
+        Some((bytes, mask))
+    }
 }
 
 #[cfg(test)]

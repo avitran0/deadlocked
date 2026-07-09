@@ -2,11 +2,7 @@ use std::time::Instant;
 
 use crate::{
     constants::cs2,
-    cs2::{
-        CS2,
-        offsets::Offsets,
-        signatures,
-    },
+    cs2::{CS2, offsets::Offsets, signatures},
 };
 
 impl CS2 {

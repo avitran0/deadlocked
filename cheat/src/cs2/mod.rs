@@ -414,11 +414,16 @@ impl CS2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{constants::cs2, os::process::Process};
 
     #[test]
     fn setup_against_live_cs2() {
+        if Process::open(cs2::PROCESS_NAME).is_none() {
+            return;
+        }
+
         let mut cs2 = CS2::new();
         cs2.setup();
-        assert!(cs2.is_valid(), "CS2::setup failed — offsets not resolved");
+        assert!(cs2.is_valid(), "CS2::setup failed: offsets not resolved");
     }
 }

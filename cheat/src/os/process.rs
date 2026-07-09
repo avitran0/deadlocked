@@ -352,16 +352,16 @@ impl Process {
             return None;
         }
 
-        const LAYOUTS: [(u64, u64, u64); 3] = [
-            (0x40, 0xA0, 2),
-            (0x48, 0xA0, 4),
-            (0x48, 160, 4),
-        ];
+        const LAYOUTS: [(u64, u64, u64); 3] = [(0x40, 0xA0, 2), (0x48, 0xA0, 4), (0x48, 160, 4)];
 
         for (list_off, count_off, count_size) in LAYOUTS {
-            if let Some(found) =
-                self.find_convar(convar_interface, convar_name, list_off, count_off, count_size)
-            {
+            if let Some(found) = self.find_convar(
+                convar_interface,
+                convar_name,
+                list_off,
+                count_off,
+                count_size,
+            ) {
                 return Some(found);
             }
         }
