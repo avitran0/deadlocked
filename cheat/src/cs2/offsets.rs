@@ -24,6 +24,7 @@ pub struct DirectOffsets {
     pub sdl_window: u64,
     pub planted_c4: u64,
     pub global_vars: u64,
+    pub global_vars_map_name: u64,
     pub vphys_world: u64,
 }
 

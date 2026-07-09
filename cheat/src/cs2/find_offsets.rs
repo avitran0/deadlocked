@@ -2,7 +2,11 @@ use std::time::Instant;
 
 use crate::{
     constants::cs2,
-    cs2::{CS2, offsets::Offsets, schema::Schema},
+    cs2::{
+        CS2,
+        offsets::Offsets,
+        signatures,
+    },
 };
 
 impl CS2 {
@@ -26,9 +30,6 @@ impl CS2 {
         };
         offsets.interface.resource = resource_offset;
 
-        offsets.interface.entity =
-            self.process.read::<u64>(offsets.interface.resource + 0x50) + 0x10;
-
         let Some(cvar_address) = self
             .process
             .get_interface_offset(offsets.library.tier0, "VEngineCvar0")
@@ -37,6 +38,7 @@ impl CS2 {
             return None;
         };
         offsets.interface.cvar = cvar_address;
+
         let Some(input_address) = self
             .process
             .get_interface_offset(offsets.library.input, "InputSystemVersion0")
@@ -46,31 +48,18 @@ impl CS2 {
         };
         offsets.interface.input = input_address;
 
-        let Some(local_player) = self
-            .process
-            .scan("48 83 3D ? ? ? ? 00 0F 95 C0 C3", offsets.library.client)
-        else {
-            utils::warn!("could not find local player offset");
-            return None;
-        };
-        offsets.direct.local_player = self.process.get_relative_address(local_player, 0x03, 0x08);
+        let resolved = signatures::resolve(&self.process, &offsets.library)?;
+        let globals = resolved.globals;
+        let schema = resolved.schema;
+        offsets.direct = globals.direct;
+        offsets.interface.entity =
+            self.process.read::<u64>(offsets.interface.resource + 0x50) + 0x10;
+
         offsets.direct.button_state = self.process.read::<u32>(
             self.process
                 .get_interface_function(offsets.interface.input, 19)
                 + 0x14,
         ) as u64;
-
-        let Some(view_matrix) = self
-            .process
-            .scan("C6 83 ? ? 00 00 01 4C 8D 05", offsets.library.client)
-        else {
-            utils::warn!("could not find view matrix offset");
-            return None;
-        };
-
-        offsets.direct.view_matrix =
-            self.process
-                .get_relative_address(view_matrix + 0x0A, 0x0, 0x04);
 
         let Some(sdl_window) = self
             .process
@@ -83,55 +72,22 @@ impl CS2 {
         let sdl_window = self.process.read(sdl_window);
         offsets.direct.sdl_window = self.process.get_relative_address(sdl_window, 0x03, 0x07);
 
-        let Some(planted_c4) = self.process.scan(
-            "48 8D 35 ? ? ? ? 66 0F EF C0 C6 05 ? ? ? ? 01 48 8D 3D",
-            offsets.library.client,
-        ) else {
-            utils::warn!("could not find planted c4 offset");
-            return None;
-        };
-        offsets.direct.planted_c4 = self.process.get_relative_address(planted_c4, 0x03, 0x0E);
+        offsets.convar.sensitivity = globals.sensitivity;
+        if offsets.convar.sensitivity == 0 {
+            offsets.convar.sensitivity = self
+                .process
+                .get_convar(offsets.interface.cvar, "sensitivity")
+                .unwrap_or(0);
+        }
+        if offsets.convar.sensitivity == 0 {
+            utils::debug!("sensitivity not found, using default");
+        }
 
-        // xref "lobby_mapveto"
-        let Some(global_vars) = self.process.scan(
-            "48 8D 05 ? ? ? ? 48 8B 00 8B 48 ? E9",
-            offsets.library.client,
-        ) else {
-            utils::warn!("could not find global vars offset");
-            return None;
-        };
-        offsets.direct.global_vars = self.process.get_relative_address(global_vars, 0x03, 0x07);
-
-        let Some(vphys_world) = self.process.scan(
-            "4c 8d 3d ? ? ? ? 49 8b 3f e8 ? ? ? ? 48 89 c2",
-            offsets.library.client,
-        ) else {
-            utils::warn!("could not find vphys_world offset");
-            return None;
-        };
-        // 0x0D + 4, 12, 20, 28
-        let vphys_world_global_ptr = self.process.get_relative_address(vphys_world, 3, 7);
-        let vphys_world_global: u64 = self.process.read(vphys_world_global_ptr);
-        offsets.direct.vphys_world = vphys_world_global;
-
-        let Some(ffa_address) = self
+        offsets.convar.ffa = self
             .process
             .get_convar(offsets.interface.cvar, "mp_teammates_are_enemies")
-        else {
-            utils::warn!("could not get mp_tammates_are_enemies convar offset");
-            return None;
-        };
-        offsets.convar.ffa = ffa_address;
-        let Some(sensitivity_address) = self
-            .process
-            .get_convar(offsets.interface.cvar, "sensitivity")
-        else {
-            utils::warn!("could not get sensitivity convar offset");
-            return None;
-        };
-        offsets.convar.sensitivity = sensitivity_address;
+            .unwrap_or(0);
 
-        let schema = Schema::new(&self.process, offsets.library.schema)?;
         let client = schema.get_library(cs2::CLIENT_LIB)?;
 
         offsets.controller.steam_id = client.get("CBasePlayerController", "m_steamID")?;
@@ -209,8 +165,13 @@ impl CS2 {
         offsets.observer_services.target =
             client.get("CPlayer_ObserverServices", "m_hObserverTarget")?;
 
-        offsets.aim_punch_services.aim_punch_cache =
-            client.get("CCSPlayer_AimPunchServices", "m_unpredictableBaseTick")? - 0x18;
+        offsets.aim_punch_services.aim_punch_cache = client
+            .get_field("CCSPlayer_AimPunchServices", "m_aimPunchAngle")
+            .or_else(|| {
+                client
+                    .get_field("CCSPlayer_AimPunchServices", "m_unpredictableBaseTick")
+                    .map(|offset| offset - 0x18)
+            })?;
 
         offsets.weapon.attribute_manager = client.get("C_EconEntity", "m_AttributeManager")?;
         offsets.weapon.item = client.get("C_AttributeContainer", "m_Item")?;

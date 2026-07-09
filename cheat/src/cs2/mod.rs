@@ -41,6 +41,7 @@ mod input;
 pub mod key_codes;
 mod offsets;
 mod schema;
+mod signatures;
 mod target;
 
 #[derive(Debug)]
@@ -352,10 +353,16 @@ impl CS2 {
 
     // convars
     fn get_sensitivity(&self) -> f32 {
+        if self.offsets.convar.sensitivity == 0 {
+            return 1.0;
+        }
         self.process.read(self.offsets.convar.sensitivity + 0x58)
     }
 
     fn is_ffa(&self) -> bool {
+        if self.offsets.convar.ffa == 0 {
+            return false;
+        }
         self.process.read::<u8>(self.offsets.convar.ffa + 0x58) == 1
     }
 
@@ -366,8 +373,10 @@ impl CS2 {
 
     fn current_map(&self) -> String {
         let global_vars: u64 = self.process.read(self.offsets.direct.global_vars);
-        self.process
-            .read_string(self.process.read(global_vars + 0x198))
+        self.process.read_string(
+            self.process
+                .read(global_vars + self.offsets.direct.global_vars_map_name),
+        )
     }
 
     fn distance_scale(&self, distance: f32) -> f32 {
@@ -399,5 +408,17 @@ impl CS2 {
                 *active
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn setup_against_live_cs2() {
+        let mut cs2 = CS2::new();
+        cs2.setup();
+        assert!(cs2.is_valid(), "CS2::setup failed — offsets not resolved");
     }
 }

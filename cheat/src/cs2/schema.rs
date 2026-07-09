@@ -7,13 +7,7 @@ pub struct Schema {
 }
 
 impl Schema {
-    pub fn new(process: &Process, schema_module: u64) -> Option<Self> {
-        let schema_system = process.scan(
-            "48 8D 3D ? ? ? ? E8 ? ? ? ? 48 8B BD ? ? ? ? 31 F6 E8 ? ? ? ? E9",
-            schema_module,
-        )?;
-        let schema_system = process.get_relative_address(schema_system, 3, 7);
-
+    pub fn from_system(process: &Process, schema_system: u64) -> Option<Self> {
         let type_scopes_len: i32 = process.read(schema_system + 0x1F0);
         let type_scopes_vec: u64 = process.read(schema_system + 0x1F8);
         let mut scopes = HashMap::new();
@@ -92,6 +86,10 @@ impl ModuleScope {
 
     pub fn get_class(&self, class: &str) -> Option<&Class> {
         self.classes.get(class)
+    }
+
+    pub fn get_field(&self, class: &str, field: &str) -> Option<u64> {
+        self.classes.get(class)?.get(field)
     }
 }
 
