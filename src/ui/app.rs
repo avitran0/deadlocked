@@ -40,7 +40,7 @@ pub struct App {
 
     pub game_status: GameStatus,
     pub display_scale: f32,
-    pub trails: HashMap<u64, Trail>,
+    pub trails: HashMap<usize, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
     pub frame_times: VecDeque<Duration>,
 

@@ -12,7 +12,7 @@ pub struct Input {
 }
 
 impl Input {
-    const MAX_KEY: u64 = 512;
+    const MAX_KEY: usize = 512;
 
     pub fn new() -> Self {
         Self {

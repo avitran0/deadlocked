@@ -4,11 +4,11 @@ use crate::cs2::{CS2, entity::player::Player};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PlantedC4 {
-    handle: u64,
+    handle: usize,
 }
 
 impl PlantedC4 {
-    pub fn new(handle: u64) -> Self {
+    pub fn new(handle: usize) -> Self {
         Self { handle }
     }
 

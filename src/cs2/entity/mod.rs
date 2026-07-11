@@ -22,13 +22,13 @@ pub mod weapon_class;
 
 #[derive(Debug, Clone)]
 pub enum Entity {
-    Weapon { weapon: Weapon, entity: u64 },
+    Weapon { weapon: Weapon, entity: usize },
     Inferno(Inferno),
     Smoke(Smoke),
     Molotov(Molotov),
-    Flashbang(u64),
-    HeGrenade(u64),
-    Decoy(u64),
+    Flashbang(usize),
+    HeGrenade(usize),
+    Decoy(usize),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -48,14 +48,14 @@ pub enum EntityInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GrenadeInfo {
-    pub entity: u64,
+    pub entity: usize,
     pub position: Vec3,
     pub name: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InfernoInfo {
-    pub entity: u64,
+    pub entity: usize,
     pub position: Vec3,
     pub hull: Vec<Vec3>,
 }
@@ -72,7 +72,7 @@ impl InfernoInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MolotovInfo {
-    pub entity: u64,
+    pub entity: usize,
     pub position: Vec3,
     pub is_incendiary: bool,
 }
@@ -92,7 +92,7 @@ impl MolotovInfo {
     }
 }
 
-pub fn grenade_info(entity: u64, name: &'static str, cs2: &CS2) -> GrenadeInfo {
+pub fn grenade_info(entity: usize, name: &'static str, cs2: &CS2) -> GrenadeInfo {
     GrenadeInfo {
         entity,
         position: Player::entity(entity).position(cs2),
@@ -120,14 +120,14 @@ impl CS2 {
         for bucket_index in 0..64 {
             let bucket_pointer =
                 *bytemuck::from_bytes(&bucket_pointers[bucket_index * 8..(bucket_index + 1) * 8]);
-            self.get_entities_in_bucket(bucket_index as u64, bucket_pointer, &local_player);
+            self.get_entities_in_bucket(bucket_index, bucket_pointer, &local_player);
         }
     }
 
     fn get_entities_in_bucket(
         &mut self,
-        bucket_index: u64,
-        bucket_ptr: u64,
+        bucket_index: usize,
+        bucket_ptr: usize,
         local_player: &Player,
     ) {
         if bucket_ptr == 0 || bucket_ptr >> 48 != 0 {
@@ -141,7 +141,8 @@ impl CS2 {
         for index_in_bucket in 0..IDENTITIES_PER_BUCKET {
             let identity_offset = index_in_bucket * self.offsets.entity_identity.size as usize;
 
-            let entity: u64 = *bytemuck::from_bytes(&bucket[identity_offset..identity_offset + 8]);
+            let entity: usize =
+                *bytemuck::from_bytes(&bucket[identity_offset..identity_offset + 8]);
             if entity == 0 {
                 continue;
             }
@@ -149,15 +150,14 @@ impl CS2 {
             let handle_start = identity_offset + 0x10;
             let handle: u32 = *bytemuck::from_bytes(&bucket[handle_start..handle_start + 4]);
             let handle_index = handle & 0x7FFF;
-            let entity_index =
-                (bucket_index as usize * IDENTITIES_PER_BUCKET + index_in_bucket) as u32;
+            let entity_index = (bucket_index * IDENTITIES_PER_BUCKET + index_in_bucket) as u32;
             if entity_index != handle_index {
                 continue;
             }
 
-            let vtable: u64 = self.process.read(entity);
-            let rtti: u64 = self.process.read(vtable - 0x8);
-            let name_ptr: u64 = self.process.read(rtti + 0x8);
+            let vtable: usize = self.process.read(entity);
+            let rtti: usize = self.process.read(vtable - 0x8);
+            let name_ptr: usize = self.process.read(rtti + 0x8);
             let name = self.process.read_string(name_ptr);
 
             match name.as_str() {
@@ -195,7 +195,7 @@ impl CS2 {
                 class::DECOY => self.entities.push(Entity::Decoy(entity)),
                 _ => {
                     // check if weapon
-                    let entity_identity: u64 = self.process.read(entity + 0x10);
+                    let entity_identity: usize = self.process.read(entity + 0x10);
                     if entity_identity == 0 {
                         continue;
                     }
@@ -220,7 +220,7 @@ impl CS2 {
             }
 
             // m_designerName
-            /*let name_pointer: u64 =
+            /*let name_pointer: usize =
                 *bytemuck::from_bytes(&bucket[identity_offset + 0x20..identity_offset + 0x28]);
             let Some(entity) = self.entity_type(entity, name_pointer) else {
                 continue;

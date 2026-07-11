@@ -5,15 +5,15 @@ use bytemuck::{Pod, Zeroable};
 use crate::{cs2::CS2, parser::bvh::Triangle};
 
 pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
-    let wld: u64 = cs2.process.read(cs2.offsets.direct.vphys_world);
+    let wld: usize = cs2.process.read(cs2.offsets.direct.vphys_world);
     if wld == 0 {
         return None;
     }
-    let inner: u64 = cs2.process.read(wld + 0x30);
+    let inner: usize = cs2.process.read(wld + 0x30);
     if inner == 0 {
         return None;
     }
-    let bods: u64 = cs2.process.read(inner + 0x118);
+    let bods: usize = cs2.process.read(inner + 0x118);
     if bods == 0 {
         return None;
     }
@@ -25,7 +25,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     let mut triangles = Vec::new();
 
     for idx in 0..bdcnt {
-        let bod = bods + idx as u64 * 88;
+        let bod = bods + idx as usize * 88;
 
         let bdty: u32 = cs2.process.read(bod + 0x40);
         if bdty != 2 {
@@ -33,7 +33,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
         }
 
         let rt: i32 = cs2.process.read(bod);
-        let ndptr: u64 = cs2.process.read(bod + 0x18);
+        let ndptr: usize = cs2.process.read(bod + 0x18);
         if ndptr == 0 {
             continue;
         }
@@ -89,7 +89,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     Some(triangles)
 }
 
-fn process_shape(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
+fn process_shape(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     // Mesh: "12CRnMeshShape"
     // Hull: "12CRnHullShape"
     let rtti_name = rtti_name(cs2, shape);
@@ -100,9 +100,9 @@ fn process_shape(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
     }
 }
 
-fn process_mesh(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
+fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     // RnMesh_t
-    let mesh_data: u64 = cs2.process.read(shape + 0xC0);
+    let mesh_data: usize = cs2.process.read(shape + 0xC0);
     if mesh_data == 0 {
         return;
     }
@@ -141,9 +141,9 @@ fn process_mesh(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
     }
 }
 
-fn process_hull(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
+fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     // RnHull_t
-    let data: u64 = cs2.process.read(shape + 0xB8);
+    let data: usize = cs2.process.read(shape + 0xB8);
     if data == 0 {
         return;
     }
@@ -169,7 +169,7 @@ fn process_hull(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
     let faces: Vec<u8> = (0..faces.count)
         .map(|index| {
             cs2.process
-                .read::<u8>(faces.data + index as u64 * size_of::<u8>() as u64)
+                .read::<u8>(faces.data + index as usize * size_of::<u8>())
         })
         .collect();
 
@@ -202,10 +202,10 @@ fn process_hull(cs2: &CS2, shape: u64, triangles: &mut Vec<Triangle>) {
     }
 }
 
-fn rtti_name(cs2: &CS2, vtable: u64) -> String {
-    let vtable: u64 = cs2.process.read(vtable);
-    let rtti: u64 = cs2.process.read(vtable - 0x08);
-    let name_ptr: u64 = cs2.process.read(rtti + 0x08);
+fn rtti_name(cs2: &CS2, vtable: usize) -> String {
+    let vtable: usize = cs2.process.read(vtable);
+    let rtti: usize = cs2.process.read(vtable - 0x08);
+    let name_ptr: usize = cs2.process.read(rtti + 0x08);
     cs2.process.read_string(name_ptr)
 }
 
@@ -214,7 +214,7 @@ fn rtti_name(cs2: &CS2, vtable: u64) -> String {
 pub struct UtlVector {
     pub count: i32,
     _pad: i32,
-    pub data: u64,
+    pub data: usize,
 }
 
 #[repr(C)]
@@ -225,7 +225,7 @@ struct OuterNode {
     pad2: [u8; 12],
     right: i32, // @ 28
     pad3: [u8; 8],
-    shape: u64, // @ 0x28
+    shape: usize, // @ 0x28
 }
 
 #[repr(C)]

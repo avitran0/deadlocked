@@ -132,7 +132,7 @@ impl CS2 {
         data.spectators.clear();
         data.entities.clear();
 
-        let sdl_window = self.process.read::<u64>(self.offsets.direct.sdl_window);
+        let sdl_window: usize = self.process.read(self.offsets.direct.sdl_window);
         if sdl_window == 0 {
             data.window_position = Vec2::ZERO;
             data.window_size = Vec2::ONE;
@@ -337,7 +337,7 @@ impl CS2 {
         angles
     }
 
-    fn entity_has_owner(&self, entity: u64) -> bool {
+    fn entity_has_owner(&self, entity: usize) -> bool {
         self.process
             .read::<i32>(entity + self.offsets.controller.owner_entity)
             != -1
@@ -353,12 +353,12 @@ impl CS2 {
     }
 
     fn current_time(&self) -> f32 {
-        let global_vars: u64 = self.process.read(self.offsets.direct.global_vars);
+        let global_vars: usize = self.process.read(self.offsets.direct.global_vars);
         self.process.read(global_vars + 0x30)
     }
 
     fn current_map(&self) -> String {
-        let global_vars: u64 = self.process.read(self.offsets.direct.global_vars);
+        let global_vars: usize = self.process.read(self.offsets.direct.global_vars);
         self.process
             .read_string(self.process.read(global_vars + 0x198))
     }

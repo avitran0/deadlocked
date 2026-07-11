@@ -8,11 +8,11 @@ use crate::cs2::{
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Smoke {
-    controller: u64,
+    controller: usize,
 }
 
 impl Smoke {
-    pub fn new(controller: u64) -> Self {
+    pub fn new(controller: usize) -> Self {
         Self { controller }
     }
 

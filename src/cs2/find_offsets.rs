@@ -26,8 +26,10 @@ impl CS2 {
         };
         offsets.interface.resource = resource_offset;
 
-        offsets.interface.entity =
-            self.process.read::<u64>(offsets.interface.resource + 0x50) + 0x10;
+        offsets.interface.entity = self
+            .process
+            .read::<usize>(offsets.interface.resource + 0x50)
+            + 0x10;
 
         let Some(cvar_address) = self
             .process
@@ -58,7 +60,7 @@ impl CS2 {
             self.process
                 .get_interface_function(offsets.interface.input, 19)
                 + 0x14,
-        ) as u64;
+        ) as usize;
 
         let Some(view_matrix) = self
             .process
@@ -111,7 +113,7 @@ impl CS2 {
         };
         // 0x0D + 4, 12, 20, 28
         let vphys_world_global_ptr = self.process.get_relative_address(vphys_world, 3, 7);
-        let vphys_world_global: u64 = self.process.read(vphys_world_global_ptr);
+        let vphys_world_global: usize = self.process.read(vphys_world_global_ptr);
         offsets.direct.vphys_world = vphys_world_global;
 
         let Some(ffa_address) = self
