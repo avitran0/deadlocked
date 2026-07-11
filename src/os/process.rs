@@ -203,18 +203,10 @@ impl Process {
     }
 
     pub fn read_string_uncached(&self, address: usize) -> String {
-        let mut bytes = Vec::with_capacity(8);
-        let mut i = address;
-        loop {
-            let c = self.read::<u8>(i);
-            if c == 0 {
-                break;
-            }
-            bytes.push(c);
-            i += 1;
-        }
-
-        String::from_utf8(bytes).unwrap_or_default()
+        let max_len = 1024;
+        let chunk = self.read_vec(address, max_len);
+        let len = chunk.iter().position(|&b| b == 0).unwrap_or(max_len);
+        String::from_utf8(chunk[..len].to_vec()).unwrap_or_default()
     }
 
     pub fn read_bytes(&self, address: usize, count: usize) -> Vec<u8> {

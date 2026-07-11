@@ -574,38 +574,3 @@ impl Player {
         }
     }
 }
-
-impl CS2 {
-    #[allow(unused)]
-    pub fn cache_players(&mut self) {
-        if !self.process.is_valid() {
-            self.players.clear();
-            return;
-        };
-
-        let Some(local_player) = Player::local_player(self) else {
-            return;
-        };
-
-        self.weapon = local_player.weapon(self);
-
-        self.players.clear();
-
-        for i in 0..=64 {
-            let player = match Player::index(self, i) {
-                Some(player) => player,
-                None => continue,
-            };
-
-            if !player.is_valid(self) {
-                continue;
-            }
-
-            if player == local_player {
-                self.target.local_pawn_index = i as u64 - 1;
-            } else {
-                self.players.push(player);
-            }
-        }
-    }
-}

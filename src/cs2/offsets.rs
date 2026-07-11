@@ -135,7 +135,7 @@ pub struct ObserverServicesOffsets {
 }
 
 #[derive(Debug, Default)]
-pub struct AimPunchSerciesOffsets {
+pub struct AimPunchServicesOffsets {
     pub aim_punch_cache: usize, // Vec<Vec3> (m_unpredictableBaseTick - 0x18)
 }
 
@@ -186,7 +186,7 @@ pub struct Offsets {
     pub item_services: ItemServicesOffsets,
     pub weapon_services: WeaponServicesOffsets,
     pub observer_services: ObserverServicesOffsets,
-    pub aim_punch_services: AimPunchSerciesOffsets,
+    pub aim_punch_services: AimPunchServicesOffsets,
     pub weapon: WeaponOffsets,
     pub econ_item_view: EconItemViewOffsets,
     pub planted_c4: PlantedC4Offsets,

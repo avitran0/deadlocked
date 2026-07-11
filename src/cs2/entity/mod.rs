@@ -218,14 +218,6 @@ impl CS2 {
                     }
                 }
             }
-
-            // m_designerName
-            /*let name_pointer: usize =
-                *bytemuck::from_bytes(&bucket[identity_offset + 0x20..identity_offset + 0x28]);
-            let Some(entity) = self.entity_type(entity, name_pointer) else {
-                continue;
-            };
-            self.entities.push(entity);*/
         }
     }
 }
