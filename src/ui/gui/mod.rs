@@ -8,7 +8,6 @@ use crate::{
     ui::{app::App, color::Colors, gui::aimbot::AimbotTab},
 };
 
-mod about;
 pub mod aimbot;
 mod application;
 mod config;
@@ -50,27 +49,19 @@ impl App {
         egui::Panel::left("sidebar")
             .resizable(false)
             .show_inside(ui, |ui| {
-                ui.selectable_value(&mut self.current_tab, Tab::Aimbot, "\u{f04fe} Aimbot");
-                ui.selectable_value(&mut self.current_tab, Tab::Player, "\u{f0013} Player");
-                ui.selectable_value(&mut self.current_tab, Tab::Hud, "\u{f0379} Hud");
-                ui.selectable_value(&mut self.current_tab, Tab::Grenades, "\u{f0691} Grenades");
-                ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "\u{f0ce6} Unsafe");
-                ui.selectable_value(&mut self.current_tab, Tab::Config, "\u{f168b} Config");
-                ui.selectable_value(
-                    &mut self.current_tab,
-                    Tab::Application,
-                    "\u{f1577} Application",
-                );
+                ui.selectable_value(&mut self.current_tab, Tab::Aimbot, "Aimbot");
+                ui.selectable_value(&mut self.current_tab, Tab::Player, "Player");
+                ui.selectable_value(&mut self.current_tab, Tab::Hud, "Hud");
+                ui.selectable_value(&mut self.current_tab, Tab::Grenades, "Grenades");
+                ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "Unsafe");
+                ui.selectable_value(&mut self.current_tab, Tab::Config, "Config");
+                ui.selectable_value(&mut self.current_tab, Tab::Application, "Application");
 
                 ui.with_layout(egui::Layout::bottom_up(Align::Min), |ui| {
                     if ui.button("Report Issue").clicked() {
                         let _ = std::process::Command::new("xdg-open")
                             .arg("https://github.com/avitran0/deadlocked/issues")
                             .status();
-                    }
-
-                    if ui.button("About").clicked() {
-                        self.show_about = true;
                     }
 
                     ui.label(egui::RichText::new(format!("{}", self.game_status)).color(
@@ -87,7 +78,7 @@ impl App {
                             self.frame_times.iter().sum::<Duration>().as_secs_f32() * 1000.0;
                         frame_sum / self.frame_times.len() as f32
                     };
-                    ui.label(format!("{frame_avg:.1} ms",));
+                    ui.label(format!("{frame_avg:.1} ms"));
                 });
             });
 
@@ -100,10 +91,6 @@ impl App {
             Tab::Config => self.config_settings(ui),
             Tab::Application => self.application_settings(ui),
         });
-
-        if self.show_about {
-            self.about(ui.ctx());
-        }
     }
 
     fn weapon_config(&mut self) -> &mut WeaponConfig {

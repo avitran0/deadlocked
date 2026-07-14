@@ -15,6 +15,7 @@ mod message;
 mod os;
 mod parser;
 mod ui;
+mod update;
 
 #[cfg(not(target_os = "linux"))]
 compile_error!("only linux is supported.");

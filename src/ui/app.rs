@@ -27,13 +27,13 @@ use crate::{
         trail::Trail,
         window_context::WindowContext,
     },
+    update::UpdateStatus,
 };
 
 pub struct App {
     pub gui: Option<WindowContext>,
     pub overlay: Option<WindowContext>,
     next_frame_time: Instant,
-    pub show_about: bool,
 
     pub channel: Channel<GameMessage, UiMessage>,
     pub data: Arc<Mutex<Data>>,
@@ -58,6 +58,8 @@ pub struct App {
     pub current_tab: Tab,
     pub aimbot_tab: AimbotTab,
     pub aimbot_weapon: Weapon,
+
+    pub update_status: UpdateStatus,
 }
 
 impl App {
@@ -70,12 +72,13 @@ impl App {
 
         let app_config = read_app_config();
 
+        let update_status = crate::update::check();
+
         let ret = Self {
             gui: None,
             overlay: None,
 
             next_frame_time: Instant::now() + Duration::from_millis(16),
-            show_about: false,
 
             channel,
             data,
@@ -99,6 +102,8 @@ impl App {
             current_tab: Tab::Aimbot,
             aimbot_tab: AimbotTab::Global,
             aimbot_weapon: Weapon::Ak47,
+
+            update_status,
         };
         ret.send_config();
         ret

@@ -8,19 +8,42 @@
 
 simple cs2 aimbot and esp, for linux only.
 
-## Setup
+Releases are tagged `v<version>` matching the version in `Cargo.toml` (e.g. `v1.0.0`).
+The built-in update checker compares against the latest release tag and will prompt when a newer version is available.
+
+## Quick Start
+
+Download and extract the [latest release](https://github.com/avitran0/deadlocked/releases).
+Each release contains the `deadlocked` binary and `setup.sh`.
+
+**Setup (one-time only):**
+
+```bash
+./setup.sh
+# Restart your machine (required)
+```
+
+This creates a `uinput` group, adds your user to it, and installs a udev rule.
+You only need to do this once, even when updating to newer versions.
+
+**Run:**
+
+```bash
+./deadlocked
+```
+
+The binary will refuse to start if setup hasn't been completed.
+Also make sure the `uinput` kernel module is loaded.
+Running NixOS or Fedora Atomic? See [OS-Specific Setup](os-setup.md).
+
+## Build from Source
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://github.com/avitran0/deadlocked
 cd deadlocked
-./setup.sh
-# Restart your machine (required)
+cargo run --release
 ```
-
-Also make sure that the `uinput` kernel module is loaded.
-
-Running NixOS or Fedora Atomic? See [OS-Specific Setup](os-setup.md).
 
 ## Running
 

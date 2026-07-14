@@ -106,7 +106,7 @@ impl App {
                     clicked_config = Some(config.clone());
                 }
                 ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    if ui.button("\u{f0a7a}").clicked() {
+                    if ui.button("Delete").clicked() {
                         delete = Some(config.clone());
                     }
                 });

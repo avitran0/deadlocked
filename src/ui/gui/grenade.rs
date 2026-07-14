@@ -49,7 +49,7 @@ impl App {
                                 _ => Some((map.to_owned(), index)),
                             };
                         }
-                        if ui.button("\u{f0a7a}").clicked() {
+                        if ui.button("Delete").clicked() {
                             delete_grenade_index = Some(index);
                         }
                     });

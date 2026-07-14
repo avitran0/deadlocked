@@ -9,24 +9,5 @@ Please download deadlocked by cloning the Git repository: 'git clone https://git
 
 [[ -d '.git' ]] || fail
 
-radar() {
-    cd radar/client
-    npm run build
-    cd ../../
-    mkdir -p radar/server/assets
-    cp -r radar/client/dist/* radar/server/assets/
-    cd radar/server
-    cargo run --bin server --release
-}
-
-cheat() {
-    cargo run --bin deadlocked --release
-}
-
 git pull
-
-if [[ $1 == "radar" ]]; then
-    radar
-else
-    cheat
-fi
+cargo run --release
