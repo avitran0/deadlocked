@@ -13,7 +13,7 @@ The built-in update checker compares against the latest release tag and will pro
 
 ## Quick Start
 
-Download and extract the [latest release](https://github.com/avitran0/deadlocked/releases).
+Download the [latest release](https://github.com/avitran0/deadlocked/releases).
 Each release contains the `deadlocked` binary and `setup.sh`.
 
 **Setup (one-time only):**
