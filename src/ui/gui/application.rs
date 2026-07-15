@@ -1,10 +1,13 @@
 use egui::Ui;
 
-use crate::{ui::app::App, update::UpdateStatus};
+use crate::{
+    ui::{app::AppState, gui::helpers::open_url},
+    update::UpdateStatus,
+};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-impl App {
+impl AppState {
     pub fn application_settings(&mut self, ui: &mut Ui) {
         ui.vertical_centered(|ui| {
             ui.heading("deadlocked");
@@ -23,7 +26,7 @@ impl App {
                         format!("Update available: {version}"),
                     );
                     if ui.link("Download").clicked() {
-                        let _ = std::process::Command::new("xdg-open").arg(url).status();
+                        open_url(url);
                     }
                 }
                 UpdateStatus::Error(err) => {

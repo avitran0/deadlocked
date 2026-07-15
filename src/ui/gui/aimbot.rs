@@ -4,7 +4,7 @@ use strum::IntoEnumIterator as _;
 use crate::{
     cs2::bones::Bones,
     ui::{
-        app::App,
+        app::AppState,
         drag_range::DragRange,
         gui::helpers::{
             checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, scroll,
@@ -18,7 +18,7 @@ pub enum AimbotTab {
     Weapon,
 }
 
-impl App {
+impl AppState {
     pub fn aimbot_settings(&mut self, ui: &mut Ui) {
         ui.horizontal(|ui| {
             ui.selectable_value(&mut self.aimbot_tab, AimbotTab::Global, "Global");

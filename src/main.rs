@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use utils::{Channel, Mutex, log::LoggerOptions};
+use winit::platform::x11::EventLoopBuilderExtX11;
 
 use crate::{config::BASE_PATH, data::Data, os::mouse::check_uinput, ui::app::App};
 
@@ -39,10 +40,6 @@ fn main() {
         return;
     }
 
-    // this runs as x11 for now, because wayland decorations for winit are not good
-    // and don't support disabling the maximize button
-    unsafe { std::env::remove_var("WAYLAND_DISPLAY") };
-
     let (channel_gui, channel_game) = Channel::new();
     let data = Arc::new(Mutex::new(Data::default()));
     let data_game = data.clone();
@@ -51,7 +48,7 @@ fn main() {
         game::GameManager::new(channel_game, data_game).run();
     });
 
-    let event_loop = match winit::event_loop::EventLoop::new() {
+    let event_loop = match winit::event_loop::EventLoop::builder().with_x11().build() {
         Ok(event_loop) => event_loop,
         Err(err) => {
             utils::error!("failed to create event loop: {err}");

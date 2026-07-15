@@ -6,14 +6,14 @@ use crate::{
     cs2::entity::weapon::Weapon,
     data::Data,
     math::world_to_screen,
-    ui::{app::App, grenades::Grenade},
+    ui::{app::AppState, grenades::Grenade},
 };
 
 mod entity;
 mod hud;
 mod player;
 
-impl App {
+impl AppState {
     fn aimbot_config(&self, weapon: &Weapon) -> &AimbotConfig {
         if let Some(weapon_config) = self.config.aim.weapons.get(weapon)
             && weapon_config.aimbot.enable_override
@@ -31,7 +31,6 @@ impl App {
         self.update_player_sounds();
         let data = &self.data.lock();
 
-        self.update_window(data);
         self.overlay_debug(&painter, data);
 
         for player in &data.players {
@@ -95,31 +94,6 @@ impl App {
         }
 
         self.grenade_manager(data, &painter);
-    }
-
-    fn update_window(&self, data: &Data) {
-        let Some(window) = &self.overlay else {
-            return;
-        };
-
-        let position = winit::dpi::PhysicalPosition::new(
-            data.window_position.x as i32,
-            data.window_position.y as i32,
-        );
-        if !match window.window().outer_position() {
-            Ok(pos) => pos == position,
-            Err(_) => false,
-        } {
-            window.window().set_outer_position(position);
-        }
-
-        let size = winit::dpi::PhysicalSize::new(
-            data.window_size.x.max(1.0) as u32,
-            data.window_size.y.max(1.0) as u32,
-        );
-        if window.window().inner_size() != size {
-            let _ = window.window().request_inner_size(size);
-        }
     }
 
     fn grenade_manager(&self, data: &Data, painter: &Painter) {

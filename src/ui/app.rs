@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, VecDeque},
+    ops::{Deref, DerefMut},
     path::PathBuf,
     sync::Arc,
     time::{Duration, Instant},
@@ -30,11 +31,7 @@ use crate::{
     update::UpdateStatus,
 };
 
-pub struct App {
-    pub gui: Option<WindowContext>,
-    pub overlay: Option<WindowContext>,
-    next_frame_time: Instant,
-
+pub struct AppState {
     pub channel: Channel<GameMessage, UiMessage>,
     pub data: Arc<Mutex<Data>>,
 
@@ -62,72 +59,97 @@ pub struct App {
     pub update_status: UpdateStatus,
 
     pub text_popup: Option<String>,
+    pub update_popup: bool,
+    pub overlay_egui: Option<egui::Context>,
 }
 
-impl App {
+pub struct App {
+    pub gui: Option<WindowContext>,
+    pub overlay: Option<WindowContext>,
+    next_frame_time: Instant,
+    pub state: AppState,
+}
+
+impl Deref for App {
+    type Target = AppState;
+    fn deref(&self) -> &AppState {
+        &self.state
+    }
+}
+
+impl DerefMut for App {
+    fn deref_mut(&mut self) -> &mut AppState {
+        &mut self.state
+    }
+}
+
+impl AppState {
     pub fn new(channel: Channel<GameMessage, UiMessage>, data: Arc<Mutex<Data>>) -> Self {
-        // read config
         let config = parse_config(&CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
-        // override config if invalid
         write_config(&config, &CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
         let grenades = read_grenades();
-
         let app_config = read_app_config();
 
         let update_status = crate::update::check();
+        let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
 
-        let ret = Self {
-            gui: None,
-            overlay: None,
-
-            next_frame_time: Instant::now() + Duration::from_millis(16),
-
+        Self {
             channel,
             data,
-
             app_config,
             config,
             current_config: CONFIG_PATH.join(DEFAULT_CONFIG_NAME),
             available_configs: available_configs(),
             new_config_name: String::new(),
-
             game_status: GameStatus::NotStarted,
             display_scale: 1.0,
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
             frame_times: VecDeque::with_capacity(500),
-
             grenades,
             new_grenade: Grenade::new(),
             current_grenade: None,
-
             current_tab: Tab::Aimbot,
             aimbot_tab: AimbotTab::Global,
             aimbot_weapon: Weapon::Ak47,
-
             update_status,
             text_popup: None,
+            update_popup,
+            overlay_egui: None,
+        }
+    }
+}
+
+impl App {
+    pub fn new(channel: Channel<GameMessage, UiMessage>, data: Arc<Mutex<Data>>) -> Self {
+        let state = AppState::new(channel, data);
+        let ret = Self {
+            gui: None,
+            overlay: None,
+            next_frame_time: Instant::now() + Duration::from_millis(16),
+            state,
         };
         ret.send_config();
         ret
     }
 
-    fn create_window(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
-        let gui = WindowContext::new(event_loop, false, self.config.accent_color);
-        let overlay = WindowContext::new(event_loop, true, self.config.accent_color);
+    pub fn create_window(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        let gui = WindowContext::new(event_loop, false, self.state.config.accent_color);
+        let overlay = WindowContext::new(event_loop, true, self.state.config.accent_color);
 
-        self.config.font.set(gui.egui());
-        self.config.font.set(overlay.egui());
+        self.state.config.font.set(gui.egui());
+        self.state.config.font.set(overlay.egui());
 
-        self.display_scale = gui.window().scale_factor() as f32;
-        utils::info!("detected display scale: {}", self.display_scale);
+        self.state.display_scale = gui.window().scale_factor() as f32;
+        self.state.overlay_egui = Some(overlay.egui().clone());
+        utils::info!("detected display scale: {}", self.state.display_scale);
 
         self.gui = Some(gui);
         self.overlay = Some(overlay);
     }
 
     fn frame_duration(&self) -> Duration {
-        Duration::from_secs_f32(1.0 / self.config.fps as f32)
+        Duration::from_secs_f32(1.0 / self.state.config.fps as f32)
     }
 }
 
@@ -164,14 +186,14 @@ impl ApplicationHandler for App {
         window_id: winit::window::WindowId,
         window_event: WindowEvent,
     ) {
-        while let Ok(message) = self.channel.try_receive() {
+        while let Ok(message) = self.state.channel.try_receive() {
             match message {
-                UiMessage::Status(status) => self.game_status = status,
+                UiMessage::Status(status) => self.state.game_status = status,
                 UiMessage::FrameTime(time) => {
-                    if self.frame_times.len() >= 500 {
-                        self.frame_times.pop_front();
+                    if self.state.frame_times.len() >= 500 {
+                        self.state.frame_times.pop_front();
                     }
-                    self.frame_times.push_back(time);
+                    self.state.frame_times.push_back(time);
                 }
             }
         }

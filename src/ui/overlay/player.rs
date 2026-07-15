@@ -9,10 +9,10 @@ use crate::{
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
     math::world_to_screen,
-    ui::app::App,
+    ui::app::AppState,
 };
 
-impl App {
+impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
         if self.config.player.visible_only && !player.visible {
             return;

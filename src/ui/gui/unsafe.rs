@@ -1,11 +1,11 @@
 use egui::{DragValue, Ui};
 
 use crate::ui::{
-    app::App,
+    app::AppState,
     gui::helpers::{collapsing_open, color_picker},
 };
 
-impl App {
+impl AppState {
     pub fn unsafe_settings(&mut self, ui: &mut Ui) {
         ui.columns(2, |cols| {
             let left = &mut cols[0];

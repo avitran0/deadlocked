@@ -4,8 +4,18 @@ use egui::{Align, Ui};
 
 use crate::{
     config::{aim::WeaponConfig, write_config},
+    data::Data,
     message::{GameMessage, GameStatus},
-    ui::{app::App, color::Colors, gui::aimbot::AimbotTab, gui::helpers::text_settings_popup},
+    ui::{
+        app::{App, AppState},
+        color::Colors,
+        gui::{
+            aimbot::AimbotTab,
+            helpers::{open_url, text_settings_popup},
+        },
+        window_context::WindowContext,
+    },
+    update::UpdateStatus,
 };
 
 pub mod aimbot;
@@ -28,7 +38,7 @@ pub enum Tab {
     Application,
 }
 
-impl App {
+impl AppState {
     pub fn send_config(&self) {
         self.send_message(GameMessage(Box::new(self.config.clone())));
         self.save();
@@ -48,7 +58,7 @@ impl App {
         ui.ctx().set_pixels_per_point(self.display_scale);
         egui::Panel::left("sidebar")
             .resizable(false)
-            .show_inside(ui, |ui| {
+            .show(ui, |ui| {
                 ui.selectable_value(&mut self.current_tab, Tab::Aimbot, "Aimbot");
                 ui.selectable_value(&mut self.current_tab, Tab::Player, "Player");
                 ui.selectable_value(&mut self.current_tab, Tab::Hud, "Hud");
@@ -59,9 +69,7 @@ impl App {
 
                 ui.with_layout(egui::Layout::bottom_up(Align::Min), |ui| {
                     if ui.button("Report Issue").clicked() {
-                        let _ = std::process::Command::new("xdg-open")
-                            .arg("https://github.com/avitran0/deadlocked/issues")
-                            .status();
+                        open_url("https://github.com/avitran0/deadlocked/issues");
                     }
 
                     ui.label(egui::RichText::new(format!("{}", self.game_status)).color(
@@ -82,7 +90,7 @@ impl App {
                 });
             });
 
-        egui::CentralPanel::default().show_inside(ui, |ui| match self.current_tab {
+        egui::CentralPanel::default().show(ui, |ui| match self.current_tab {
             Tab::Aimbot => self.aimbot_settings(ui),
             Tab::Player => self.player_settings(ui),
             Tab::Hud => self.hud_settings(ui),
@@ -93,6 +101,38 @@ impl App {
         });
 
         self.render_text_popups(ui);
+
+        if self.update_popup {
+            let mut close = false;
+            egui::Window::new("Update Available")
+                .id(egui::Id::new("update_popup"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    if let UpdateStatus::Available { version, url } = &self.update_status {
+                        ui.label(
+                            egui::RichText::new(format!("Update {version} available!"))
+                                .color(Colors::YELLOW)
+                                .size(18.0),
+                        );
+                        ui.separator();
+                        ui.label("A new version of deadlocked is ready to download.");
+                        ui.add_space(8.0);
+                        ui.horizontal(|ui| {
+                            if ui.button("Download").clicked() {
+                                open_url(url);
+                            }
+                            if ui.button("Dismiss").clicked() {
+                                close = true;
+                            }
+                        });
+                    }
+                });
+            if close {
+                self.update_popup = false;
+            }
+        }
     }
 
     fn weapon_config(&mut self) -> &mut WeaponConfig {
@@ -187,17 +227,19 @@ impl App {
             "spectator_list",
         );
     }
+}
 
+impl App {
     pub fn render(&mut self) {
-        let self_ptr = self as *mut Self;
-
         let gui = self.gui.as_mut().unwrap();
+        let overlay = self.overlay.as_mut().unwrap();
+        let state = &mut self.state;
 
         if let Err(err) = gui.make_current() {
             utils::error!("could not make gui window current: {err}");
             return;
         }
-        gui.run(|ui| (unsafe { &mut *self_ptr }).gui(ui));
+        gui.run(|ui| state.gui(ui));
         gui.clear();
         gui.paint();
 
@@ -206,22 +248,42 @@ impl App {
             return;
         }
 
-        let overlay = self.overlay.as_mut().unwrap();
-
         overlay.window().set_cursor_hittest(false).unwrap();
+        {
+            let data_guard = state.data.lock();
+            Self::update_overlay_window(overlay, &data_guard);
+        }
         if let Err(err) = overlay.make_current() {
             utils::error!("could not make overlay window current: {err}");
             return;
         }
 
-        overlay.run(move |ui| {
-            (unsafe { &mut *self_ptr }).overlay(ui);
-        });
+        overlay.run(move |ui| state.overlay(ui));
         overlay.clear();
         overlay.paint();
 
         if let Err(err) = overlay.swap_buffers() {
             utils::error!("could not swap overlay window buffers: {err}");
+        }
+    }
+
+    fn update_overlay_window(overlay: &WindowContext, data: &Data) {
+        use winit::dpi::PhysicalPosition;
+        let position =
+            PhysicalPosition::new(data.window_position.x as i32, data.window_position.y as i32);
+        if !match overlay.window().outer_position() {
+            Ok(pos) => pos == position,
+            Err(_) => false,
+        } {
+            overlay.window().set_outer_position(position);
+        }
+
+        let size = winit::dpi::PhysicalSize::new(
+            data.window_size.x.max(1.0) as u32,
+            data.window_size.y.max(1.0) as u32,
+        );
+        if overlay.window().inner_size() != size {
+            let _ = overlay.window().request_inner_size(size);
         }
     }
 }

@@ -6,14 +6,14 @@ use crate::{
         write_config,
     },
     ui::{
-        app::App,
+        app::AppState,
         color::Colors,
         grenades::read_grenades,
-        gui::helpers::{collapsing_open, scroll},
+        gui::helpers::{collapsing_open, open_url, scroll},
     },
 };
 
-impl App {
+impl AppState {
     pub fn config_settings(&mut self, ui: &mut Ui) {
         ui.columns(2, |cols| {
             let left = &mut cols[0];
@@ -55,10 +55,8 @@ impl App {
             }
 
             if ui.button("Config Folder").clicked() {
-                std::process::Command::new("xdg-open")
-                    .arg(BASE_PATH.as_os_str())
-                    .status()
-                    .unwrap();
+                let url = format!("file://{}", BASE_PATH.display());
+                open_url(&url);
             }
         });
 

@@ -3,14 +3,14 @@ use egui::Ui;
 use crate::{
     constants::cs2::GRENADES,
     ui::{
-        app::App,
+        app::AppState,
         color::Colors,
         grenades::{Grenade, write_grenades},
         gui::helpers::{collapsing_open, scroll},
     },
 };
 
-impl App {
+impl AppState {
     pub fn grenade_settings(&mut self, ui: &mut Ui) {
         scroll(ui, "hud", |ui| {
             if self.current_grenade.is_some() {

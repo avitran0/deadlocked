@@ -6,10 +6,10 @@ use crate::{
     cs2::entity::{EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo},
     data::Data,
     math::world_to_screen,
-    ui::{app::App, overlay::convex_hull, trail::Trail},
+    ui::{app::AppState, overlay::convex_hull, trail::Trail},
 };
 
-impl App {
+impl AppState {
     pub fn draw_entity(&self, painter: &Painter, entity: &EntityInfo, data: &Data) {
         match entity {
             EntityInfo::Weapon {

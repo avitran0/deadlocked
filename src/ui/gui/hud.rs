@@ -1,13 +1,13 @@
 use egui::{DragValue, Ui};
 
 use crate::ui::{
-    app::App,
+    app::AppState,
     gui::helpers::{
         checkbox, collapsing_open, color_picker, combo_box, drag, scroll, text_settings_button,
     },
 };
 
-impl App {
+impl AppState {
     pub fn hud_settings(&mut self, ui: &mut Ui) {
         scroll(ui, "hud", |ui| {
             ui.columns(2, |cols| {
@@ -181,8 +181,8 @@ impl App {
 
             if combo_box(ui, "font", "Font", &mut self.config.font) {
                 self.config.font.set(ui.ctx());
-                if let Some(overlay) = &self.overlay {
-                    self.config.font.set(overlay.egui());
+                if let Some(ctx) = &self.overlay_egui {
+                    self.config.font.set(ctx);
                 }
                 self.send_config();
             }

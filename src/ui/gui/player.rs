@@ -1,14 +1,14 @@
 use egui::{DragValue, Ui};
 
 use crate::ui::{
-    app::App,
+    app::AppState,
     gui::helpers::{
         checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
         text_settings_button,
     },
 };
 
-impl App {
+impl AppState {
     pub fn player_settings(&mut self, ui: &mut Ui) {
         scroll(ui, "player", |ui| {
             ui.columns(2, |cols| {

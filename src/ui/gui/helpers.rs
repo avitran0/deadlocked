@@ -180,7 +180,7 @@ pub struct Keybind<'gui> {
 }
 
 impl<'gui> Keybind<'gui> {
-    pub fn new(keycode: &'gui mut KeyCode, id: impl Hash) -> Self {
+    pub fn new(keycode: &'gui mut KeyCode, id: impl std::fmt::Debug + Hash) -> Self {
         Self {
             keycode,
             id: egui::Id::new(id),
@@ -259,4 +259,8 @@ impl<'gui> Widget for Keybind<'gui> {
 
         response
     }
+}
+
+pub fn open_url(url: &str) {
+    let _ = std::process::Command::new("xdg-open").arg(url).spawn();
 }
