@@ -20,7 +20,7 @@ pub mod smoke;
 pub mod weapon;
 pub mod weapon_class;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum Entity {
     Weapon { weapon: Weapon, entity: usize },
     Inferno(Inferno),
@@ -31,7 +31,7 @@ pub enum Entity {
     Decoy(usize),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub enum EntityInfo {
     Weapon {
         weapon: Weapon,
@@ -46,14 +46,14 @@ pub enum EntityInfo {
     Decoy(GrenadeInfo),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct GrenadeInfo {
     pub entity: usize,
     pub position: Vec3,
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct InfernoInfo {
     pub entity: usize,
     pub position: Vec3,
@@ -70,7 +70,7 @@ impl InfernoInfo {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct MolotovInfo {
     pub entity: usize,
     pub position: Vec3,

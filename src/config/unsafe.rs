@@ -1,7 +1,7 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct UnsafeConfig {
     pub no_flash: bool,

@@ -6,7 +6,7 @@ use crate::config::BASE_PATH;
 
 pub static APP_CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| BASE_PATH.join("deadlocked.toml"));
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct ApplicationConfig {
     pub first_launch: bool,

@@ -6,7 +6,7 @@ use strum::{EnumIter, IntoEnumIterator};
 
 use crate::cs2::{bones::Bones, entity::weapon::Weapon, key_codes::KeyCode};
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct WeaponConfig {
     pub aimbot: AimbotConfig,
@@ -28,7 +28,7 @@ impl WeaponConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AimbotConfig {
     pub enable_override: bool,
@@ -74,7 +74,7 @@ impl Default for AimbotConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct RcsConfig {
     pub enable_override: bool,
@@ -104,7 +104,7 @@ pub enum TargetingMode {
     Distance,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TriggerbotConfig {
     pub enable_override: bool,
@@ -136,7 +136,7 @@ impl Default for TriggerbotConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct AimConfig {
     pub aimbot_hotkey: KeyCode,

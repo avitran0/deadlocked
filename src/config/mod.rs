@@ -19,7 +19,7 @@ pub mod player;
 pub mod text;
 pub mod r#unsafe;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
     pub aim: AimConfig,

@@ -13,7 +13,6 @@ use crate::{
     os::mouse::Mouse,
 };
 
-#[derive(Debug)]
 pub struct Recoil {
     pub previous: Vec2,
     unaccounted: Vec2,

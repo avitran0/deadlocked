@@ -10,7 +10,7 @@ use crate::{
 
 use super::{CS2, weapon_class::WeaponClass};
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct Player {
     controller: usize,
     pub(crate) pawn: usize,

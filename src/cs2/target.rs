@@ -12,7 +12,7 @@ use crate::{
     math::angles_to_fov,
 };
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Target {
     pub player: Option<Player>,
     pub angle: Vec2,

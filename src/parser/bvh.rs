@@ -115,7 +115,7 @@ impl Triangle {
 }
 
 #[repr(C)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 enum BvhNode {
     Branch {
         left: usize,
@@ -129,7 +129,7 @@ enum BvhNode {
 }
 
 #[repr(C)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct Bvh {
     nodes: Vec<BvhNode>,
     triangles: Vec<Triangle>,

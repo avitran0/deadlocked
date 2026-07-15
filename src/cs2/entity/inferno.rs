@@ -5,7 +5,7 @@ use crate::cs2::{
     entity::{InfernoInfo, player::Player},
 };
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Inferno {
     controller: usize,
 }

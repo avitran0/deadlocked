@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use super::text::OverlayTextConfig;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HudConfig {
     pub bomb_timer: bool,
@@ -37,7 +37,7 @@ impl Default for HudConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct CrosshairConfig {
     pub enabled: bool,
@@ -59,7 +59,7 @@ impl Default for CrosshairConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TrailConfig {
     pub enabled: bool,

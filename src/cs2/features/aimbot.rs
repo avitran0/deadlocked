@@ -10,7 +10,7 @@ use crate::{
     os::mouse::Mouse,
 };
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Aimbot {
     pub active: bool,
     inertia: Vec2,

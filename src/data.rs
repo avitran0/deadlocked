@@ -8,14 +8,14 @@ use crate::cs2::{
     entity::{EntityInfo, weapon::Weapon},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SoundType {
     Footstep,
     Gunshot,
     Weapon,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct Data {
     pub in_game: bool,
     pub is_ffa: bool,
@@ -36,7 +36,7 @@ pub struct Data {
     pub esp_active: bool,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 pub struct PlayerData {
     pub steam_id: u64,
     pub health: i32,
@@ -56,7 +56,7 @@ pub struct PlayerData {
     pub sound: Option<SoundType>,
 }
 
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct BombData {
     pub planted: bool,
     pub timer: f32,

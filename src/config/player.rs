@@ -17,7 +17,7 @@ pub enum BoxMode {
     Full,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
     pub enabled: bool,
@@ -63,7 +63,7 @@ impl Default for PlayerConfig {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SoundConfig {
     pub enabled: bool,

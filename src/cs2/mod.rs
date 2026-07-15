@@ -36,7 +36,6 @@ mod offsets;
 mod schema;
 mod target;
 
-#[derive(Debug)]
 pub struct CS2 {
     is_valid: bool,
     process: Process,

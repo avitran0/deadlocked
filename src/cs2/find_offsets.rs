@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use crate::{
     constants::cs2,
     cs2::{CS2, offsets::Offsets, schema::Schema},
@@ -7,7 +5,6 @@ use crate::{
 
 impl CS2 {
     pub fn find_offsets(&self) -> Option<Offsets> {
-        let start = Instant::now();
         let mut offsets = Offsets::default();
 
         offsets.library.client = self.process.module_base_address(cs2::CLIENT_LIB)?;
@@ -231,7 +228,6 @@ impl CS2 {
 
         offsets.entity_identity.size = client.get_class("CEntityIdentity")?.size();
 
-        utils::debug!("offsets: {:?} ({:?})", offsets, Instant::now() - start);
         Some(offsets)
     }
 }

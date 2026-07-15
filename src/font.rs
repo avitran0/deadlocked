@@ -12,10 +12,7 @@ pub enum Font {
     #[default]
     FiraSans,
     Inter,
-    Lexend,
-    Manrope,
     Nunito,
-    Outfit,
     Ubuntu,
 }
 
@@ -25,10 +22,7 @@ impl Font {
             Self::DMSans => include_bytes!("../resources/DMSans.ttf"),
             Self::FiraSans => include_bytes!("../resources/FiraSans.ttf"),
             Self::Inter => include_bytes!("../resources/Inter.ttf"),
-            Self::Lexend => include_bytes!("../resources/Lexend.ttf"),
-            Self::Manrope => include_bytes!("../resources/Manrope.ttf"),
             Self::Nunito => include_bytes!("../resources/Nunito.ttf"),
-            Self::Outfit => include_bytes!("../resources/Outfit.ttf"),
             Self::Ubuntu => include_bytes!("../resources/Ubuntu.ttf"),
         }
     }
@@ -38,10 +32,7 @@ impl Font {
             Self::DMSans => "dm_sans",
             Self::FiraSans => "fira_sans",
             Self::Inter => "inter",
-            Self::Lexend => "lexend",
-            Self::Manrope => "manrope",
             Self::Nunito => "nunito",
-            Self::Outfit => "outfit",
             Self::Ubuntu => "ubuntu",
         }
     }
@@ -68,7 +59,7 @@ impl Font {
     }
 
     pub fn install(ctx: &egui::Context) {
-        Self::register(ctx, Self::Lexend.id());
+        Self::register(ctx, Self::FiraSans.id());
     }
 
     pub fn set(&self, ctx: &egui::Context) {
@@ -85,10 +76,7 @@ impl Display for Font {
                 Self::DMSans => "DM Sans",
                 Self::FiraSans => "Fira Sans",
                 Self::Inter => "Inter",
-                Self::Lexend => "Lexend",
-                Self::Manrope => "Manrope",
                 Self::Nunito => "Nunito",
-                Self::Outfit => "Outfit",
                 Self::Ubuntu => "Ubuntu",
             }
         )

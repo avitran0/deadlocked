@@ -8,7 +8,7 @@ use crate::{config::BASE_PATH, constants::GRENADE_FILE_NAME, cs2::entity::weapon
 
 pub type GrenadeList = HashMap<String, Vec<Grenade>>;
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct Grenade {
     pub id: Uuid,
     pub name: String,
@@ -30,7 +30,7 @@ impl Grenade {
     }
 }
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[derive(Default, Serialize, Deserialize, Clone)]
 pub struct GrenadeModifiers {
     pub jump: bool,
     pub duck: bool,

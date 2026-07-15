@@ -6,7 +6,7 @@ use ureq::Agent;
 const REPO: &str = "avitran0/deadlocked";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Default, Clone, PartialEq)]
 pub enum UpdateStatus {
     #[default]
     UpToDate,

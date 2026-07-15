@@ -1,26 +1,22 @@
 [package]
 name = "deadlocked"
-version = "1.0.2"
+version = "1.0.3"
 edition = "2024"
 
 [profile.dev]
 overflow-checks = false
 
 [profile.release]
+codegen-units = 1
 lto = true
 strip = true
 
 [dependencies]
-utils = { git = "https://codeberg.org/avitrano/utils", features = [
-    "system_info",
-] }
+utils.git = "https://codeberg.org/avitrano/utils"
 bytemuck = "1.24"
 egui = "0.35"
 egui_glow = { version = "0.35", features = ["winit"] }
-egui-winit = { version = "0.35", default-features = false, features = [
-    "x11",
-    "links",
-] }
+egui-winit = { version = "0.35", default-features = false, features = ["x11"] }
 epaint = { version = "0.35", features = ["serde"] }
 glam = { version = "0.33", features = ["bytemuck", "serde"] }
 glutin = { version = "0.32", default-features = false, features = [

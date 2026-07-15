@@ -46,7 +46,7 @@ impl TextAlign {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct TextCategory {
     pub font_size: f32,
@@ -77,7 +77,7 @@ impl TextCategory {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct OverlayTextConfig {
     pub status_text: TextCategory,

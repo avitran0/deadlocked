@@ -1,4 +1,4 @@
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct LibraryOffsets {
     pub client: usize,
     pub engine: usize,
@@ -8,7 +8,7 @@ pub struct LibraryOffsets {
     pub schema: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct InterfaceOffsets {
     pub resource: usize,
     pub entity: usize,
@@ -16,7 +16,7 @@ pub struct InterfaceOffsets {
     pub input: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct DirectOffsets {
     pub local_player: usize,
     pub button_state: usize,
@@ -27,13 +27,13 @@ pub struct DirectOffsets {
     pub vphys_world: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ConvarOffsets {
     pub ffa: usize,
     pub sensitivity: usize,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct PlayerControllerOffsets {
     pub steam_id: usize,                 // u64 (m_steamID)
     pub name: usize,                     // Pointer -> String (m_iszPlayerName)
@@ -44,7 +44,7 @@ pub struct PlayerControllerOffsets {
     pub action_tracking_services: usize, // Pointer -> ActionTrackingServices (m_pActionTrackingServices)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct PawnOffsets {
     pub health: usize,              // i32 (m_iHealth)
     pub armor: usize,               // i32 (m_ArmorValue)
@@ -71,75 +71,75 @@ pub struct PawnOffsets {
     pub aim_punch_services: usize,  // Pointer -> AimPunchServices (m_pAimPunchServices)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct GameSceneNodeOffsets {
     pub dormant: usize,     // bool (m_bDormant)
     pub origin: usize,      // Vec3 (m_vecAbsOrigin)
     pub model_state: usize, // Pointer -> ModelState (m_modelState)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ModelState {
     pub skeleton_instance: usize, // CSkeletonInstance (m_skeletonInstance)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct SmokeOffsets {
     pub did_smoke_effect: usize, // bool (m_bDidSmokeEffect)
     pub smoke_color: usize,      // Vec3 (m_vSmokeColor)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct MolotovOffsets {
     pub is_incendiary: usize, // bool (m_bIsIncGrenade)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct InfernoOffsets {
     pub is_burning: usize,     // bool[64] (m_bFireIsBurning)
     pub fire_count: usize,     // i32 (m_fireCount)
     pub fire_positions: usize, // Vec3[64] (m_firePositions)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct SpottedStateOffsets {
     pub mask: usize, // i32[2] or u64? (m_bSpottedByMask)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ActionTrackingServicesOffsets {
     pub round_kills: usize,  // i32 (m_iNumRoundKills)
     pub round_damage: usize, // f32 (m_flTotalRoundDamageDealt)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct CameraServicesOffsets {
     pub fov: usize, // u32 (m_iFOV)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ItemServicesOffsets {
     pub has_defuser: usize, // bool (m_bHasDefuser)
     pub has_helmet: usize,  // bool (m_bHasHelmet)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct WeaponServicesOffsets {
     pub active_weapon: usize, // Handle<Weapon> (m_hActiveWeapon)
     pub weapons: usize,       // Pointer -> Vec<Pointer -> Weapon> (m_hMyWeapons)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct ObserverServicesOffsets {
     pub target: usize, // Handle -> BaseEntity (m_hObserverTarget)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct AimPunchServicesOffsets {
     pub aim_punch_cache: usize, // Vec<Vec3> (m_unpredictableBaseTick - 0x18)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct WeaponOffsets {
     pub attribute_manager: usize, // AttributeContainer (m_AttributeManager)
     pub item: usize,              // EconItemView (m_Item)
@@ -147,12 +147,12 @@ pub struct WeaponOffsets {
     pub reserve_ammo: usize,      // i32[2] (m_pReserveAmmo)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct EconItemViewOffsets {
     pub item_definition_index: usize, // u16 (m_iItemDefinitionIndex)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct PlantedC4Offsets {
     pub is_ticking: usize,       // bool (m_bBombTicking)
     pub blow_time: usize,        // f32 (m_flC4Blow)
@@ -162,12 +162,12 @@ pub struct PlantedC4Offsets {
     pub defuse_time_left: usize, // u64 (m_flDefuseCountDown)
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct EntityIdentityOffsets {
     pub size: i32,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Offsets {
     pub library: LibraryOffsets,
     pub interface: InterfaceOffsets,

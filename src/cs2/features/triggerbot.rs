@@ -14,7 +14,7 @@ use crate::{
     os::mouse::Mouse,
 };
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct Triggerbot {
     shot_start: Option<Instant>,
     shot_end: Option<Instant>,

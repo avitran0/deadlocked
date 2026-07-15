@@ -12,7 +12,6 @@ use nix::libc::{self, iovec, process_vm_readv};
 
 use crate::constants::{cs2, elf};
 
-#[derive(Debug)]
 pub struct Process {
     pub pid: i32,
     file: File,

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::config::Config;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GameStatus {
     Working,
     NotStarted,
@@ -19,10 +19,10 @@ impl Display for GameStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GameMessage(pub Box<Config>);
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum UiMessage {
     Status(GameStatus),
     FrameTime(Duration),

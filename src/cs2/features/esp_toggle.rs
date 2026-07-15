@@ -3,7 +3,6 @@ use crate::{
     cs2::CS2,
 };
 
-#[derive(Debug)]
 pub struct EspToggle {
     pub active: bool,
 }

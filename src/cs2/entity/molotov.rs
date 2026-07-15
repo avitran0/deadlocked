@@ -5,7 +5,7 @@ use crate::cs2::{
     entity::{MolotovInfo, player::Player},
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 pub struct Molotov {
     controller: usize,
 }

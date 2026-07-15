@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Default)]
+#[derive(PartialEq, Default)]
 pub enum WeaponClass {
     #[default]
     Unknown,

@@ -9,15 +9,14 @@ use std::{
 
 use glam::{IVec2, Vec2};
 use nix::{ioctl_none, ioctl_write_int, ioctl_write_ptr, libc::c_ulong};
-use utils::system_info::info;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct Timeval {
     seconds: u64,
     microseconds: u64,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 struct InputEvent {
     time: Timeval,
     event_type: u16,
@@ -106,7 +105,6 @@ impl Mouse {
             .write(true)
             .open("/dev/uinput")
             .map_err(|e| e.to_string())?;
-        std::thread::spawn(info);
         let fd = file.as_raw_fd();
 
         unsafe {

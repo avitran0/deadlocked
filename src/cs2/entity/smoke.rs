@@ -6,7 +6,7 @@ use crate::cs2::{
     entity::{GrenadeInfo, grenade_info},
 };
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 pub struct Smoke {
     controller: usize,
 }
