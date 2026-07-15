@@ -2,7 +2,9 @@ use egui::{DragValue, Ui};
 
 use crate::ui::{
     app::App,
-    gui::helpers::{checkbox, collapsing_open, color_picker, combo_box, drag, scroll},
+    gui::helpers::{
+        checkbox, collapsing_open, color_picker, combo_box, drag, scroll, text_settings_button,
+    },
 };
 
 impl App {
@@ -16,10 +18,6 @@ impl App {
             });
 
             collapsing_open(ui, "Colors", |ui| {
-                if color_picker(ui, "Text Color", &mut self.config.hud.text_color) {
-                    self.send_config();
-                }
-
                 if color_picker(
                     ui,
                     "Crosshair Color",
@@ -91,25 +89,37 @@ impl App {
 
     fn hud_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "HUD", |ui| {
-            if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb_timer) {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb_timer) {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "bomb_timer");
+            });
 
             if checkbox(ui, "FOV Circle", &mut self.config.hud.fov_circle) {
                 self.send_config();
             }
 
-            if checkbox(ui, "Dropped Weapons", &mut self.config.hud.dropped_weapons) {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if checkbox(ui, "Dropped Weapons", &mut self.config.hud.dropped_weapons) {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "weapon_name");
+            });
 
-            if checkbox(ui, "Keybind List", &mut self.config.hud.keybind_list) {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if checkbox(ui, "Keybind List", &mut self.config.hud.keybind_list) {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "keybind_list");
+            });
 
-            if checkbox(ui, "Spectator List", &mut self.config.hud.spectator_list) {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if checkbox(ui, "Spectator List", &mut self.config.hud.spectator_list) {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "spectator_list");
+            });
         });
 
         ui.collapsing("Sniper Crosshair", |ui| {
@@ -169,28 +179,6 @@ impl App {
                 self.send_config();
             }
 
-            if drag(
-                ui,
-                "Font Size",
-                DragValue::new(&mut self.config.hud.font_size)
-                    .range(1.0..=99.0)
-                    .speed(0.2)
-                    .max_decimals(1),
-            ) {
-                self.send_config();
-            }
-
-            if drag(
-                ui,
-                "Icon Size",
-                DragValue::new(&mut self.config.hud.icon_size)
-                    .range(1.0..=99.0)
-                    .speed(0.2)
-                    .max_decimals(1),
-            ) {
-                self.send_config();
-            }
-
             if combo_box(ui, "font", "Font", &mut self.config.font) {
                 self.config.font.set(ui.ctx());
                 if let Some(overlay) = &self.overlay {
@@ -198,6 +186,23 @@ impl App {
                 }
                 self.send_config();
             }
+
+            ui.separator();
+
+            ui.horizontal(|ui| {
+                ui.label("Status Text");
+                text_settings_button(ui, &mut self.text_popup, "status_text");
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Grenade Name");
+                text_settings_button(ui, &mut self.text_popup, "grenade_name");
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Grenade Lineup");
+                text_settings_button(ui, &mut self.text_popup, "grenade_lineup");
+            });
         });
 
         ui.collapsing("Advanced", |ui| {

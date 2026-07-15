@@ -1,8 +1,8 @@
-use egui::{Align2, Color32, Painter, Stroke, pos2};
+use egui::{Color32, Painter, Pos2, Stroke, pos2, vec2};
 
 use crate::{
-    config::aim::KeyMode, cs2::entity::weapon_class::WeaponClass, data::Data,
-    math::world_to_screen, ui::app::App,
+    config::aim::KeyMode, config::text::TextPosition, cs2::entity::weapon_class::WeaponClass,
+    data::Data, math::world_to_screen, ui::app::App,
 };
 
 impl App {
@@ -25,20 +25,24 @@ impl App {
         }
 
         if let Some(pos) = world_to_screen(&data.bomb.position, data) {
-            self.text(
+            let cat = &self.config.hud.overlay_text.bomb_timer;
+            let anchor = point_anchor(pos, cat.position, cat.font_size * 0.3);
+            self.text_sized(
                 painter,
                 format!("{:.3}", data.bomb.timer),
-                pos,
-                Align2::CENTER_CENTER,
-                None,
+                anchor,
+                cat.align.to_align2(),
+                cat.color,
+                cat.font_size,
             );
             if data.bomb.being_defused {
-                self.text(
+                self.text_sized(
                     painter,
                     format!("defusing {:.3}", data.bomb.defuse_remain_time),
-                    pos2(pos.x, pos.y + self.config.hud.font_size),
-                    Align2::CENTER_CENTER,
-                    None,
+                    anchor + vec2(0.0, cat.font_size),
+                    cat.align.to_align2(),
+                    cat.color,
+                    cat.font_size,
                 );
             }
         }
@@ -82,31 +86,39 @@ impl App {
             return;
         }
 
-        let position = pos2(10.0, data.window_size.y / 2.0);
+        let cat = &self.config.hud.overlay_text.keybind_list;
+        let position = screen_anchor(
+            [data.window_size.x, data.window_size.y],
+            cat.position,
+            10.0,
+            0.0,
+        );
         let aimbot_color = if data.aimbot_active {
             Color32::GREEN
         } else {
-            Color32::WHITE
+            cat.color
         };
-        self.text(
+        self.text_sized(
             painter,
             format!("Aimbot: {:?}", self.config.aim.aimbot_hotkey),
             position,
-            Align2::LEFT_TOP,
-            Some(aimbot_color),
+            cat.align.to_align2(),
+            aimbot_color,
+            cat.font_size,
         );
 
         let triggerbot_color = if data.triggerbot_active {
             Color32::GREEN
         } else {
-            Color32::WHITE
+            cat.color
         };
-        self.text(
+        self.text_sized(
             painter,
             format!("Triggerbot: {:?}", self.config.aim.triggerbot_hotkey),
-            position + egui::vec2(0.0, self.config.hud.font_size),
-            Align2::LEFT_TOP,
-            Some(triggerbot_color),
+            position + vec2(0.0, cat.font_size),
+            cat.align.to_align2(),
+            triggerbot_color,
+            cat.font_size,
         );
     }
 
@@ -115,25 +127,30 @@ impl App {
             return;
         }
 
-        let position = pos2(
+        let cat = &self.config.hud.overlay_text.spectator_list;
+        let position = screen_anchor(
+            [data.window_size.x, data.window_size.y],
+            cat.position,
             10.0,
-            data.window_size.y / 2.0 + self.config.hud.font_size * 3.0,
+            cat.font_size * 3.0,
         );
-        self.text(
+        self.text_sized(
             painter,
             "Spectators:",
             position,
-            Align2::LEFT_TOP,
-            Some(Color32::WHITE),
+            cat.align.to_align2(),
+            cat.color,
+            cat.font_size,
         );
 
         for (i, name) in data.spectators.iter().enumerate() {
-            self.text(
+            self.text_sized(
                 painter,
                 format!("> {name}"),
-                position + egui::vec2(0.0, self.config.hud.font_size * (i as f32 + 1.0)),
-                Align2::LEFT_TOP,
-                Some(Color32::WHITE),
+                position + vec2(0.0, cat.font_size * (i as f32 + 1.0)),
+                cat.align.to_align2(),
+                cat.color,
+                cat.font_size,
             );
         }
     }
@@ -239,5 +256,34 @@ impl App {
             ],
             stroke,
         );
+    }
+}
+
+pub fn point_anchor(point: Pos2, position: TextPosition, offset: f32) -> Pos2 {
+    match position {
+        TextPosition::TopLeft => point + vec2(-offset, -offset),
+        TextPosition::TopCenter => point + vec2(0.0, -offset),
+        TextPosition::TopRight => point + vec2(offset, -offset),
+        TextPosition::CenterLeft => point + vec2(-offset, 0.0),
+        TextPosition::Center => point,
+        TextPosition::CenterRight => point + vec2(offset, 0.0),
+        TextPosition::BottomLeft => point + vec2(-offset, offset),
+        TextPosition::BottomCenter => point + vec2(0.0, offset),
+        TextPosition::BottomRight => point + vec2(offset, offset),
+    }
+}
+
+pub fn screen_anchor(size: [f32; 2], position: TextPosition, pad_x: f32, offset_y: f32) -> Pos2 {
+    let [w, h] = size;
+    match position {
+        TextPosition::TopLeft => pos2(pad_x, offset_y),
+        TextPosition::TopCenter => pos2(w / 2.0, offset_y),
+        TextPosition::TopRight => pos2(w - pad_x, offset_y),
+        TextPosition::CenterLeft => pos2(pad_x, h / 2.0 + offset_y),
+        TextPosition::Center => pos2(w / 2.0, h / 2.0 + offset_y),
+        TextPosition::CenterRight => pos2(w - pad_x, h / 2.0 + offset_y),
+        TextPosition::BottomLeft => pos2(pad_x, h + offset_y),
+        TextPosition::BottomCenter => pos2(w / 2.0, h + offset_y),
+        TextPosition::BottomRight => pos2(w - pad_x, h + offset_y),
     }
 }

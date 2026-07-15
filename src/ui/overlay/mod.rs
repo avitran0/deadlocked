@@ -61,28 +61,36 @@ impl App {
         self.draw_spectator_list(&painter, data);
 
         if data.aimbot_active {
-            self.text(
+            let cat = &self.config.hud.overlay_text.status_text;
+            self.text_sized(
                 &painter,
                 "aimbot active",
-                pos2(
-                    data.window_size.x / 2.0 + 8.0,
-                    data.window_size.y / 2.0 + 8.0,
+                hud::screen_anchor(
+                    [data.window_size.x, data.window_size.y],
+                    cat.position,
+                    8.0,
+                    8.0,
                 ),
-                Align2::LEFT_TOP,
-                None,
+                cat.align.to_align2(),
+                cat.color,
+                cat.font_size,
             );
         }
 
         if data.triggerbot_active {
-            self.text(
+            let cat = &self.config.hud.overlay_text.status_text;
+            self.text_sized(
                 &painter,
                 "trigger active",
-                pos2(
-                    data.window_size.x / 2.0 + 8.0,
-                    data.window_size.y / 2.0 + 8.0 + self.config.hud.font_size,
+                hud::screen_anchor(
+                    [data.window_size.x, data.window_size.y],
+                    cat.position,
+                    8.0,
+                    8.0 + cat.font_size,
                 ),
-                Align2::LEFT_TOP,
-                None,
+                cat.align.to_align2(),
+                cat.color,
+                cat.font_size,
             );
         }
 
@@ -211,7 +219,10 @@ impl App {
         let v3 = center - right * CROSS_SIZE + up * CROSS_SIZE;
         let v4 = center - right * CROSS_SIZE - up * CROSS_SIZE;
 
-        let stroke = Stroke::new(self.config.hud.line_width, self.config.hud.text_color);
+        let stroke = Stroke::new(
+            self.config.hud.line_width,
+            self.config.hud.overlay_text.grenade_lineup.color,
+        );
         let stroke_bg = Stroke::new(self.config.hud.line_width * 2.0, Color32::BLACK);
 
         let Some(v1) = world_to_screen(&v1, data) else {
@@ -234,23 +245,28 @@ impl App {
         painter.line_segment([v2, v3], stroke);
 
         let text_center = center - up * CROSS_SIZE;
-        if let Some(text_center) = world_to_screen(&text_center, data) {
-            self.text(
+        if let Some(screen) = world_to_screen(&text_center, data) {
+            let cat = &self.config.hud.overlay_text.grenade_lineup;
+            let anchor = hud::point_anchor(screen, cat.position, cat.font_size * 0.3);
+            let align = cat.align.to_align2();
+            self.text_sized(
                 painter,
                 &grenade.name,
-                text_center,
-                Align2::CENTER_TOP,
-                None,
+                anchor,
+                align,
+                cat.color,
+                cat.font_size,
             );
-            let mut offset = self.config.hud.font_size;
-            self.text(
+            let mut offset = cat.font_size;
+            self.text_sized(
                 painter,
                 format!("{}", grenade.weapon,),
-                text_center + egui::vec2(0.0, offset),
-                Align2::CENTER_TOP,
-                None,
+                anchor + egui::vec2(0.0, offset),
+                align,
+                cat.color,
+                cat.font_size,
             );
-            offset += self.config.hud.font_size;
+            offset += cat.font_size;
             let text = match (
                 grenade.modifiers.duck,
                 grenade.modifiers.jump,
@@ -266,22 +282,24 @@ impl App {
                 (false, false, true) => "Run",
             };
             if !text.is_empty() {
-                self.text(
+                self.text_sized(
                     painter,
                     text,
-                    text_center + egui::vec2(0.0, offset),
-                    Align2::CENTER_TOP,
-                    None,
+                    anchor + egui::vec2(0.0, offset),
+                    align,
+                    cat.color,
+                    cat.font_size,
                 );
-                offset += self.config.hud.font_size;
+                offset += cat.font_size;
             }
             if !grenade.description.is_empty() {
-                self.text(
+                self.text_sized(
                     painter,
                     &grenade.description,
-                    text_center + egui::vec2(0.0, offset),
-                    Align2::CENTER_TOP,
-                    None,
+                    anchor + egui::vec2(0.0, offset),
+                    align,
+                    cat.color,
+                    cat.font_size,
                 );
             }
         }
@@ -301,40 +319,18 @@ impl App {
         Color32::from_rgba_unmultiplied(r, g, 0, alpha)
     }
 
-    fn text(
-        &self,
-        painter: &Painter,
-        text: impl AsRef<str>,
-        position: Pos2,
-        align: Align2,
-        color: Option<Color32>,
-    ) {
-        self.text_sized(
-            painter,
-            text,
-            position,
-            align,
-            color,
-            self.config.hud.font_size,
-        );
-    }
-
     fn text_sized(
         &self,
         painter: &Painter,
         text: impl AsRef<str>,
         position: Pos2,
         align: Align2,
-        color: Option<Color32>,
+        color: Color32,
         font_size: f32,
     ) {
         use egui::FontId;
 
         let font = FontId::proportional(font_size);
-        let color = match color {
-            Some(color) => color,
-            None => self.config.hud.text_color,
-        };
         if self.config.hud.text_outline {
             for (pos, color) in outline(position, color) {
                 painter.text(pos, align, text.as_ref(), font.clone(), color);

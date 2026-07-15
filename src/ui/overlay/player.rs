@@ -1,10 +1,11 @@
 use std::time::{Duration, Instant};
 
-use egui::{Align2, Color32, Painter, Stroke, pos2};
+use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use glam::vec3;
 
 use crate::{
     config::player::{BoxMode, DrawMode},
+    config::text::TextPosition,
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
     math::world_to_screen,
@@ -108,32 +109,15 @@ impl App {
         color = Self::alpha(color, alpha);
 
         let stroke = Stroke::new(line_width, color);
-        let icon_size = self.config.hud.icon_size * esp_scale;
 
-        let midpoint = (player.position + player.head) / 2.0;
-        let height = player.head.z - player.position.z + 24.0;
-        let half_height = height / 2.0;
-        let top = midpoint + vec3(0.0, 0.0, half_height);
-        let bottom = midpoint - vec3(0.0, 0.0, half_height);
-
-        let Some(top) = world_to_screen(&top, data) else {
+        let Some((tl, br)) = self.skeleton_bounds(player, data) else {
             return;
         };
-        let Some(bottom) = world_to_screen(&bottom, data) else {
-            return;
-        };
-        let half_height = bottom.y - top.y;
-        let width = half_height / 2.0;
-        let half_width = width / 2.0;
-        // quarter width
+        let tr = pos2(br.x, tl.y);
+        let bl = pos2(tl.x, br.y);
+        let half_width = (br.x - tl.x) / 2.0;
         let qw = half_width - 2.0;
-        // eigth width
         let ew = qw / 2.0;
-
-        let tl = pos2(top.x - half_width, top.y);
-        let tr = pos2(top.x + half_width, top.y);
-        let bl = pos2(bottom.x - half_width, bottom.y);
-        let br = pos2(bottom.x + half_width, bottom.y);
 
         if self.config.player.draw_box != DrawMode::None {
             if self.config.player.box_mode == BoxMode::Gap {
@@ -195,73 +179,87 @@ impl App {
             );
         }
 
+        let pad = 4.0 * esp_scale;
         let mut offset = 0.0;
-        let font_size = self.config.hud.font_size * esp_scale;
-        let text_color = Self::alpha(self.config.hud.text_color, alpha);
+
         if self.config.player.player_name {
+            let cat = &self.config.hud.overlay_text.player_name;
+            let fs = cat.font_size * esp_scale;
+            let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
             self.text_sized(
                 painter,
                 &player.name,
-                pos2(tr.x + ew, tr.y + offset),
-                Align2::LEFT_TOP,
-                Some(text_color),
-                font_size,
+                anchor,
+                cat.align.to_align2(),
+                Self::alpha(cat.color, alpha),
+                fs,
             );
-            offset += font_size;
+            offset += fs;
         }
 
-        if self.config.player.tags && player.has_defuser {
-            self.text_sized(
-                painter,
-                "\u{e00f}",
-                pos2(tr.x + ew, tr.y + offset),
-                Align2::LEFT_TOP,
-                None,
-                icon_size,
-            );
-            offset += font_size;
-        }
-
-        if self.config.player.tags && player.has_helmet {
-            self.text_sized(
-                painter,
-                "\u{e017}",
-                pos2(tr.x + ew, tr.y + offset),
-                Align2::LEFT_TOP,
-                None,
-                icon_size,
-            );
-            offset += font_size;
-        }
-
-        if self.config.player.tags && player.has_bomb {
-            self.text_sized(
-                painter,
-                "\u{e01e}",
-                pos2(tr.x + ew, tr.y + offset),
-                Align2::LEFT_TOP,
-                None,
-                icon_size,
-            );
+        if self.config.player.tags {
+            let cat = &self.config.hud.overlay_text.player_tags;
+            let fs = cat.font_size * esp_scale;
+            let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+            if player.has_defuser {
+                self.text_sized(
+                    painter,
+                    "\u{e00f}",
+                    anchor,
+                    cat.align.to_align2(),
+                    Self::alpha(cat.color, alpha),
+                    fs,
+                );
+                offset += fs;
+            }
+            if player.has_helmet {
+                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                self.text_sized(
+                    painter,
+                    "\u{e017}",
+                    anchor,
+                    cat.align.to_align2(),
+                    Self::alpha(cat.color, alpha),
+                    fs,
+                );
+                offset += fs;
+            }
+            if player.has_bomb {
+                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                self.text_sized(
+                    painter,
+                    "\u{e01e}",
+                    anchor,
+                    cat.align.to_align2(),
+                    Self::alpha(cat.color, alpha),
+                    fs,
+                );
+            }
         }
 
         if self.config.player.weapon_icon {
+            let icon_cat = &self.config.hud.overlay_text.weapon_icon;
+            let ammo_cat = &self.config.hud.overlay_text.ammo_text;
+            let ifs = icon_cat.font_size * esp_scale;
+            let afs = ammo_cat.font_size * esp_scale;
+            let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
                 player.weapon.to_icon(),
-                pos2(bl.x + half_width, bl.y),
-                Align2::CENTER_TOP,
-                None,
-                icon_size,
+                icon_anchor,
+                icon_cat.align.to_align2(),
+                Self::alpha(icon_cat.color, alpha),
+                ifs,
             );
             if player.ammo.0 >= 0 {
+                let ammo_anchor = self.box_anchor(tl, tr, bl, br, ammo_cat.position, 0.0, afs);
                 self.text_sized(
                     painter,
                     format!("{}/{}", player.ammo.0, player.ammo.1),
-                    pos2(bl.x + half_width, bl.y + font_size),
-                    Align2::CENTER_TOP,
-                    Some(text_color),
-                    font_size,
+                    ammo_anchor,
+                    ammo_cat.align.to_align2(),
+                    Self::alpha(ammo_cat.color, alpha),
+                    afs,
                 );
             }
         }
@@ -326,6 +324,71 @@ impl App {
         let height = spine.y - neck.y;
         let pos = pos2(neck.x - (spine.x - neck.x) / 2.0, neck.y - height / 2.0);
         painter.circle_stroke(pos, height / 2.0, stroke);
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn box_anchor(
+        &self,
+        tl: Pos2,
+        tr: Pos2,
+        bl: Pos2,
+        br: Pos2,
+        position: TextPosition,
+        pad: f32,
+        offset: f32,
+    ) -> Pos2 {
+        let top = pos2((tl.x + tr.x) / 2.0, tl.y);
+        let bottom = pos2((bl.x + br.x) / 2.0, bl.y);
+        let center = pos2((tl.x + br.x) / 2.0, (tl.y + bl.y) / 2.0);
+        let center_left = pos2(tl.x, (tl.y + bl.y) / 2.0);
+        let center_right = pos2(tr.x, (tr.y + br.y) / 2.0);
+        match position {
+            TextPosition::TopLeft => pos2(tl.x + pad, tl.y + offset),
+            TextPosition::TopCenter => pos2(top.x, tl.y + offset),
+            TextPosition::TopRight => pos2(tr.x + pad, tr.y + offset),
+            TextPosition::CenterLeft => pos2(center_left.x + pad, center_left.y + offset),
+            TextPosition::Center => pos2(center.x, center.y + offset),
+            TextPosition::CenterRight => pos2(center_right.x + pad, center_right.y + offset),
+            TextPosition::BottomLeft => pos2(bl.x + pad, bl.y + offset),
+            TextPosition::BottomCenter => pos2(bottom.x, bl.y + offset),
+            TextPosition::BottomRight => pos2(br.x + pad, bl.y + offset),
+        }
+    }
+
+    fn skeleton_bounds(&self, player: &PlayerData, data: &Data) -> Option<(Pos2, Pos2)> {
+        let mut points = Vec::with_capacity(Bones::CONNECTIONS.len() * 2);
+        for (a, b) in &Bones::CONNECTIONS {
+            for bone in [a, b] {
+                if let Some(world) = player.bones.get(bone)
+                    && let Some(screen) = world_to_screen(world, data)
+                {
+                    points.push(screen);
+                }
+            }
+        }
+
+        if points.is_empty() {
+            let midpoint = (player.position + player.head) / 2.0;
+            let height = (player.head.z - player.position.z + 24.0).max(1.0);
+            let half = height / 2.0;
+            let top = midpoint + vec3(0.0, 0.0, half);
+            let bottom = midpoint - vec3(0.0, 0.0, half);
+            let top = world_to_screen(&top, data)?;
+            let bottom = world_to_screen(&bottom, data)?;
+            let hh = (bottom.y - top.y).max(1.0);
+            let hw = hh / 4.0;
+            return Some((pos2(top.x - hw, top.y), pos2(bottom.x + hw, bottom.y)));
+        }
+
+        let min_x = points.iter().map(|p| p.x).reduce(f32::min)?;
+        let max_x = points.iter().map(|p| p.x).reduce(f32::max)?;
+        let min_y = points.iter().map(|p| p.y).reduce(f32::min)?;
+        let max_y = points.iter().map(|p| p.y).reduce(f32::max)?;
+
+        let mx = (max_x - min_x) * 0.1;
+        let my = (max_y - min_y) * 0.1;
+
+        Some((pos2(min_x - mx, min_y - my), pos2(max_x + mx, max_y + my)))
     }
 
     pub fn update_player_sounds(&mut self) {

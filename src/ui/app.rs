@@ -60,6 +60,8 @@ pub struct App {
     pub aimbot_weapon: Weapon,
 
     pub update_status: UpdateStatus,
+
+    pub text_popup: Option<String>,
 }
 
 impl App {
@@ -104,6 +106,7 @@ impl App {
             aimbot_weapon: Weapon::Ak47,
 
             update_status,
+            text_popup: None,
         };
         ret.send_config();
         ret

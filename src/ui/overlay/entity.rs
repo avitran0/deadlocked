@@ -1,6 +1,6 @@
 use std::time::Instant;
 
-use egui::{Align2, Color32, Painter, Pos2, Stroke};
+use egui::{Color32, Painter, Pos2, Stroke, vec2};
 
 use crate::{
     cs2::entity::{EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo},
@@ -20,23 +20,27 @@ impl App {
                 if !self.config.hud.dropped_weapons {
                     return;
                 }
-                let Some(position) = world_to_screen(position, data) else {
+                let Some(screen) = world_to_screen(position, data) else {
                     return;
                 };
-                self.text(
+                let cat = &self.config.hud.overlay_text.weapon_name;
+                let anchor = super::hud::point_anchor(screen, cat.position, cat.font_size * 0.3);
+                self.text_sized(
                     painter,
                     format!("{weapon}"),
-                    position,
-                    Align2::CENTER_CENTER,
-                    None,
+                    anchor,
+                    cat.align.to_align2(),
+                    cat.color,
+                    cat.font_size,
                 );
                 if ammo.0 >= 0 {
-                    self.text(
+                    self.text_sized(
                         painter,
                         format!("{}/{}", ammo.0, ammo.1),
-                        egui::pos2(position.x, position.y + self.config.hud.font_size),
-                        Align2::CENTER_CENTER,
-                        None,
+                        anchor + vec2(0.0, cat.font_size),
+                        cat.align.to_align2(),
+                        cat.color,
+                        cat.font_size,
                     );
                 }
             }
@@ -67,10 +71,19 @@ impl App {
         if !self.config.hud.grenade_trails.enabled {
             return;
         }
-        let Some(position) = world_to_screen(&info.position, data) else {
+        let Some(screen) = world_to_screen(&info.position, data) else {
             return;
         };
-        self.text(painter, &info.name, position, Align2::CENTER_CENTER, None);
+        let cat = &self.config.hud.overlay_text.grenade_name;
+        let anchor = super::hud::point_anchor(screen, cat.position, cat.font_size * 0.3);
+        self.text_sized(
+            painter,
+            &info.name,
+            anchor,
+            cat.align.to_align2(),
+            cat.color,
+            cat.font_size,
+        );
 
         if !self.config.hud.grenade_trails.enabled {
             return;

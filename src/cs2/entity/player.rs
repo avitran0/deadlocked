@@ -222,6 +222,9 @@ impl Player {
         let length: i32 = cs2
             .process
             .read(weapon_services + cs2.offsets.weapon_services.weapons);
+        if length > 10 {
+            return weapons;
+        }
         let weapon_list: usize = cs2
             .process
             .read(weapon_services + cs2.offsets.weapon_services.weapons + 0x08);

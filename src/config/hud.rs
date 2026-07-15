@@ -1,7 +1,7 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use crate::ui::color::Colors;
+use super::text::OverlayTextConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -14,11 +14,9 @@ pub struct HudConfig {
     pub spectator_list: bool,
     pub grenade_trails: TrailConfig,
     pub text_outline: bool,
-    pub text_color: Color32,
     pub line_width: f32,
-    pub font_size: f32,
-    pub icon_size: f32,
     pub debug: bool,
+    pub overlay_text: OverlayTextConfig,
 }
 
 impl Default for HudConfig {
@@ -32,11 +30,9 @@ impl Default for HudConfig {
             spectator_list: false,
             grenade_trails: TrailConfig::default(),
             text_outline: true,
-            text_color: Colors::TEXT,
             line_width: 2.0,
-            font_size: 16.0,
-            icon_size: 20.0,
             debug: false,
+            overlay_text: OverlayTextConfig::default(),
         }
     }
 }

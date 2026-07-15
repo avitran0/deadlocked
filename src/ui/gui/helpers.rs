@@ -2,6 +2,7 @@ use std::hash::Hash;
 
 use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
 
+use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
 
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
@@ -83,6 +84,84 @@ pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
     }
 
     changed
+}
+
+pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &str) {
+    if ui.button("⚙").on_hover_text("Text settings").clicked() {
+        *open_popup = Some(id.to_string());
+    }
+}
+
+pub fn text_settings_popup(
+    ui: &mut Ui,
+    label: &str,
+    category: &mut TextCategory,
+    open_popup: &mut Option<String>,
+    popup_id: &str,
+) {
+    let is_open = open_popup.as_deref() == Some(popup_id);
+    if !is_open {
+        return;
+    }
+
+    let mut close = false;
+    egui::Window::new(label)
+        .id(egui::Id::new(popup_id))
+        .collapsible(false)
+        .resizable(false)
+        .show(ui.ctx(), |ui| {
+            ui.horizontal(|ui| {
+                ui.label("Font Size");
+                ui.add(
+                    egui::DragValue::new(&mut category.font_size)
+                        .range(1.0..=99.0)
+                        .speed(0.2)
+                        .max_decimals(1),
+                );
+            });
+
+            let [mut r, mut g, mut b, mut a] = category.color.to_srgba_unmultiplied();
+            ui.horizontal(|ui| {
+                let (response, painter) =
+                    ui.allocate_painter(ui.spacing().interact_size, Sense::hover());
+                painter.rect_filled(
+                    response.rect,
+                    ui.style().visuals.widgets.inactive.corner_radius,
+                    category.color,
+                );
+                let _r = ui.add(DragValue::new(&mut r).prefix("r: "));
+                let _g = ui.add(DragValue::new(&mut g).prefix("g: "));
+                let _b = ui.add(DragValue::new(&mut b).prefix("b: "));
+                let _a = ui.add(DragValue::new(&mut a).prefix("a: "));
+            });
+            let new_color = Color32::from_rgba_premultiplied(r, g, b, a);
+            if new_color != category.color {
+                category.color = new_color;
+            }
+
+            ui.separator();
+
+            combo_box(
+                ui,
+                &format!("{popup_id}_pos"),
+                "Position",
+                &mut category.position,
+            );
+            combo_box(
+                ui,
+                &format!("{popup_id}_align"),
+                "Align",
+                &mut category.align,
+            );
+
+            if ui.button("Close").clicked() {
+                close = true;
+            }
+        });
+
+    if close {
+        *open_popup = None;
+    }
 }
 
 pub fn keybind(ui: &mut Ui, id: &str, label: &str, keycode: &mut KeyCode) -> bool {

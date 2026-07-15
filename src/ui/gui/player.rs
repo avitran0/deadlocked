@@ -4,6 +4,7 @@ use crate::ui::{
     app::App,
     gui::helpers::{
         checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
+        text_settings_button,
     },
 };
 
@@ -112,26 +113,40 @@ impl App {
                 self.send_config();
             }
 
-            if ui
-                .checkbox(&mut self.config.player.player_name, "Player Name")
-                .changed()
-            {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.player_name, "Player Name")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "player_name");
+            });
 
-            if ui
-                .checkbox(&mut self.config.player.weapon_icon, "Weapon Icon")
-                .changed()
-            {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.weapon_icon, "Weapon Icon")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "weapon_icon");
+            });
 
-            if ui
-                .checkbox(&mut self.config.player.tags, "Show Tags")
-                .changed()
-            {
-                self.send_config();
-            }
+            ui.horizontal(|ui| {
+                ui.label("Ammo");
+                text_settings_button(ui, &mut self.text_popup, "ammo_text");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.tags, "Show Tags")
+                    .changed()
+                {
+                    self.send_config();
+                }
+                text_settings_button(ui, &mut self.text_popup, "player_tags");
+            });
         });
 
         ui.collapsing("Sound ESP", |ui| {

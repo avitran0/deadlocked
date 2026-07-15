@@ -16,6 +16,7 @@ pub mod aim;
 pub mod application;
 pub mod hud;
 pub mod player;
+pub mod text;
 pub mod r#unsafe;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
