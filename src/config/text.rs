@@ -99,7 +99,7 @@ impl Default for OverlayTextConfig {
             status_text: TextCategory::new(
                 16.0,
                 Colors::TEXT,
-                TextPosition::CenterRight,
+                TextPosition::Center,
                 TextAlign::LeftTop,
             ),
             player_name: TextCategory::new(
