@@ -98,56 +98,43 @@ pub fn text_settings_popup(
     category: &mut TextCategory,
     open_popup: &mut Option<String>,
     popup_id: &str,
-) {
+) -> bool {
     let is_open = open_popup.as_deref() == Some(popup_id);
     if !is_open {
-        return;
+        return false;
     }
 
     let mut close = false;
+    let mut changed = false;
     egui::Window::new(label)
         .id(egui::Id::new(popup_id))
         .collapsible(false)
         .resizable(false)
         .show(ui.ctx(), |ui| {
-            ui.horizontal(|ui| {
-                ui.label("Font Size");
-                ui.add(
-                    egui::DragValue::new(&mut category.font_size)
-                        .range(1.0..=99.0)
-                        .speed(0.2)
-                        .max_decimals(1),
-                );
-            });
+            changed |= ui
+                .horizontal(|ui| {
+                    ui.label("Font Size");
+                    ui.add(
+                        egui::DragValue::new(&mut category.font_size)
+                            .range(1.0..=99.0)
+                            .speed(0.2)
+                            .max_decimals(1),
+                    )
+                    .changed()
+                })
+                .inner;
 
-            let [mut r, mut g, mut b, mut a] = category.color.to_srgba_unmultiplied();
-            ui.horizontal(|ui| {
-                let (response, painter) =
-                    ui.allocate_painter(ui.spacing().interact_size, Sense::hover());
-                painter.rect_filled(
-                    response.rect,
-                    ui.style().visuals.widgets.inactive.corner_radius,
-                    category.color,
-                );
-                let _r = ui.add(DragValue::new(&mut r).prefix("r: "));
-                let _g = ui.add(DragValue::new(&mut g).prefix("g: "));
-                let _b = ui.add(DragValue::new(&mut b).prefix("b: "));
-                let _a = ui.add(DragValue::new(&mut a).prefix("a: "));
-            });
-            let new_color = Color32::from_rgba_premultiplied(r, g, b, a);
-            if new_color != category.color {
-                category.color = new_color;
-            }
+            changed |= color_picker(ui, "Color", &mut category.color);
 
             ui.separator();
 
-            combo_box(
+            changed |= combo_box(
                 ui,
                 &format!("{popup_id}_pos"),
                 "Position",
                 &mut category.position,
             );
-            combo_box(
+            changed |= combo_box(
                 ui,
                 &format!("{popup_id}_align"),
                 "Align",
@@ -162,6 +149,8 @@ pub fn text_settings_popup(
     if close {
         *open_popup = None;
     }
+
+    changed
 }
 
 pub fn keybind(ui: &mut Ui, id: &str, label: &str, keycode: &mut KeyCode) -> bool {

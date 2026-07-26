@@ -149,83 +149,87 @@ impl AppState {
 
     fn render_text_popups(&mut self, ui: &mut Ui) {
         let text = &mut self.config.hud.overlay_text;
-        text_settings_popup(
+        let mut changed = false;
+        changed |= text_settings_popup(
             ui,
             "Status Text",
             &mut text.status_text,
             &mut self.text_popup,
             "status_text",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Player Name",
             &mut text.player_name,
             &mut self.text_popup,
             "player_name",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Player Tags",
             &mut text.player_tags,
             &mut self.text_popup,
             "player_tags",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Weapon Icon",
             &mut text.weapon_icon,
             &mut self.text_popup,
             "weapon_icon",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Ammo",
             &mut text.ammo_text,
             &mut self.text_popup,
             "ammo_text",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Weapon Name",
             &mut text.weapon_name,
             &mut self.text_popup,
             "weapon_name",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Bomb Timer",
             &mut text.bomb_timer,
             &mut self.text_popup,
             "bomb_timer",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Grenade Name",
             &mut text.grenade_name,
             &mut self.text_popup,
             "grenade_name",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Grenade Lineup",
             &mut text.grenade_lineup,
             &mut self.text_popup,
             "grenade_lineup",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Keybind List",
             &mut text.keybind_list,
             &mut self.text_popup,
             "keybind_list",
         );
-        text_settings_popup(
+        changed |= text_settings_popup(
             ui,
             "Spectator List",
             &mut text.spectator_list,
             &mut self.text_popup,
             "spectator_list",
         );
+        if changed {
+            self.send_config();
+        }
     }
 }
 
