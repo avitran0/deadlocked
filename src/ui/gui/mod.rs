@@ -68,6 +68,8 @@ impl AppState {
                 ui.selectable_value(&mut self.current_tab, Tab::Application, "Application");
 
                 ui.with_layout(egui::Layout::bottom_up(Align::Min), |ui| {
+                    ui.label(concat!("v", env!("CARGO_PKG_VERSION")));
+
                     if ui.button("Report Issue").clicked() {
                         open_url("https://github.com/avitran0/deadlocked/issues");
                     }
