@@ -67,7 +67,7 @@ impl ModuleScope {
         let mut current_blob: usize = process.read(address + 0x560 + 0x20);
         while current_blob != 0 {
             let data: usize = process.read(current_blob + 0x10);
-            if data > process.min && data < process.max {
+            if process.data_range.contains(&data) {
                 let class = Class::new(process, data);
                 classes.insert(class.name.clone(), class);
             }

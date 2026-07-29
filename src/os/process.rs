@@ -3,6 +3,7 @@ use std::{
     collections::HashMap,
     fs::{File, OpenOptions, read_dir, read_link},
     io::{BufRead, BufReader},
+    ops::RangeInclusive,
     os::unix::fs::FileExt,
     path::PathBuf,
 };
@@ -16,8 +17,7 @@ pub struct Process {
     pub pid: i32,
     file: File,
     path: PathBuf,
-    pub min: usize,
-    pub max: usize,
+    pub data_range: RangeInclusive<usize>,
     string_cache: RefCell<HashMap<usize, String>>,
 }
 
@@ -28,8 +28,7 @@ impl Process {
                 pid,
                 path: PathBuf::from(format!("/proc/{pid}")),
                 file: OpenOptions::new().read(true).open("/dev/null").unwrap(),
-                min: usize::MAX,
-                max: usize::MIN,
+                data_range: 0..=0,
                 string_cache: RefCell::new(HashMap::new()),
             };
         }
@@ -45,8 +44,7 @@ impl Process {
             pid,
             path: PathBuf::from(format!("/proc/{pid}")),
             file,
-            min: usize::MAX,
-            max: usize::MIN,
+            data_range: 0..=0,
             string_cache: RefCell::new(HashMap::new()),
         };
 
@@ -54,18 +52,22 @@ impl Process {
             .iter()
             .filter_map(|&lib| ret.module_base_address(lib))
             .collect();
-        let sizes: Vec<usize> = libs.iter().map(|lib| ret.module_size(*lib)).collect();
 
-        for (lib, size) in libs.into_iter().zip(sizes) {
+        let mut min_addr = usize::MAX;
+        let mut max_addr = 0usize;
+        for lib in libs {
+            let size = ret.module_size(lib);
             let min = lib - 1_000_000;
             let max = lib + size + 1_000_000;
-            if min < ret.min {
-                ret.min = min;
+            if min < min_addr {
+                min_addr = min;
             }
-            if max > ret.max {
-                ret.max = max;
+            if max > max_addr {
+                max_addr = max;
             }
         }
+
+        ret.data_range = min_addr..=max_addr;
 
         ret
     }
