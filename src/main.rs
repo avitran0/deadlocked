@@ -1,9 +1,12 @@
-use std::sync::Arc;
+use std::{ffi::CString, sync::Arc};
 
 use utils::{Channel, Mutex, log::LoggerOptions};
 use winit::platform::x11::EventLoopBuilderExtX11;
 
-use crate::{config::BASE_PATH, data::Data, os::mouse::check_uinput, ui::app::App};
+use crate::{
+    config::BASE_PATH, constants::APPLICATION_NAME, data::Data, os::mouse::check_uinput,
+    ui::app::App,
+};
 
 mod config;
 mod constants;
@@ -22,6 +25,14 @@ mod update;
 compile_error!("only linux is supported.");
 
 fn main() {
+    let process_name = CString::new(APPLICATION_NAME.as_str()).unwrap();
+    if unsafe { nix::libc::prctl(nix::libc::PR_SET_NAME, process_name.as_ptr()) } == -1 {
+        eprintln!(
+            "failed to set process name: {}",
+            std::io::Error::last_os_error()
+        );
+    }
+
     utils::log::init(
         LoggerOptions::default()
             .file(BASE_PATH.join("deadlocked.log"))

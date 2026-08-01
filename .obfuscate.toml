@@ -1,0 +1,62 @@
+[obfuscation]
+strings = true
+min_string_length = 5
+
+# Strings that must remain unchanged.
+ignore_strings = [
+    "DEBUG",
+    "TRACE"
+]
+
+control_flow = true
+control_flow_files = [
+    "src/core/**/*.rs",
+    "src/licensing/**/*.rs",
+    "src/protocol/**/*.rs"
+]
+
+dummy_branches = true
+obfuscate_logging = true
+skip_attributes = true
+
+# Avoid rewriting generated or fragile modules.
+skip_files = [
+    "src/main.rs",
+    "src/ui/**/*.rs"
+]
+
+[identifiers]
+rename = false
+
+# Names that external systems or macros may expect.
+preserve = [
+    "main"
+]
+
+[include]
+files = [
+    "src/**/*.rs"
+]
+
+exclude = [
+    "target/**",
+    "tests/**",
+    "benches/**",
+    "examples/**"
+]
+
+[logging_macros]
+enabled = [
+    "println",
+    "eprintln",
+    "log::info",
+    "log::warn",
+    "log::error",
+    "tracing::info",
+    "tracing::warn",
+    "tracing::error"
+]
+
+ignore_messages = [
+    "startup ok"
+]

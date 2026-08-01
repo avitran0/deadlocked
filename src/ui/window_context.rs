@@ -5,7 +5,7 @@ use egui_glow::glow::{self, HasContext as _};
 use glutin::prelude::PossiblyCurrentGlContext;
 use winit::platform::x11::{WindowAttributesExtX11, WindowType};
 
-use crate::{font::Font, ui::color::Colors};
+use crate::{constants::APPLICATION_NAME, font::Font, ui::color::Colors};
 
 pub struct WindowContext {
     window: winit::window::Window,
@@ -39,11 +39,11 @@ impl WindowContext {
                 .with_window_level(winit::window::WindowLevel::AlwaysOnTop)
                 .with_override_redirect(true)
                 .with_x11_window_type(vec![WindowType::Tooltip])
-                .with_title("deadlocked_overlay")
+                .with_title(APPLICATION_NAME.as_str())
         } else {
             winit::window::WindowAttributes::default()
                 .with_inner_size(winit::dpi::LogicalSize::new(750, 450))
-                .with_title("deadlocked")
+                .with_title(APPLICATION_NAME.as_str())
         };
 
         let config_template_builder = if overlay {

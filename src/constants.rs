@@ -1,3 +1,16 @@
+use std::sync::LazyLock;
+
+use uuid::Uuid;
+
+pub static APPLICATION_NAME: LazyLock<String> = LazyLock::new(|| {
+    Uuid::new_v4()
+        .simple()
+        .to_string()
+        .chars()
+        .take(15)
+        .collect()
+});
+
 pub mod cs2 {
     use crate::cs2::entity::weapon::Weapon;
 
