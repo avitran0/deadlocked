@@ -346,6 +346,7 @@ dependencies = [
  "utils",
  "uuid",
  "winit",
+ "x11rb",
 ]
 
 [[package]]

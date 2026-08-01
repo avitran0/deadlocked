@@ -5,6 +5,13 @@ use std::{
 };
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
+use x11rb::{
+    connection::Connection as _,
+    protocol::{
+        randr::ConnectionExt as _,
+        xproto::{AtomEnum, ConnectionExt as _},
+    },
+};
 
 use crate::{
     config::{
@@ -57,7 +64,7 @@ pub struct CS2 {
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
-    gamescope_size: Option<Vec2>,
+    gamescope_geometry: Option<(Vec2, Vec2)>,
     last_cache: Instant,
 }
 
@@ -73,9 +80,15 @@ impl CS2 {
         };
         utils::info!("process found, pid: {}", process.pid);
         self.process = process;
-        self.gamescope_size = gamescope_output_size(self.process.pid);
-        if let Some(size) = self.gamescope_size {
-            utils::info!("detected gamescope output size: {}x{}", size.x, size.y);
+        self.gamescope_geometry = gamescope_geometry(self.process.pid);
+        if let Some((position, size)) = self.gamescope_geometry {
+            utils::info!(
+                "detected gamescope geometry: {}x{} at {},{}",
+                size.x,
+                size.y,
+                position.x,
+                position.y
+            );
         }
 
         self.offsets = match self.find_offsets() {
@@ -141,8 +154,8 @@ impl CS2 {
         data.entities.clear();
 
         let sdl_window: usize = self.process.read(self.offsets.direct.sdl_window);
-        if let Some(size) = self.gamescope_size {
-            data.window_position = Vec2::ZERO;
+        if let Some((position, size)) = self.gamescope_geometry {
+            data.window_position = position;
             data.window_size = size;
         } else if sdl_window == 0 {
             data.window_position = Vec2::ZERO;
@@ -307,7 +320,7 @@ impl CS2 {
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
-            gamescope_size: None,
+            gamescope_geometry: None,
             last_cache: Instant::now(),
         }
     }
@@ -407,7 +420,7 @@ impl CS2 {
     }
 }
 
-fn gamescope_output_size(mut pid: i32) -> Option<Vec2> {
+fn gamescope_geometry(mut pid: i32) -> Option<(Vec2, Vec2)> {
     while pid > 1 {
         let raw = fs::read(format!("/proc/{pid}/cmdline")).ok()?;
         let args = raw
@@ -422,7 +435,12 @@ fn gamescope_output_size(mut pid: i32) -> Option<Vec2> {
             .is_some_and(|name| name == "gamescope")
         {
             let (width, height) = parse_gamescope_output_size(&args);
-            return Some(Vec2::new(width as f32, height as f32));
+            let size = Vec2::new(width as f32, height as f32);
+            return Some(
+                x11_window_geometry(pid)
+                    .or_else(|| x11_monitor_geometry(size))
+                    .unwrap_or((Vec2::ZERO, size)),
+            );
         }
 
         pid = fs::read_to_string(format!("/proc/{pid}/status"))
@@ -435,6 +453,71 @@ fn gamescope_output_size(mut pid: i32) -> Option<Vec2> {
     }
 
     None
+}
+
+fn x11_window_geometry(pid: i32) -> Option<(Vec2, Vec2)> {
+    let (connection, screen) = x11rb::connect(None).ok()?;
+    let root = connection.setup().roots.get(screen)?.root;
+    let client_list = connection
+        .intern_atom(false, b"_NET_CLIENT_LIST")
+        .ok()?
+        .reply()
+        .ok()?
+        .atom;
+    let pid_atom = connection
+        .intern_atom(false, b"_NET_WM_PID")
+        .ok()?
+        .reply()
+        .ok()?
+        .atom;
+    let windows = connection
+        .get_property(false, root, client_list, AtomEnum::WINDOW, 0, u32::MAX)
+        .ok()?
+        .reply()
+        .ok()?;
+
+    for window in windows.value32()? {
+        let Ok(cookie) = connection.get_property(false, window, pid_atom, AtomEnum::CARDINAL, 0, 1)
+        else {
+            continue;
+        };
+        let Ok(reply) = cookie.reply() else {
+            continue;
+        };
+        if reply.value32().and_then(|mut values| values.next()) != Some(pid as u32) {
+            continue;
+        }
+
+        let geometry = connection.get_geometry(window).ok()?.reply().ok()?;
+        let position = connection
+            .translate_coordinates(window, root, 0, 0)
+            .ok()?
+            .reply()
+            .ok()?;
+        return Some((
+            Vec2::new(position.dst_x as f32, position.dst_y as f32),
+            Vec2::new(geometry.width as f32, geometry.height as f32),
+        ));
+    }
+
+    None
+}
+
+fn x11_monitor_geometry(size: Vec2) -> Option<(Vec2, Vec2)> {
+    let (connection, screen) = x11rb::connect(None).ok()?;
+    let root = connection.setup().roots.get(screen)?.root;
+    let monitor = connection
+        .randr_get_monitors(root, true)
+        .ok()?
+        .reply()
+        .ok()?
+        .monitors
+        .into_iter()
+        .find(|monitor| monitor.width as f32 == size.x && monitor.height as f32 == size.y)?;
+    Some((
+        Vec2::new(monitor.x as f32, monitor.y as f32),
+        Vec2::new(monitor.width as f32, monitor.height as f32),
+    ))
 }
 
 fn parse_gamescope_output_size(args: &[String]) -> (u32, u32) {

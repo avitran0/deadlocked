@@ -37,6 +37,7 @@ toml = "1.0"
 ureq = { version = "3", features = ["json"] }
 uuid = { version = "1.18", features = ["v4", "serde"] }
 winit = { version = "0.30", default-features = false, features = ["x11"] }
+x11rb = { version = "0.13", default-features = false, features = ["randr"] }
 
 [features]
 read-only = []
