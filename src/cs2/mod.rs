@@ -1,4 +1,8 @@
-use std::time::{Duration, Instant};
+use std::{
+    fs,
+    path::Path,
+    time::{Duration, Instant},
+};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 
@@ -53,6 +57,7 @@ pub struct CS2 {
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
+    gamescope_size: Option<Vec2>,
     last_cache: Instant,
 }
 
@@ -68,6 +73,10 @@ impl CS2 {
         };
         utils::info!("process found, pid: {}", process.pid);
         self.process = process;
+        self.gamescope_size = gamescope_output_size(self.process.pid);
+        if let Some(size) = self.gamescope_size {
+            utils::info!("detected gamescope output size: {}x{}", size.x, size.y);
+        }
 
         self.offsets = match self.find_offsets() {
             Some(offsets) => offsets,
@@ -132,7 +141,10 @@ impl CS2 {
         data.entities.clear();
 
         let sdl_window: usize = self.process.read(self.offsets.direct.sdl_window);
-        if sdl_window == 0 {
+        if let Some(size) = self.gamescope_size {
+            data.window_position = Vec2::ZERO;
+            data.window_size = size;
+        } else if sdl_window == 0 {
             data.window_position = Vec2::ZERO;
             data.window_size = Vec2::ONE;
         } else {
@@ -295,6 +307,7 @@ impl CS2 {
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
+            gamescope_size: None,
             last_cache: Instant::now(),
         }
     }
@@ -391,5 +404,77 @@ impl CS2 {
                 *active
             }
         }
+    }
+}
+
+fn gamescope_output_size(mut pid: i32) -> Option<Vec2> {
+    while pid > 1 {
+        let raw = fs::read(format!("/proc/{pid}/cmdline")).ok()?;
+        let args = raw
+            .split(|byte| *byte == 0)
+            .filter(|arg| !arg.is_empty())
+            .map(|arg| String::from_utf8_lossy(arg).into_owned())
+            .collect::<Vec<_>>();
+
+        if args
+            .first()
+            .and_then(|arg| Path::new(arg).file_name())
+            .is_some_and(|name| name == "gamescope")
+        {
+            let (width, height) = parse_gamescope_output_size(&args);
+            return Some(Vec2::new(width as f32, height as f32));
+        }
+
+        pid = fs::read_to_string(format!("/proc/{pid}/status"))
+            .ok()?
+            .lines()
+            .find_map(|line| line.strip_prefix("PPid:"))?
+            .trim()
+            .parse()
+            .ok()?;
+    }
+
+    None
+}
+
+fn parse_gamescope_output_size(args: &[String]) -> (u32, u32) {
+    let args = &args[..args
+        .iter()
+        .position(|arg| arg == "--")
+        .unwrap_or(args.len())];
+    let value = |short: &str, long: &str| {
+        args.iter().enumerate().find_map(|(index, arg)| {
+            let value = if arg == short || arg == long {
+                args.get(index + 1).map(String::as_str)
+            } else {
+                arg.strip_prefix(long)?.strip_prefix('=')
+            };
+            value?.parse::<u32>().ok().filter(|value| *value > 0)
+        })
+    };
+
+    let output_height = value("-H", "--output-height");
+    let height = output_height.unwrap_or(720);
+    let width = value("-W", "--output-width").unwrap_or_else(|| {
+        if output_height.is_some() {
+            height.saturating_mul(16) / 9
+        } else {
+            1280
+        }
+    });
+    (width, height)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_gamescope_output_size;
+
+    #[test]
+    fn parses_gamescope_output_settings() {
+        let args = ["gamescope", "-W", "3440", "-H", "1440"].map(String::from);
+        assert_eq!(parse_gamescope_output_size(&args), (3440, 1440));
+
+        let args = ["gamescope", "--output-height=1080"].map(String::from);
+        assert_eq!(parse_gamescope_output_size(&args), (1920, 1080));
     }
 }
