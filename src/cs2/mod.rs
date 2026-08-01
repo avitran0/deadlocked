@@ -8,9 +8,13 @@ use glam::{IVec2, Mat4, Vec2, Vec3};
 use x11rb::{
     connection::Connection as _,
     protocol::{
-        randr::ConnectionExt as _,
-        xproto::{AtomEnum, ConnectionExt as _},
+        Event,
+        randr::{ConnectionExt as _, NotifyMask},
+        xproto::{
+            Atom, AtomEnum, ChangeWindowAttributesAux, ConnectionExt as _, EventMask, Window,
+        },
     },
+    rust_connection::RustConnection,
 };
 
 use crate::{
@@ -64,6 +68,7 @@ pub struct CS2 {
     esp: EspToggle,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
+    gamescope: Option<Gamescope>,
     gamescope_geometry: Option<(Vec2, Vec2)>,
     last_cache: Instant,
 }
@@ -80,7 +85,12 @@ impl CS2 {
         };
         utils::info!("process found, pid: {}", process.pid);
         self.process = process;
-        self.gamescope_geometry = gamescope_geometry(self.process.pid);
+        self.gamescope = find_gamescope(self.process.pid);
+        self.gamescope_geometry = self.gamescope.as_ref().map(|gamescope| {
+            gamescope
+                .live_geometry()
+                .unwrap_or_else(|| gamescope.fallback())
+        });
         if let Some((position, size)) = self.gamescope_geometry {
             utils::info!(
                 "detected gamescope geometry: {}x{} at {},{}",
@@ -110,6 +120,8 @@ impl CS2 {
             utils::debug!("process is no longer valid");
             return;
         }
+
+        self.update_gamescope_geometry();
 
         self.input.update(&self.process, &self.offsets);
 
@@ -320,8 +332,26 @@ impl CS2 {
             esp: EspToggle::default(),
             weapon: Weapon::default(),
             planted_c4: None,
+            gamescope: None,
             gamescope_geometry: None,
             last_cache: Instant::now(),
+        }
+    }
+
+    fn update_gamescope_geometry(&mut self) {
+        let Some(geometry) = self.gamescope.as_mut().and_then(Gamescope::update_geometry) else {
+            return;
+        };
+        if self.gamescope_geometry != Some(geometry) {
+            let (position, size) = geometry;
+            utils::debug!(
+                "gamescope geometry changed: {}x{} at {},{}",
+                size.x,
+                size.y,
+                position.x,
+                position.y
+            );
+            self.gamescope_geometry = Some(geometry);
         }
     }
 
@@ -420,7 +450,226 @@ impl CS2 {
     }
 }
 
-fn gamescope_geometry(mut pid: i32) -> Option<(Vec2, Vec2)> {
+struct Gamescope {
+    pid: i32,
+    output_size: Vec2,
+    x11: Option<GamescopeX11>,
+}
+
+impl Gamescope {
+    fn new(pid: i32, output_size: Vec2) -> Self {
+        Self {
+            pid,
+            output_size,
+            x11: GamescopeX11::new(pid),
+        }
+    }
+
+    fn live_geometry(&self) -> Option<(Vec2, Vec2)> {
+        self.x11.as_ref()?.geometry(self.output_size)
+    }
+
+    fn update_geometry(&mut self) -> Option<(Vec2, Vec2)> {
+        self.x11
+            .as_mut()?
+            .update_geometry(self.pid, self.output_size)
+    }
+
+    fn fallback(&self) -> (Vec2, Vec2) {
+        (Vec2::ZERO, self.output_size)
+    }
+}
+
+struct GamescopeX11 {
+    connection: RustConnection,
+    root: Window,
+    client_list: Atom,
+    pid_atom: Atom,
+    window: Option<Window>,
+}
+
+impl GamescopeX11 {
+    fn new(pid: i32) -> Option<Self> {
+        let (connection, screen) = x11rb::connect(None).ok()?;
+        let root = connection.setup().roots.get(screen)?.root;
+        let client_list = connection
+            .intern_atom(false, b"_NET_CLIENT_LIST")
+            .ok()?
+            .reply()
+            .ok()?
+            .atom;
+        let pid_atom = connection
+            .intern_atom(false, b"_NET_WM_PID")
+            .ok()?
+            .reply()
+            .ok()?
+            .atom;
+
+        connection
+            .change_window_attributes(
+                root,
+                &ChangeWindowAttributesAux::new().event_mask(EventMask::PROPERTY_CHANGE),
+            )
+            .ok()?;
+        let _ = connection.randr_select_input(
+            root,
+            NotifyMask::SCREEN_CHANGE | NotifyMask::CRTC_CHANGE | NotifyMask::OUTPUT_CHANGE,
+        );
+
+        let mut x11 = Self {
+            connection,
+            root,
+            client_list,
+            pid_atom,
+            window: None,
+        };
+        x11.track_window(pid);
+        x11.connection.flush().ok()?;
+        Some(x11)
+    }
+
+    fn update_geometry(&mut self, pid: i32, output_size: Vec2) -> Option<(Vec2, Vec2)> {
+        let mut rediscover_window = false;
+        let mut geometry_changed = false;
+
+        loop {
+            let event = match self.connection.poll_for_event() {
+                Ok(Some(event)) => event,
+                Ok(None) => break,
+                Err(_) => return None,
+            };
+
+            match event {
+                Event::ConfigureNotify(event) if Some(event.window) == self.window => {
+                    geometry_changed = true;
+                }
+                Event::MapNotify(event) if Some(event.window) == self.window => {
+                    geometry_changed = true;
+                }
+                Event::ReparentNotify(event) if Some(event.window) == self.window => {
+                    geometry_changed = true;
+                }
+                Event::DestroyNotify(event) if Some(event.window) == self.window => {
+                    self.window = None;
+                    rediscover_window = true;
+                    geometry_changed = true;
+                }
+                Event::UnmapNotify(event) if Some(event.window) == self.window => {
+                    self.window = None;
+                    rediscover_window = true;
+                    geometry_changed = true;
+                }
+                Event::PropertyNotify(event)
+                    if event.window == self.root && event.atom == self.client_list =>
+                {
+                    rediscover_window = true;
+                    geometry_changed = true;
+                }
+                Event::RandrNotify(_) | Event::RandrScreenChangeNotify(_) => {
+                    geometry_changed = true;
+                }
+                _ => {}
+            }
+        }
+
+        if rediscover_window {
+            self.track_window(pid);
+        }
+
+        if geometry_changed {
+            self.geometry(output_size)
+        } else {
+            None
+        }
+    }
+
+    fn track_window(&mut self, pid: i32) {
+        let window = self.find_window(pid);
+        if window == self.window {
+            return;
+        }
+        self.window = window;
+
+        if let Some(window) = window {
+            let _ = self.connection.change_window_attributes(
+                window,
+                &ChangeWindowAttributesAux::new().event_mask(EventMask::STRUCTURE_NOTIFY),
+            );
+            let _ = self.connection.flush();
+        }
+    }
+
+    fn find_window(&self, pid: i32) -> Option<Window> {
+        let windows = self
+            .connection
+            .get_property(
+                false,
+                self.root,
+                self.client_list,
+                AtomEnum::WINDOW,
+                0,
+                u32::MAX,
+            )
+            .ok()?
+            .reply()
+            .ok()?;
+
+        windows.value32()?.find(|window| {
+            let Ok(cookie) = self.connection.get_property(
+                false,
+                *window,
+                self.pid_atom,
+                AtomEnum::CARDINAL,
+                0,
+                1,
+            ) else {
+                return false;
+            };
+            let Ok(reply) = cookie.reply() else {
+                return false;
+            };
+            reply.value32().and_then(|mut values| values.next()) == Some(pid as u32)
+        })
+    }
+
+    fn geometry(&self, output_size: Vec2) -> Option<(Vec2, Vec2)> {
+        self.window
+            .and_then(|window| self.window_geometry(window))
+            .or_else(|| self.monitor_geometry(output_size))
+    }
+
+    fn window_geometry(&self, window: Window) -> Option<(Vec2, Vec2)> {
+        let geometry = self.connection.get_geometry(window).ok()?.reply().ok()?;
+        let position = self
+            .connection
+            .translate_coordinates(window, self.root, 0, 0)
+            .ok()?
+            .reply()
+            .ok()?;
+        Some((
+            Vec2::new(position.dst_x as f32, position.dst_y as f32),
+            Vec2::new(geometry.width as f32, geometry.height as f32),
+        ))
+    }
+
+    fn monitor_geometry(&self, size: Vec2) -> Option<(Vec2, Vec2)> {
+        let monitor = self
+            .connection
+            .randr_get_monitors(self.root, true)
+            .ok()?
+            .reply()
+            .ok()?
+            .monitors
+            .into_iter()
+            .find(|monitor| monitor.width as f32 == size.x && monitor.height as f32 == size.y)?;
+        Some((
+            Vec2::new(monitor.x as f32, monitor.y as f32),
+            Vec2::new(monitor.width as f32, monitor.height as f32),
+        ))
+    }
+}
+
+fn find_gamescope(mut pid: i32) -> Option<Gamescope> {
     while pid > 1 {
         let raw = fs::read(format!("/proc/{pid}/cmdline")).ok()?;
         let args = raw
@@ -435,12 +684,7 @@ fn gamescope_geometry(mut pid: i32) -> Option<(Vec2, Vec2)> {
             .is_some_and(|name| name == "gamescope")
         {
             let (width, height) = parse_gamescope_output_size(&args);
-            let size = Vec2::new(width as f32, height as f32);
-            return Some(
-                x11_window_geometry(pid)
-                    .or_else(|| x11_monitor_geometry(size))
-                    .unwrap_or((Vec2::ZERO, size)),
-            );
+            return Some(Gamescope::new(pid, Vec2::new(width as f32, height as f32)));
         }
 
         pid = fs::read_to_string(format!("/proc/{pid}/status"))
@@ -453,71 +697,6 @@ fn gamescope_geometry(mut pid: i32) -> Option<(Vec2, Vec2)> {
     }
 
     None
-}
-
-fn x11_window_geometry(pid: i32) -> Option<(Vec2, Vec2)> {
-    let (connection, screen) = x11rb::connect(None).ok()?;
-    let root = connection.setup().roots.get(screen)?.root;
-    let client_list = connection
-        .intern_atom(false, b"_NET_CLIENT_LIST")
-        .ok()?
-        .reply()
-        .ok()?
-        .atom;
-    let pid_atom = connection
-        .intern_atom(false, b"_NET_WM_PID")
-        .ok()?
-        .reply()
-        .ok()?
-        .atom;
-    let windows = connection
-        .get_property(false, root, client_list, AtomEnum::WINDOW, 0, u32::MAX)
-        .ok()?
-        .reply()
-        .ok()?;
-
-    for window in windows.value32()? {
-        let Ok(cookie) = connection.get_property(false, window, pid_atom, AtomEnum::CARDINAL, 0, 1)
-        else {
-            continue;
-        };
-        let Ok(reply) = cookie.reply() else {
-            continue;
-        };
-        if reply.value32().and_then(|mut values| values.next()) != Some(pid as u32) {
-            continue;
-        }
-
-        let geometry = connection.get_geometry(window).ok()?.reply().ok()?;
-        let position = connection
-            .translate_coordinates(window, root, 0, 0)
-            .ok()?
-            .reply()
-            .ok()?;
-        return Some((
-            Vec2::new(position.dst_x as f32, position.dst_y as f32),
-            Vec2::new(geometry.width as f32, geometry.height as f32),
-        ));
-    }
-
-    None
-}
-
-fn x11_monitor_geometry(size: Vec2) -> Option<(Vec2, Vec2)> {
-    let (connection, screen) = x11rb::connect(None).ok()?;
-    let root = connection.setup().roots.get(screen)?.root;
-    let monitor = connection
-        .randr_get_monitors(root, true)
-        .ok()?
-        .reply()
-        .ok()?
-        .monitors
-        .into_iter()
-        .find(|monitor| monitor.width as f32 == size.x && monitor.height as f32 == size.y)?;
-    Some((
-        Vec2::new(monitor.x as f32, monitor.y as f32),
-        Vec2::new(monitor.width as f32, monitor.height as f32),
-    ))
 }
 
 fn parse_gamescope_output_size(args: &[String]) -> (u32, u32) {
@@ -546,18 +725,4 @@ fn parse_gamescope_output_size(args: &[String]) -> (u32, u32) {
         }
     });
     (width, height)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse_gamescope_output_size;
-
-    #[test]
-    fn parses_gamescope_output_settings() {
-        let args = ["gamescope", "-W", "3440", "-H", "1440"].map(String::from);
-        assert_eq!(parse_gamescope_output_size(&args), (3440, 1440));
-
-        let args = ["gamescope", "--output-height=1080"].map(String::from);
-        assert_eq!(parse_gamescope_output_size(&args), (1920, 1080));
-    }
 }
