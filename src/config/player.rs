@@ -17,6 +17,25 @@ pub enum BoxMode {
     Full,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum VisibilityMode {
+    All,
+    #[serde(alias = "Visible Only")]
+    VisibleOnly,
+    #[serde(alias = "Invisible Only")]
+    InvisibleOnly,
+}
+
+impl VisibilityMode {
+    pub fn includes(self, visible: bool) -> bool {
+        match self {
+            Self::All => true,
+            Self::VisibleOnly => visible,
+            Self::InvisibleOnly => !visible,
+        }
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
@@ -35,7 +54,7 @@ pub struct PlayerConfig {
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
-    pub visible_only: bool,
+    pub visibility_mode: VisibilityMode,
     pub sound: SoundConfig,
 }
 
@@ -57,7 +76,7 @@ impl Default for PlayerConfig {
             player_name: true,
             weapon_icon: true,
             tags: true,
-            visible_only: false,
+            visibility_mode: VisibilityMode::All,
             sound: SoundConfig::default(),
         }
     }
@@ -86,5 +105,39 @@ impl Default for SoundConfig {
             fadeout_duration: 1.0,
             show_visible: true,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::VisibilityMode;
+
+    #[derive(serde::Deserialize, serde::Serialize)]
+    struct VisibilityConfig {
+        mode: VisibilityMode,
+    }
+
+    #[test]
+    fn visibility_modes_filter_players() {
+        assert!(VisibilityMode::All.includes(true));
+        assert!(VisibilityMode::All.includes(false));
+        assert!(VisibilityMode::VisibleOnly.includes(true));
+        assert!(!VisibilityMode::VisibleOnly.includes(false));
+        assert!(!VisibilityMode::InvisibleOnly.includes(true));
+        assert!(VisibilityMode::InvisibleOnly.includes(false));
+    }
+
+    #[test]
+    fn visibility_modes_accept_spaced_aliases() {
+        let visible: VisibilityConfig = toml::from_str(r#"mode = "Visible Only""#).unwrap();
+        let invisible: VisibilityConfig = toml::from_str(r#"mode = "Invisible Only""#).unwrap();
+
+        assert_eq!(visible.mode, VisibilityMode::VisibleOnly);
+        assert_eq!(invisible.mode, VisibilityMode::InvisibleOnly);
+        assert!(
+            toml::to_string(&invisible)
+                .unwrap()
+                .contains(r#"mode = "InvisibleOnly""#)
+        );
     }
 }

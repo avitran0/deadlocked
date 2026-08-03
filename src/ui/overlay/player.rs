@@ -14,7 +14,7 @@ use crate::{
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        if self.config.player.visible_only && !player.visible {
+        if !self.config.player.visibility_mode.includes(player.visible) {
             return;
         }
 

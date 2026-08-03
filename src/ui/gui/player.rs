@@ -86,11 +86,11 @@ impl AppState {
                 self.send_config();
             }
 
-            if checkbox_hover(
+            if combo_box(
                 ui,
-                "Visible Only",
-                "Only show visible players",
-                &mut self.config.player.visible_only,
+                "visibility_mode",
+                "Visibility",
+                &mut self.config.player.visibility_mode,
             ) {
                 self.send_config();
             }
