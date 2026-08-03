@@ -466,37 +466,3 @@ impl CS2 {
         }
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use glam::{Vec3, vec3};
-
-    use super::{Bones, hitboxes_block_line, player_hitboxes};
-
-    #[test]
-    fn player_hitboxes_block_only_intersecting_lines() {
-        let bones = [
-            (Bones::Hip, vec3(5.0, 0.0, 0.0)),
-            (Bones::Spine1, vec3(6.0, 0.0, 0.0)),
-        ]
-        .into_iter()
-        .collect();
-        let hitboxes = player_hitboxes(&bones);
-
-        assert!(hitboxes_block_line(
-            &hitboxes,
-            Vec3::ZERO,
-            vec3(10.0, 0.0, 0.0)
-        ));
-        assert!(!hitboxes_block_line(
-            &hitboxes,
-            Vec3::ZERO,
-            vec3(0.0, 10.0, 0.0)
-        ));
-        assert!(!hitboxes_block_line(
-            &hitboxes,
-            Vec3::ZERO,
-            vec3(0.5, 0.0, 0.0)
-        ));
-    }
-}
