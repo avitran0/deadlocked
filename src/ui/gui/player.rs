@@ -88,9 +88,9 @@ impl AppState {
 
             if combo_box(
                 ui,
-                "visibility_mode",
+                "visibility_filter",
                 "Visibility",
-                &mut self.config.player.visibility_mode,
+                &mut self.config.player.visibility_filter,
             ) {
                 self.send_config();
             }

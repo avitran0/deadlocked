@@ -9,7 +9,7 @@ use crate::{
     config::{
         Config,
         aim::{AimbotConfig, KeyMode, RcsConfig, TriggerbotConfig},
-        player::VisibilityMode,
+        player::VisibilityFilter,
     },
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
@@ -63,7 +63,7 @@ pub struct CS2 {
     last_cache: Instant,
 }
 
-fn player_hitboxes(bones: &HashMap<Bones, Vec3>) -> Vec<Aabb> {
+fn bone_occlusion_boxes(bones: &HashMap<Bones, Vec3>) -> Vec<Aabb> {
     const HITBOX_PADDING: f32 = 4.0;
     let padding = Vec3::splat(HITBOX_PADDING);
 
@@ -205,9 +205,9 @@ impl CS2 {
             .collect();
         let hitboxes_by_pawn: HashMap<usize, _> = bones_by_pawn
             .iter()
-            .map(|(&pawn, bones)| (pawn, player_hitboxes(bones)))
+            .map(|(&pawn, bones)| (pawn, bone_occlusion_boxes(bones)))
             .collect();
-        let filter_visibility = config.player.visibility_mode != VisibilityMode::All;
+        let filter_visibility = config.player.visibility_filter != VisibilityFilter::All;
         let ray_origin = active_player.eye_position(self);
 
         for player in &self.players {

@@ -4,7 +4,7 @@ use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use glam::{Vec3, vec3};
 
 use crate::{
-    config::player::{BoxMode, DrawMode, VisibilityMode},
+    config::player::{BoxMode, DrawMode, VisibilityFilter},
     config::text::TextPosition,
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
@@ -14,13 +14,13 @@ use crate::{
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        let visibility_mode = self.config.player.visibility_mode;
+        let visibility_filter = self.config.player.visibility_filter;
         let matching_bones = player
             .bones
             .keys()
-            .filter(|bone| visibility_mode.includes(player.visible_bones.contains(bone)))
+            .filter(|bone| visibility_filter.should_show(player.visible_bones.contains(bone)))
             .count();
-        if visibility_mode != VisibilityMode::All && matching_bones == 0 {
+        if visibility_filter != VisibilityFilter::All && matching_bones == 0 {
             return;
         }
 
@@ -31,7 +31,7 @@ impl AppState {
             None
         };
 
-        if visibility_mode == VisibilityMode::All || matching_bones == player.bones.len() {
+        if visibility_filter == VisibilityFilter::All || matching_bones == player.bones.len() {
             self.player_box(painter, player, data, sound_alpha);
         }
         self.skeleton(painter, player, data, sound_alpha);
@@ -323,8 +323,8 @@ impl AppState {
         if !self
             .config
             .player
-            .visibility_mode
-            .includes(player.visible_bones.contains(&Bones::Head))
+            .visibility_filter
+            .should_show(player.visible_bones.contains(&Bones::Head))
         {
             return;
         }
@@ -355,7 +355,7 @@ impl AppState {
         start: Vec3,
         end: Vec3,
     ) -> Option<(Vec3, Vec3)> {
-        let (start_t, end_t) = self.config.player.visibility_mode.segment_range(
+        let (start_t, end_t) = self.config.player.visibility_filter.segment_range(
             player.visible_bones.contains(&start_bone),
             player.visible_bones.contains(&end_bone),
         )?;

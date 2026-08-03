@@ -18,7 +18,7 @@ pub enum BoxMode {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
-pub enum VisibilityMode {
+pub enum VisibilityFilter {
     All,
     #[serde(alias = "Visible Only")]
     VisibleOnly,
@@ -26,8 +26,8 @@ pub enum VisibilityMode {
     InvisibleOnly,
 }
 
-impl VisibilityMode {
-    pub fn includes(self, visible: bool) -> bool {
+impl VisibilityFilter {
+    pub fn should_show(self, visible: bool) -> bool {
         match self {
             Self::All => true,
             Self::VisibleOnly => visible,
@@ -40,7 +40,10 @@ impl VisibilityMode {
             return Some((0.0, 1.0));
         }
 
-        match (self.includes(start_visible), self.includes(end_visible)) {
+        match (
+            self.should_show(start_visible),
+            self.should_show(end_visible),
+        ) {
             (true, true) => Some((0.0, 1.0)),
             (true, false) => Some((0.0, 0.5)),
             (false, true) => Some((0.5, 1.0)),
@@ -67,7 +70,7 @@ pub struct PlayerConfig {
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
-    pub visibility_mode: VisibilityMode,
+    pub visibility_filter: VisibilityFilter,
     pub sound: SoundConfig,
 }
 
@@ -89,7 +92,7 @@ impl Default for PlayerConfig {
             player_name: true,
             weapon_icon: true,
             tags: true,
-            visibility_mode: VisibilityMode::All,
+            visibility_filter: VisibilityFilter::All,
             sound: SoundConfig::default(),
         }
     }
