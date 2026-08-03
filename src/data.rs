@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use glam::{Mat4, Vec2, Vec3};
 use serde::{Deserialize, Serialize};
@@ -47,6 +47,8 @@ pub struct PlayerData {
     pub weapon: Weapon,
     pub ammo: (i32, i32),
     pub bones: HashMap<Bones, Vec3>,
+    #[serde(default)]
+    pub visible_bones: HashSet<Bones>,
     pub has_defuser: bool,
     pub has_helmet: bool,
     pub has_bomb: bool,

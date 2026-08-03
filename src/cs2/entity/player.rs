@@ -468,28 +468,27 @@ impl Player {
     }
 
     pub fn visible(&self, cs2: &CS2, local_player: &Player) -> bool {
+        const CHECKED_BONES: [Bones; 5] = [
+            Bones::Head,
+            Bones::LeftFoot,
+            Bones::RightFoot,
+            Bones::LeftHand,
+            Bones::RightHand,
+        ];
+        let eye_position = local_player.eye_position(cs2);
+
+        CHECKED_BONES
+            .iter()
+            .any(|bone| self.visible_at(cs2, eye_position, self.bone_position(cs2, bone.u64())))
+    }
+
+    pub fn visible_at(&self, cs2: &CS2, eye_position: Vec3, position: Vec3) -> bool {
         if let Some(bvh) = &cs2.bvh {
-            let eye_pos = local_player.eye_position(cs2);
-            const CHECKED_BONES: [Bones; 5] = [
-                Bones::Head,
-                Bones::LeftFoot,
-                Bones::RightFoot,
-                Bones::LeftHand,
-                Bones::RightHand,
-            ];
-            if !CHECKED_BONES
-                .iter()
-                .any(|bone| bvh.has_line_of_sight(eye_pos, self.bone_position(cs2, bone.u64())))
-            {
-                return false;
-            }
+            bvh.has_line_of_sight(eye_position, position)
         } else {
             let spotted_mask = self.spotted_mask(cs2);
-            if (spotted_mask & (1 << cs2.target.local_pawn_index)) == 0 {
-                return false;
-            }
+            (spotted_mask & (1 << cs2.target.local_pawn_index)) != 0
         }
-        true
     }
 
     pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {

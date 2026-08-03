@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    time::{Duration, Instant},
+};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 
@@ -6,6 +9,7 @@ use crate::{
     config::{
         Config,
         aim::{AimbotConfig, KeyMode, RcsConfig, TriggerbotConfig},
+        player::VisibilityMode,
     },
     constants::cs2::{self, TEAM_CT, TEAM_T},
     cs2::{
@@ -22,7 +26,10 @@ use crate::{
     data::{Data, PlayerData},
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
-    parser::{bvh::Bvh, read_map},
+    parser::{
+        bvh::{Aabb, Bvh},
+        read_map,
+    },
 };
 
 pub mod bones;
@@ -54,6 +61,38 @@ pub struct CS2 {
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
     last_cache: Instant,
+}
+
+fn player_hitboxes(bones: &HashMap<Bones, Vec3>) -> Vec<Aabb> {
+    const HITBOX_PADDING: f32 = 4.0;
+    let padding = Vec3::splat(HITBOX_PADDING);
+
+    Bones::CONNECTIONS
+        .iter()
+        .filter_map(|(a, b)| {
+            let a = *bones.get(a)?;
+            let b = *bones.get(b)?;
+            Some(Aabb::from_points(&[
+                a - padding,
+                a + padding,
+                b - padding,
+                b + padding,
+            ]))
+        })
+        .collect()
+}
+
+fn hitboxes_block_line(hitboxes: &[Aabb], start: Vec3, end: Vec3) -> bool {
+    let direction = end - start;
+    let distance = direction.length();
+    if distance <= f32::EPSILON {
+        return false;
+    }
+
+    let inv_direction = 1.0 / (direction / distance);
+    hitboxes
+        .iter()
+        .any(|hitbox| hitbox.ray_intersect(start, inv_direction, distance))
 }
 
 impl CS2 {
@@ -156,31 +195,64 @@ impl CS2 {
         }
         let is_ffa = self.is_ffa();
         let spectator_target = local_player.spectator_target(self);
-        let active_pawn = if let Some(target) = spectator_target {
-            target.pawn
-        } else {
-            local_player.pawn
-        };
+        let active_player = spectator_target.unwrap_or(local_player);
+        let active_pawn = active_player.pawn;
+
+        let mut bones_by_pawn: HashMap<usize, _> = self
+            .players
+            .iter()
+            .map(|player| (player.pawn, player.all_bones(self)))
+            .collect();
+        let hitboxes_by_pawn: HashMap<usize, _> = bones_by_pawn
+            .iter()
+            .map(|(&pawn, bones)| (pawn, player_hitboxes(bones)))
+            .collect();
+        let filter_visibility = config.player.visibility_mode != VisibilityMode::All;
+        let ray_origin = active_player.eye_position(self);
 
         for player in &self.players {
             if spectator_target.is_some() && player.pawn == active_pawn {
                 continue;
             }
 
+            let bones = bones_by_pawn.remove(&player.pawn).unwrap_or_default();
+            let visible = player.visible(self, &active_player);
+            let visible_bones: HashSet<Bones> = if filter_visibility {
+                bones
+                    .iter()
+                    .filter_map(|(&bone, &position)| {
+                        let world_visible = player.visible_at(self, ray_origin, position);
+                        let player_visible = !hitboxes_by_pawn.iter().any(|(&pawn, hitboxes)| {
+                            pawn != player.pawn
+                                && hitboxes_block_line(hitboxes, ray_origin, position)
+                        });
+                        (world_visible && player_visible).then_some(bone)
+                    })
+                    .collect()
+            } else {
+                Default::default()
+            };
+            let visible = if filter_visibility {
+                !visible_bones.is_empty()
+            } else {
+                visible
+            };
+
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
                 armor: player.armor(self),
                 position: player.position(self),
-                head: player.bone_position(self, Bones::Head.u64()),
+                head: bones.get(&Bones::Head).copied().unwrap_or_default(),
                 name: player.name(self),
                 weapon: player.weapon(self),
                 ammo: (player.clip_ammo(self), player.reserve_ammo(self)),
-                bones: player.all_bones(self),
+                bones,
+                visible_bones,
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
-                visible: player.visible(self, &local_player),
+                visible,
                 color: player.color(self),
                 rotation: player.rotation(self),
                 sound: player.is_making_sound(self),
@@ -214,6 +286,7 @@ impl CS2 {
                 local_player.reserve_ammo(self),
             ),
             bones: local_player.all_bones(self),
+            visible_bones: Default::default(),
             has_defuser: local_player.has_defuser(self),
             has_helmet: local_player.has_helmet(self),
             has_bomb: local_player.has_bomb(self),
@@ -391,5 +464,39 @@ impl CS2 {
                 *active
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use glam::{Vec3, vec3};
+
+    use super::{Bones, hitboxes_block_line, player_hitboxes};
+
+    #[test]
+    fn player_hitboxes_block_only_intersecting_lines() {
+        let bones = [
+            (Bones::Hip, vec3(5.0, 0.0, 0.0)),
+            (Bones::Spine1, vec3(6.0, 0.0, 0.0)),
+        ]
+        .into_iter()
+        .collect();
+        let hitboxes = player_hitboxes(&bones);
+
+        assert!(hitboxes_block_line(
+            &hitboxes,
+            Vec3::ZERO,
+            vec3(10.0, 0.0, 0.0)
+        ));
+        assert!(!hitboxes_block_line(
+            &hitboxes,
+            Vec3::ZERO,
+            vec3(0.0, 10.0, 0.0)
+        ));
+        assert!(!hitboxes_block_line(
+            &hitboxes,
+            Vec3::ZERO,
+            vec3(0.5, 0.0, 0.0)
+        ));
     }
 }

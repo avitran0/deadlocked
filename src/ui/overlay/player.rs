@@ -1,10 +1,10 @@
 use std::time::{Duration, Instant};
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
-use glam::vec3;
+use glam::{Vec3, vec3};
 
 use crate::{
-    config::player::{BoxMode, DrawMode},
+    config::player::{BoxMode, DrawMode, VisibilityMode},
     config::text::TextPosition,
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
@@ -14,7 +14,13 @@ use crate::{
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        if !self.config.player.visibility_mode.includes(player.visible) {
+        let visibility_mode = self.config.player.visibility_mode;
+        let matching_bones = player
+            .bones
+            .keys()
+            .filter(|bone| visibility_mode.includes(player.visible_bones.contains(bone)))
+            .count();
+        if visibility_mode != VisibilityMode::All && matching_bones == 0 {
             return;
         }
 
@@ -25,7 +31,9 @@ impl AppState {
             None
         };
 
-        self.player_box(painter, player, data, sound_alpha);
+        if visibility_mode == VisibilityMode::All || matching_bones == player.bones.len() {
+            self.player_box(painter, player, data, sound_alpha);
+        }
         self.skeleton(painter, player, data, sound_alpha);
     }
 
@@ -286,17 +294,22 @@ impl AppState {
         let stroke = Stroke::new(self.config.hud.line_width * esp_scale, color);
 
         for (a, b) in &Bones::CONNECTIONS {
-            let Some(a) = player.bones.get(a) else {
+            let Some(a_position) = player.bones.get(a) else {
                 continue;
             };
-            let Some(b) = player.bones.get(b) else {
+            let Some(b_position) = player.bones.get(b) else {
+                continue;
+            };
+            let Some((a_position, b_position)) =
+                self.filtered_bone_segment(player, *a, *b, *a_position, *b_position)
+            else {
                 continue;
             };
 
-            let Some(a) = world_to_screen(a, data) else {
+            let Some(a) = world_to_screen(&a_position, data) else {
                 continue;
             };
-            let Some(b) = world_to_screen(b, data) else {
+            let Some(b) = world_to_screen(&b_position, data) else {
                 continue;
             };
 
@@ -305,6 +318,14 @@ impl AppState {
 
         // head circle
         if !self.config.player.head_circle {
+            return;
+        }
+        if !self
+            .config
+            .player
+            .visibility_mode
+            .includes(player.visible_bones.contains(&Bones::Head))
+        {
             return;
         }
         let Some(neck) = player.bones.get(&Bones::Neck) else {
@@ -324,6 +345,21 @@ impl AppState {
         let height = spine.y - neck.y;
         let pos = pos2(neck.x - (spine.x - neck.x) / 2.0, neck.y - height / 2.0);
         painter.circle_stroke(pos, height / 2.0, stroke);
+    }
+
+    fn filtered_bone_segment(
+        &self,
+        player: &PlayerData,
+        start_bone: Bones,
+        end_bone: Bones,
+        start: Vec3,
+        end: Vec3,
+    ) -> Option<(Vec3, Vec3)> {
+        let (start_t, end_t) = self.config.player.visibility_mode.segment_range(
+            player.visible_bones.contains(&start_bone),
+            player.visible_bones.contains(&end_bone),
+        )?;
+        Some((start.lerp(end, start_t), start.lerp(end, end_t)))
     }
 
     #[allow(clippy::too_many_arguments)]

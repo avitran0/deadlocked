@@ -34,6 +34,19 @@ impl VisibilityMode {
             Self::InvisibleOnly => !visible,
         }
     }
+
+    pub fn segment_range(self, start_visible: bool, end_visible: bool) -> Option<(f32, f32)> {
+        if self == Self::All {
+            return Some((0.0, 1.0));
+        }
+
+        match (self.includes(start_visible), self.includes(end_visible)) {
+            (true, true) => Some((0.0, 1.0)),
+            (true, false) => Some((0.0, 0.5)),
+            (false, true) => Some((0.5, 1.0)),
+            (false, false) => None,
+        }
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -125,6 +138,19 @@ mod tests {
         assert!(!VisibilityMode::VisibleOnly.includes(false));
         assert!(!VisibilityMode::InvisibleOnly.includes(true));
         assert!(VisibilityMode::InvisibleOnly.includes(false));
+
+        assert_eq!(
+            VisibilityMode::VisibleOnly.segment_range(true, false),
+            Some((0.0, 0.5))
+        );
+        assert_eq!(
+            VisibilityMode::InvisibleOnly.segment_range(true, false),
+            Some((0.5, 1.0))
+        );
+        assert_eq!(
+            VisibilityMode::VisibleOnly.segment_range(false, false),
+            None
+        );
     }
 
     #[test]
