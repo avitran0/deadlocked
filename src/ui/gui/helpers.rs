@@ -104,12 +104,13 @@ pub fn text_settings_popup(
         return false;
     }
 
-    let mut close = false;
+    let mut open = true;
     let mut changed = false;
     egui::Window::new(label)
         .id(egui::Id::new(popup_id))
         .collapsible(false)
         .resizable(false)
+        .open(&mut open)
         .show(ui.ctx(), |ui| {
             changed |= ui
                 .horizontal(|ui| {
@@ -140,13 +141,9 @@ pub fn text_settings_popup(
                 "Align",
                 &mut category.align,
             );
-
-            if ui.button("Close").clicked() {
-                close = true;
-            }
         });
 
-    if close {
+    if !open {
         *open_popup = None;
     }
 
