@@ -45,7 +45,7 @@ cd deadlocked
 cargo run --release
 ```
 
-## Running
+**Run:**
 
 ```bash
 ./run.sh
