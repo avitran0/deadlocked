@@ -41,13 +41,15 @@ git clone --recursive https://github.com/avitran0/deadlocked
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
+<br>
+
 # Window Managers:
 
 ## Hyprland
 
 The setup script automatically adds the required `no_blur` window rule for users running the Lua configuration format.
 
-If you're using the legacy `.conf` configuration, add the following rule manually to `hyprland.conf`:
+If you're using the legacy `.conf` configuration (_Deprecated as of Hyprland 0.55, but still supported_) , add the following rule manually to `hyprland.conf`:
 
 ```conf
 windowrule = no_blur 1, match:title ^(deadlocked_overlay)$
