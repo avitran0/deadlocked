@@ -7,12 +7,18 @@
 
 [![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
 
+<br>
+
 simple cs2 aimbot and esp, for linux only.
+
+<br>
 
 Releases are tagged `v<version>` matching the version in `Cargo.toml` (e.g. `v1.0.0`).
 The built-in update checker compares against the latest release tag and will prompt when a newer version is available.
 
 </div>
+
+<br>
 
 ## Quick Start
 
@@ -42,6 +48,8 @@ You only need to do this once, even when updating to newer versions.
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
 
+<br>
+
 ## Build from Source
 
 ```bash
@@ -51,11 +59,15 @@ cd deadlocked
 cargo run --release
 ```
 
+<br>
+
 ## Running
 
 ```bash
 ./run.sh
 ```
+
+<br>
 
 ## Features
 
@@ -119,6 +131,8 @@ cargo run --release
 - FOV changer
 - No smoke
 - Smoke color change
+
+<br>
 
 ## FAQ
 
