@@ -66,3 +66,4 @@ If you're using the legacy .conf configuration (_Deprecated as of Hyprland 0.55,
 ```conf
 windowrule = no_blur 1, match:title ^(deadlocked_overlay)$
 ```
+Hyprland has poor X11 support for the techniques this cheat uses, not much i can do about that. May require additional tweaks.
