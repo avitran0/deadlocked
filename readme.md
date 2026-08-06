@@ -25,7 +25,7 @@ The built-in update checker compares against the latest release tag and will pro
 > [!NOTE]
 > Running NixOS, Fedora Atomic, Hyprland (Legacy .conf config)?
 > 
-> See the [Compatibility Guide](compatibility.md).
+> See the [compatibility,md](compatibility.md).
 
 Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
 
