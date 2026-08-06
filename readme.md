@@ -1,27 +1,40 @@
+<div align="center">
+
 # deadlocked
 
-[![Matrix Invite](https://img.shields.io/matrix/open-source-cs2-hacking%3Amatrix.org?style=for-the-badge&logo=matrix&label=Matrix)](https://matrix.to/#/%23open-source-cs2-hacking:matrix.org)
-
-[![Discord Invite](https://img.shields.io/discord/1333541580249890949?style=for-the-badge&logo=discord&logoColor=white&label=Discord)](https://discord.gg/eXjG4Ar9Sx)
+[![Matrix Invite](https://img.shields.io/matrix/open-source-cs2-hacking%3Amatrix.org?style=for-the-badge\&logo=matrix\&label=Matrix)](https://matrix.to/#/%23open-source-cs2-hacking:matrix.org)
+[![Discord Invite](https://img.shields.io/discord/1333541580249890949?style=for-the-badge\&logo=discord\&logoColor=white\&label=Discord)](https://discord.gg/eXjG4Ar9Sx)
 
 [![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
 
+<br>
+
 simple cs2 aimbot and esp, for linux only.
+
+<br>
 
 Releases are tagged `v<version>` matching the version in `Cargo.toml` (e.g. `v1.0.0`).
 The built-in update checker compares against the latest release tag and will prompt when a newer version is available.
 
+</div>
+
+<br>
+
 ## Quick Start
 
-Download the [latest release](https://github.com/avitran0/deadlocked/releases).
-Each release contains the `deadlocked` binary and `setup.sh`.
+> [!NOTE]
+> Running NixOS, Fedora Atomic, Hyprland (Legacy .conf config)?
+> 
+> See the [compatibility,md](compatibility.md).
+
+Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
 
 **Setup (one-time only):**
 
 ```bash
 ./setup.sh
-# Restart your machine (required)
 ```
+> **Restart your machine (required)**
 
 This creates a `uinput` group, adds your user to it, and installs a udev rule.
 You only need to do this once, even when updating to newer versions.
@@ -34,7 +47,8 @@ You only need to do this once, even when updating to newer versions.
 
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
-Running NixOS or Fedora Atomic? See [OS-Specific Setup](os-setup.md).
+
+<br>
 
 ## Build from Source
 
@@ -45,11 +59,15 @@ cd deadlocked
 cargo run --release
 ```
 
+<br>
+
 ## Running
 
 ```bash
 ./run.sh
 ```
+
+<br>
 
 ## Features
 
@@ -114,55 +132,95 @@ cargo run --release
 - No smoke
 - Smoke color change
 
+<br>
+
 ## FAQ
 
-### Where are my configs saved?
+<details>
+<summary>Where are my configs saved?</summary>
 
 Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherwise they're saved alongside the executable.
 
-### Which desktop environments and window managers are supported?
+</details>
+
+<br>
+
+<details>
+<summary>Which desktop environments and window managers are supported?</summary>
 
 **Best support:**
 
-- GNOME (Mutter)
-- KDE (KWin)
+* GNOME (Mutter)
+* KDE (KWin)
 
 **Good support:**
 
-- SwayWM
-- Weston
+* SwayWM
+* Weston
 
 **Fair support:**
 
-- i3
-- OpenBox
-- XFCE
-- Hyprland (tweaks may be needed; no guarantees)
+* i3
+* OpenBox
+* XFCE
+* Hyprland (tweaks may be needed, no guarantees; see [compatibility,md](compatibility.md/#hyprland))
 
-### I'm using Hyprland and something doesn't work
+</details>
 
-Hyprland has poor X11 support for the techniques this cheat uses, not much i can do about that.
+<br>
+
+<details>
+<summary>I'm using Hyprland and something doesn't work</summary>
+
+Hyprland has poor X11 support for the techniques this cheat uses, not much I can do about that.
 Try another WM if possible.
 
-### I'm using Gamescope and the overlay is too small
+</details>
+
+<br>
+
+<details>
+<summary>I'm using Gamescope and the overlay is too small</summary>
 
 The game still thinks it's running in 16:9 resolution, so the cheat gets the wrong window resolution.
 Try running the game without Gamescope.
 
-### My screen/overlay is black
+</details>
+
+<br>
+
+<details>
+<summary>My screen/overlay is black</summary>
 
 Your compositor or window manager doesn't support transparency, or it's not enabled.
 
-On KDE, go into the `Display and Monitor` settings, then `Compositor`, and tick `Enable compositor on startup`.
+On KDE, go into **Display and Monitor** settings, then **Compositor**, and tick **Enable compositor on startup**.
 
-### The overlay shows but I can't click anything
+</details>
+
+<br>
+
+<details>
+<summary>The overlay shows but I can't click anything</summary>
 
 The window couldn't be made click-through. This is a window manager/compositor limitation.
 
-### The overlay doesn't show up
+</details>
+
+<br>
+
+<details>
+<summary>The overlay doesn't show up</summary>
 
 Your window manager doesn't support positioning or resizing windows.
 
-### The overlay isn't on top of other windows
+</details>
+
+<br>
+
+<details>
+<summary>The overlay isn't on top of other windows</summary>
 
 Your window manager doesn't support always-on-top windows.
+
+</details>
