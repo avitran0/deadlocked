@@ -29,6 +29,8 @@ cargo run --release
 
 Everything is configured in `flake.nix` and `nix/shell.nix`.
 
+<br>
+
 ## Fedora Atomic
 
 ```bash
@@ -44,8 +46,9 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 <br>
+<br>
 
-# Window Managers:
+# Window Managers
 
 ## Hyprland
 
