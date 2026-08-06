@@ -163,7 +163,7 @@ Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherw
 * i3
 * OpenBox
 * XFCE
-* Hyprland (tweaks may be needed; no guarantees)
+* Hyprland (tweaks may be needed, no guarantees; see [compatibility,md](compatibility.md/#hyprland))
 
 </details>
 
