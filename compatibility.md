@@ -61,7 +61,7 @@ hl.window_rule({
 
 ```
 
-If you're using the legacy `.conf` configuration (_Deprecated as of Hyprland 0.55, but still supported_) , add the following rule manually to `hyprland.conf`:
+If you're using the legacy .conf configuration (_Deprecated as of Hyprland 0.55, but still supported_) , add the following rule manually to `hyprland.conf`:
 
 ```conf
 windowrule = no_blur 1, match:title ^(deadlocked_overlay)$
