@@ -13,8 +13,12 @@ The built-in update checker compares against the latest release tag and will pro
 
 ## Quick Start
 
-Download the [latest release](https://github.com/avitran0/deadlocked/releases).
-Each release contains the `deadlocked` binary and `setup.sh`.
+> [!NOTE]
+> Running NixOS, Fedora Atomic, Hyprland (Legacy .conf config)?
+> 
+> See the [Compatibility Guide](compatibility.md).
+
+Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
 
 **Setup (one-time only):**
 
@@ -26,7 +30,7 @@ Each release contains the `deadlocked` binary and `setup.sh`.
 This creates a `uinput` group, adds your user to it, and installs a udev rule.
 You only need to do this once, even when updating to newer versions.
 
-## Running
+**Run:**
 
 ```bash
 ./deadlocked
@@ -34,7 +38,6 @@ You only need to do this once, even when updating to newer versions.
 
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
-Running NixOS or Fedora Atomic? See [OS-Specific Setup](os-setup.md).
 
 ## Build from Source
 
@@ -45,7 +48,7 @@ cd deadlocked
 cargo run --release
 ```
 
-**Run:**
+## Running
 
 ```bash
 ./run.sh
