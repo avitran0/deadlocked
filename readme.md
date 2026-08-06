@@ -116,53 +116,91 @@ cargo run --release
 
 ## FAQ
 
-### Where are my configs saved?
+<details>
+<summary>Where are my configs saved?</summary>
 
 Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherwise they're saved alongside the executable.
 
-### Which desktop environments and window managers are supported?
+</details>
+
+<br>
+
+<details>
+<summary>Which desktop environments and window managers are supported?</summary>
 
 **Best support:**
 
-- GNOME (Mutter)
-- KDE (KWin)
+* GNOME (Mutter)
+* KDE (KWin)
 
 **Good support:**
 
-- SwayWM
-- Weston
+* SwayWM
+* Weston
 
 **Fair support:**
 
-- i3
-- OpenBox
-- XFCE
-- Hyprland (tweaks may be needed; no guarantees)
+* i3
+* OpenBox
+* XFCE
+* Hyprland (tweaks may be needed; no guarantees)
 
-### I'm using Hyprland and something doesn't work
+</details>
 
-Hyprland has poor X11 support for the techniques this cheat uses, not much i can do about that.
+<br>
+
+<details>
+<summary>I'm using Hyprland and something doesn't work</summary>
+
+Hyprland has poor X11 support for the techniques this cheat uses, not much I can do about that.
 Try another WM if possible.
 
-### I'm using Gamescope and the overlay is too small
+</details>
+
+<br>
+
+<details>
+<summary>I'm using Gamescope and the overlay is too small</summary>
 
 The game still thinks it's running in 16:9 resolution, so the cheat gets the wrong window resolution.
 Try running the game without Gamescope.
 
-### My screen/overlay is black
+</details>
+
+<br>
+
+<details>
+<summary>My screen/overlay is black</summary>
 
 Your compositor or window manager doesn't support transparency, or it's not enabled.
 
-On KDE, go into the `Display and Monitor` settings, then `Compositor`, and tick `Enable compositor on startup`.
+On KDE, go into **Display and Monitor** settings, then **Compositor**, and tick **Enable compositor on startup**.
 
-### The overlay shows but I can't click anything
+</details>
+
+<br>
+
+<details>
+<summary>The overlay shows but I can't click anything</summary>
 
 The window couldn't be made click-through. This is a window manager/compositor limitation.
 
-### The overlay doesn't show up
+</details>
+
+<br>
+
+<details>
+<summary>The overlay doesn't show up</summary>
 
 Your window manager doesn't support positioning or resizing windows.
 
-### The overlay isn't on top of other windows
+</details>
+
+<br>
+
+<details>
+<summary>The overlay isn't on top of other windows</summary>
 
 Your window manager doesn't support always-on-top windows.
+
+</details>
