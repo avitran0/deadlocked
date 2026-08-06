@@ -51,6 +51,16 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 The setup script automatically adds the required `no_blur` window rule for users running the Lua configuration format.
 
+```lua
+hl.window_rule({
+	match = {
+		title = "^(deadlocked_overlay)$",
+	},
+	no_blur = true,
+})
+
+```
+
 If you're using the legacy `.conf` configuration (_Deprecated as of Hyprland 0.55, but still supported_) , add the following rule manually to `hyprland.conf`:
 
 ```conf
