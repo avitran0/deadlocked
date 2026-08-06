@@ -1,8 +1,6 @@
-# Compatibility
+# Operating Systems
 
-## Operating Systems
-
-### NixOS
+## NixOS
 
 Add `"input"` to your user's `extraGroups` in `configuration.nix`:
 
@@ -31,17 +29,21 @@ cargo run --release
 
 Everything is configured in `flake.nix` and `nix/shell.nix`.
 
-### Fedora Atomic
+## Fedora Atomic
 
 ```bash
 grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group && sudo usermod -aG input $USER
-# Restart your machine (required)
+```
+#### Restart your machine (required)
+
+```bash
 git clone --recursive https://github.com/avitran0/deadlocked
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
-## Window Managers:
 
-### Hyprland
+# Window Managers:
+
+## Hyprland
 
 The setup script automatically adds the required `no_blur` window rule for users running the Lua configuration format.
 
