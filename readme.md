@@ -1,8 +1,9 @@
+<div align="center">
+
 # deadlocked
 
-[![Matrix Invite](https://img.shields.io/matrix/open-source-cs2-hacking%3Amatrix.org?style=for-the-badge&logo=matrix&label=Matrix)](https://matrix.to/#/%23open-source-cs2-hacking:matrix.org)
-
-[![Discord Invite](https://img.shields.io/discord/1333541580249890949?style=for-the-badge&logo=discord&logoColor=white&label=Discord)](https://discord.gg/eXjG4Ar9Sx)
+[![Matrix Invite](https://img.shields.io/matrix/open-source-cs2-hacking%3Amatrix.org?style=for-the-badge\&logo=matrix\&label=Matrix)](https://matrix.to/#/%23open-source-cs2-hacking:matrix.org)
+[![Discord Invite](https://img.shields.io/discord/1333541580249890949?style=for-the-badge\&logo=discord\&logoColor=white\&label=Discord)](https://discord.gg/eXjG4Ar9Sx)
 
 [![Casual Maintenance Intended](https://casuallymaintained.tech/badge.svg)](https://casuallymaintained.tech/)
 
@@ -10,6 +11,8 @@ simple cs2 aimbot and esp, for linux only.
 
 Releases are tagged `v<version>` matching the version in `Cargo.toml` (e.g. `v1.0.0`).
 The built-in update checker compares against the latest release tag and will prompt when a newer version is available.
+
+</div>
 
 ## Quick Start
 
