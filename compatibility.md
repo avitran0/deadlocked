@@ -32,9 +32,11 @@ Everything is configured in `flake.nix` and `nix/shell.nix`.
 ## Fedora Atomic
 
 ```bash
-grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group && sudo usermod -aG input $USER
+grep -E '^input:' /usr/lib/group | sudo tee -a /etc/group
+sudo usermod -aG input "$USER"
 ```
-#### Restart your machine (required)
+
+> **Restart your machine (required)**
 
 ```bash
 git clone --recursive https://github.com/avitran0/deadlocked
