@@ -20,8 +20,8 @@ Each release contains the `deadlocked` binary and `setup.sh`.
 
 ```bash
 ./setup.sh
-# Restart your machine (required)
 ```
+> **Restart your machine (required)**
 
 This creates a `uinput` group, adds your user to it, and installs a udev rule.
 You only need to do this once, even when updating to newer versions.
