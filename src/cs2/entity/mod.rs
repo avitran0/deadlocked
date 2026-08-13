@@ -6,12 +6,18 @@ use crate::{
     cs2::{
         CS2,
         entity::{
-            inferno::Inferno, molotov::Molotov, planted_c4::PlantedC4, player::Player,
-            smoke::Smoke, weapon::Weapon,
+            chicken::{Chicken, ChickenInfo},
+            inferno::Inferno,
+            molotov::Molotov,
+            planted_c4::PlantedC4,
+            player::Player,
+            smoke::Smoke,
+            weapon::Weapon,
         },
     },
 };
 
+pub mod chicken;
 pub mod inferno;
 pub mod molotov;
 pub mod planted_c4;
@@ -29,6 +35,7 @@ pub enum Entity {
     Flashbang(usize),
     HeGrenade(usize),
     Decoy(usize),
+    Chicken(Chicken),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -44,6 +51,7 @@ pub enum EntityInfo {
     Flashbang(GrenadeInfo),
     HeGrenade(GrenadeInfo),
     Decoy(GrenadeInfo),
+    ChickenInfo(ChickenInfo),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -193,6 +201,7 @@ impl CS2 {
                 class::FLASHBANG => self.entities.push(Entity::Flashbang(entity)),
                 class::HE_GRENADE => self.entities.push(Entity::HeGrenade(entity)),
                 class::DECOY => self.entities.push(Entity::Decoy(entity)),
+                class::CHICKEN => self.entities.push(Entity::Chicken(Chicken::new(entity))),
                 _ => {
                     // check if weapon
                     let entity_identity: usize = self.process.read(entity + 0x10);

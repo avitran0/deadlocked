@@ -258,7 +258,7 @@ impl Player {
         cs2.process.read(weapon + cs2.offsets.weapon.reserve_ammo)
     }
 
-    fn game_scene_node(&self, cs2: &CS2) -> usize {
+    pub fn game_scene_node(&self, cs2: &CS2) -> usize {
         cs2.process
             .read(self.pawn + cs2.offsets.pawn.game_scene_node)
     }

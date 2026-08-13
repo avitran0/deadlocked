@@ -1,9 +1,13 @@
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
 use egui::{Color32, Painter, Pos2, Stroke, vec2};
 
 use crate::{
-    cs2::entity::{EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo},
+    config::player::DrawMode,
+    cs2::entity::{
+        EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo,
+        chicken::{ChickenBones, ChickenInfo},
+    },
     data::Data,
     math::world_to_screen,
     ui::{app::AppState, overlay::convex_hull, trail::Trail},
@@ -58,6 +62,7 @@ impl AppState {
             EntityInfo::Decoy(info) => {
                 self.draw_grenade(painter, data, info, self.config.hud.grenade_trails.decoy)
             }
+            EntityInfo::ChickenInfo(info) => self.draw_chicken(painter, data, info),
         };
     }
 
@@ -190,5 +195,54 @@ impl AppState {
         let now = Instant::now();
         self.trails
             .retain(|_k, trail| now.duration_since(trail.last_update) < Trail::MAX_AGE);
+    }
+
+    fn draw_chicken(&self, painter: &Painter, data: &Data, chicken: &ChickenInfo) {
+        if !self.config.player.chicken {
+            return;
+        }
+
+        let screen_bones: HashMap<ChickenBones, Pos2> = chicken
+            .bones
+            .iter()
+            .filter_map(|(bone, pos)| world_to_screen(pos, data).map(|s| (*bone, s)))
+            .collect();
+
+        if screen_bones.is_empty() {
+            return;
+        }
+
+        // box
+        if self.config.player.draw_box != DrawMode::None {
+            let Some((tl, tr, bl, br)) = Self::calculate_box_corners(&screen_bones) else {
+                return;
+            };
+
+            let box_color = if chicken.visible {
+                self.config.player.box_visible_color
+            } else {
+                self.config.player.box_invisible_color
+            };
+            let stroke = Stroke::new(self.config.hud.line_width, box_color);
+            self.draw_gap_box(painter, tl, tr, bl, br, stroke);
+        }
+
+        // skeleton
+        let color = match &self.config.player.draw_skeleton {
+            DrawMode::None => return,
+            DrawMode::Health => self.health_color(100, self.config.player.skeleton_color.a()),
+            DrawMode::Color => self.config.player.skeleton_color,
+        };
+
+        let stroke = Stroke::new(self.config.hud.line_width, color);
+        for (bone_a, bone_b) in &ChickenBones::CONNECTIONS {
+            let (Some(a_screen), Some(b_screen)) =
+                (screen_bones.get(bone_a), screen_bones.get(bone_b))
+            else {
+                continue;
+            };
+
+            painter.line_segment([*a_screen, *b_screen], stroke);
+        }
     }
 }

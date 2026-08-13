@@ -44,7 +44,11 @@ impl AppState {
 
     fn player_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "Players", |ui| {
-            if checkbox(ui, "Enable", &mut self.config.player.enabled) {
+            if checkbox(ui, "Player", &mut self.config.player.enabled) {
+                self.send_config();
+            }
+
+            if checkbox(ui, "Chicken", &mut self.config.player.chicken) {
                 self.send_config();
             }
 

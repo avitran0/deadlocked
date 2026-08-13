@@ -42,6 +42,8 @@ pub mod cs2 {
         pub const FLASHBANG: &str = "21C_FlashbangProjectile";
         pub const HE_GRENADE: &str = "21C_HEGrenadeProjectile";
         pub const DECOY: &str = "17C_DecoyProjectile";
+
+        pub const CHICKEN: &str = "9C_Chicken";
     }
 }
 

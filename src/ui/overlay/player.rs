@@ -1,4 +1,4 @@
-use std::time::{Duration, Instant};
+use std::{collections::HashMap, time::{Duration, Instant}};
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use glam::vec3;
@@ -115,28 +115,10 @@ impl AppState {
         };
         let tr = pos2(br.x, tl.y);
         let bl = pos2(tl.x, br.y);
-        let half_width = (br.x - tl.x) / 2.0;
-        let qw = half_width - 2.0;
-        let ew = qw / 2.0;
 
         if self.config.player.draw_box != DrawMode::None {
             if self.config.player.box_mode == BoxMode::Gap {
-                painter.line(
-                    vec![pos2(tl.x + ew, tl.y), tl, pos2(tl.x, tl.y + qw)],
-                    stroke,
-                );
-                painter.line(
-                    vec![pos2(tr.x - ew, tl.y), tr, pos2(tr.x, tr.y + qw)],
-                    stroke,
-                );
-                painter.line(
-                    vec![pos2(bl.x + ew, bl.y), bl, pos2(bl.x, bl.y - qw)],
-                    stroke,
-                );
-                painter.line(
-                    vec![pos2(br.x - ew, bl.y), br, pos2(br.x, br.y - qw)],
-                    stroke,
-                );
+                self.draw_gap_box(painter, tl, tr, bl, br, stroke);
             } else {
                 painter.rect(
                     egui::Rect::from_min_max(tl, br),
@@ -265,6 +247,96 @@ impl AppState {
         }
     }
 
+    pub fn calculate_box_corners<K>(
+        screen_bones: &HashMap<K, Pos2>,
+    ) -> Option<(Pos2, Pos2, Pos2, Pos2)> {
+        let screen_positions: Vec<&Pos2> = screen_bones.values().collect();
+
+        if screen_positions.len() < 2 {
+            return None;
+        }
+
+        let min_x = screen_positions
+            .iter()
+            .map(|p| p.x)
+            .reduce(f32::min)
+            .unwrap();
+        let max_x = screen_positions
+            .iter()
+            .map(|p| p.x)
+            .reduce(f32::max)
+            .unwrap();
+        let min_y = screen_positions
+            .iter()
+            .map(|p| p.y)
+            .reduce(f32::min)
+            .unwrap();
+        let max_y = screen_positions
+            .iter()
+            .map(|p| p.y)
+            .reduce(f32::max)
+            .unwrap();
+
+        let margin_x = (max_x - min_x) * 0.1;
+        let margin_y = (max_y - min_y) * 0.1;
+
+        Some((
+            pos2(min_x - margin_x, min_y - margin_y),
+            pos2(max_x + margin_x, min_y - margin_y),
+            pos2(min_x - margin_x, max_y + margin_y),
+            pos2(max_x + margin_x, max_y + margin_y),
+        ))
+    }
+
+    pub fn draw_gap_box(
+        &self,
+        painter: &Painter,
+        tl: Pos2,
+        tr: Pos2,
+        bl: Pos2,
+        br: Pos2,
+        stroke: Stroke,
+    ) {
+        let gap_size = (tr.x - tl.x) / 8.0; // eighth of width
+        let corner_length = (tr.x - tl.x) / 4.0 - 2.0; // quarter width minus small offset
+
+        painter.line(
+            vec![
+                pos2(tl.x + gap_size, tl.y),
+                tl,
+                pos2(tl.x, tl.y + corner_length),
+            ],
+            stroke,
+        );
+
+        painter.line(
+            vec![
+                pos2(tr.x - gap_size, tr.y),
+                tr,
+                pos2(tr.x, tr.y + corner_length),
+            ],
+            stroke,
+        );
+
+        painter.line(
+            vec![
+                pos2(bl.x + gap_size, bl.y),
+                bl,
+                pos2(bl.x, bl.y - corner_length),
+            ],
+            stroke,
+        );
+
+        painter.line(
+            vec![
+                pos2(br.x - gap_size, br.y),
+                br,
+                pos2(br.x, br.y - corner_length),
+            ],
+            stroke,
+        );
+    }
+
     fn skeleton(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
         let distance = data
             .local_player
@@ -356,18 +428,19 @@ impl AppState {
     }
 
     fn skeleton_bounds(&self, player: &PlayerData, data: &Data) -> Option<(Pos2, Pos2)> {
-        let mut points = Vec::with_capacity(Bones::CONNECTIONS.len() * 2);
+        let mut screen_bones: HashMap<Bones, Pos2> =
+            HashMap::with_capacity(Bones::CONNECTIONS.len() * 2);
         for (a, b) in &Bones::CONNECTIONS {
             for bone in [a, b] {
                 if let Some(world) = player.bones.get(bone)
                     && let Some(screen) = world_to_screen(world, data)
                 {
-                    points.push(screen);
+                    screen_bones.insert(*bone, screen);
                 }
             }
         }
 
-        if points.is_empty() {
+        if screen_bones.is_empty() {
             let midpoint = (player.position + player.head) / 2.0;
             let height = (player.head.z - player.position.z + 24.0).max(1.0);
             let half = height / 2.0;
@@ -380,15 +453,8 @@ impl AppState {
             return Some((pos2(top.x - hw, top.y), pos2(bottom.x + hw, bottom.y)));
         }
 
-        let min_x = points.iter().map(|p| p.x).reduce(f32::min)?;
-        let max_x = points.iter().map(|p| p.x).reduce(f32::max)?;
-        let min_y = points.iter().map(|p| p.y).reduce(f32::min)?;
-        let max_y = points.iter().map(|p| p.y).reduce(f32::max)?;
-
-        let mx = (max_x - min_x) * 0.1;
-        let my = (max_y - min_y) * 0.1;
-
-        Some((pos2(min_x - mx, min_y - my), pos2(max_x + mx, max_y + my)))
+        let (tl, _tr, _bl, br) = Self::calculate_box_corners(&screen_bones)?;
+        Some((tl, br))
     }
 
     pub fn update_player_sounds(&mut self) {
