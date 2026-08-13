@@ -1,7 +1,6 @@
 use std::collections::VecDeque;
 
 use glam::Vec2;
-use rand::{RngExt, rng};
 
 use crate::{
     config::Config,
@@ -12,6 +11,50 @@ use crate::{
     math::{compute_max_acceleration_component, record_acceleration, soft_clamp_acceleration},
     os::mouse::Mouse,
 };
+
+/// Per-axis limits for the acceleration clamp, matched to the old hand-tuned values.
+struct AccelTuning {
+    multiplier: f32,
+    range: (f32, f32),
+    fallback: f32,
+    decay: f32,
+}
+
+const PITCH_TUNING: AccelTuning = AccelTuning {
+    multiplier: 3.0,
+    range: (4.0, 20.0),
+    fallback: 10.0,
+    decay: 0.15,
+};
+
+const YAW_TUNING: AccelTuning = AccelTuning {
+    multiplier: 2.5,
+    range: (1.5, 8.0),
+    fallback: 5.0,
+    decay: 0.30,
+};
+
+const TRACK_SCALE: Vec2 = Vec2::new(0.65, 0.55);
+const ACCEL_HISTORY_MAX: usize = 12;
+
+fn clamp_acceleration(
+    history: &VecDeque<Vec2>,
+    track: f32,
+    component: impl Fn(&Vec2) -> f32,
+    tuning: &AccelTuning,
+) -> f32 {
+    soft_clamp_acceleration(
+        track,
+        compute_max_acceleration_component(
+            history,
+            component,
+            tuning.multiplier,
+            tuning.range,
+            tuning.fallback,
+        ),
+        tuning.decay,
+    )
+}
 
 pub struct Recoil {
     pub previous: Vec2,
@@ -26,7 +69,7 @@ impl Default for Recoil {
             previous: Vec2::ZERO,
             unaccounted: Vec2::ZERO,
             velocity: Vec2::ZERO,
-            accel_history: VecDeque::with_capacity(12),
+            accel_history: VecDeque::with_capacity(ACCEL_HISTORY_MAX),
         }
     }
 }
@@ -89,39 +132,16 @@ impl CS2 {
 
         let raw_acceleration = desired - self.recoil.velocity;
 
-        let track = Vec2::new(
-            raw_acceleration.x * rng().random_range(0.55..0.75),
-            raw_acceleration.y * rng().random_range(0.45..0.65),
-        );
+        let track = raw_acceleration * TRACK_SCALE;
 
         let clamp = Vec2::new(
-            soft_clamp_acceleration(
-                track.x,
-                compute_max_acceleration_component(
-                    &self.recoil.accel_history,
-                    |v| v.x,
-                    3.0,
-                    (4.0, 20.0),
-                    10.0,
-                ),
-                0.15,
-            ),
-            soft_clamp_acceleration(
-                track.y,
-                compute_max_acceleration_component(
-                    &self.recoil.accel_history,
-                    |v| v.y,
-                    2.5,
-                    (1.5, 8.0),
-                    5.0,
-                ),
-                0.30,
-            ),
+            clamp_acceleration(&self.recoil.accel_history, track.x, |v| v.x, &PITCH_TUNING),
+            clamp_acceleration(&self.recoil.accel_history, track.y, |v| v.y, &YAW_TUNING),
         );
 
         self.recoil.velocity += clamp;
 
-        record_acceleration(&mut self.recoil.accel_history, clamp, 12);
+        record_acceleration(&mut self.recoil.accel_history, clamp, ACCEL_HISTORY_MAX);
 
         let ready = Vec2::new(
             self.recoil.velocity.x.trunc(),
