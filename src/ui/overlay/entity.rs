@@ -116,9 +116,10 @@ impl AppState {
     fn inferno(&self, painter: &Painter, data: &Data, inferno: &InfernoInfo) {
         use egui::Shape;
 
-        if !self.config.hud.grenade_trails.enabled {
+        if !self.config.hud.grenade_trails.enabled || !self.config.hud.grenade_trails.inferno_poly {
             return;
         }
+
         let hull: Vec<Pos2> = convex_hull(&inferno.hull)
             .iter()
             .filter_map(|p| {

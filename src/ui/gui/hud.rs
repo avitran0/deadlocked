@@ -36,6 +36,14 @@ impl AppState {
                     self.send_config();
                 }
 
+                if checkbox(
+                    ui,
+                    "Inferno Polygon",
+                    &mut self.config.hud.grenade_trails.inferno_poly,
+                ) {
+                    self.send_config();
+                }
+
                 if color_picker(
                     ui,
                     "Smoke Trail Color",
