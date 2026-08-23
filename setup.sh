@@ -4,8 +4,6 @@ UDEV_RULE_FILE="/etc/udev/rules.d/99-uinput.rules"
 UINPUT_GROUP="uinput"
 CURRENT_USER=$(whoami)
 
-git config core.hooksPath .hooks
-
 sudo modprobe uinput
 
 echo 'KERNEL=="uinput", MODE="0660", GROUP="uinput", TAG+="uaccess"' | sudo tee "$UDEV_RULE_FILE" > /dev/null
