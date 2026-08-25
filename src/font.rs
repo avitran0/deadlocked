@@ -12,7 +12,11 @@ pub enum Font {
     #[default]
     FiraSans,
     Inter,
+    JetBrainsMono,
+    Lato,
     Nunito,
+    OpenSans,
+    Roboto,
     Ubuntu,
 }
 
@@ -22,7 +26,11 @@ impl Font {
             Self::DMSans => include_bytes!("../resources/DMSans.ttf"),
             Self::FiraSans => include_bytes!("../resources/FiraSans.ttf"),
             Self::Inter => include_bytes!("../resources/Inter.ttf"),
+            Self::JetBrainsMono => include_bytes!("../resources/JetBrainsMono.ttf"),
+            Self::Lato => include_bytes!("../resources/Lato.ttf"),
             Self::Nunito => include_bytes!("../resources/Nunito.ttf"),
+            Self::OpenSans => include_bytes!("../resources/OpenSans.ttf"),
+            Self::Roboto => include_bytes!("../resources/Roboto.ttf"),
             Self::Ubuntu => include_bytes!("../resources/Ubuntu.ttf"),
         }
     }
@@ -32,7 +40,11 @@ impl Font {
             Self::DMSans => "dm_sans",
             Self::FiraSans => "fira_sans",
             Self::Inter => "inter",
+            Self::JetBrainsMono => "jetbrains_mono",
+            Self::Lato => "lato",
             Self::Nunito => "nunito",
+            Self::OpenSans => "open_sans",
+            Self::Roboto => "roboto",
             Self::Ubuntu => "ubuntu",
         }
     }
@@ -76,7 +88,11 @@ impl Display for Font {
                 Self::DMSans => "DM Sans",
                 Self::FiraSans => "Fira Sans",
                 Self::Inter => "Inter",
+                Self::JetBrainsMono => "JetBrains Mono",
+                Self::Lato => "Lato",
                 Self::Nunito => "Nunito",
+                Self::OpenSans => "Open Sans",
+                Self::Roboto => "Roboto",
                 Self::Ubuntu => "Ubuntu",
             }
         )

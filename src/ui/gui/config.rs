@@ -1,4 +1,4 @@
-use egui::{Align, Button, Ui};
+use egui::{Align, Button, Ui, Color32};
 
 use crate::{
     config::{
@@ -9,7 +9,7 @@ use crate::{
         app::AppState,
         color::Colors,
         grenades::read_grenades,
-        gui::helpers::{collapsing_open, open_url, scroll},
+        gui::helpers::{collapsing_open, open_url, scroll, color_picker},
     },
 };
 
@@ -61,30 +61,38 @@ impl AppState {
         });
 
         collapsing_open(ui, "Accent Color", |ui| {
+            let mut color = self.config.accent_color;
+            let mut updated = false;
+            let selected_name = Colors::ACCENT_COLORS
+                .iter()
+                .find(|(_, c)| *c == color)
+                .map(|(name, _)| *name);
+
             egui::ComboBox::new("accent_color", "Accent Color")
-                .selected_text(
-                    Colors::ACCENT_COLORS
-                        .iter()
-                        .find(|c| c.1 == self.config.accent_color)
-                        .unwrap_or(&Colors::ACCENT_COLORS[5])
-                        .0,
-                )
+                .selected_text(selected_name.unwrap_or("Blue"))
                 .show_ui(ui, |ui| {
-                    for (name, color) in Colors::ACCENT_COLORS {
-                        if ui
-                            .add(
-                                Button::selectable(color == self.config.accent_color, name)
-                                    .fill(color),
-                            )
-                            .clicked()
-                        {
-                            self.config.accent_color = color;
-                            ui.ctx()
-                                .global_style_mut(|style| style.visuals.selection.bg_fill = color);
-                            self.send_config();
+                    for (name, preset_color) in Colors::ACCENT_COLORS {
+                        if ui.selectable_value(&mut color, preset_color, name).clicked() {
+                            updated = true;
                         }
                     }
+                    if ui.selectable_label(selected_name.is_none(), "Custom").clicked() {
+                        color = Color32::from_gray(128);
+                        updated = true;
+                    }
                 });
+
+            if selected_name.is_none() {
+                if color_picker(ui, "Custom Color", &mut color) {
+                    updated = true;
+                }
+            }
+
+            if updated {
+                self.config.accent_color = color;
+                self.send_config();
+                ui.ctx().global_style_mut(|s| s.visuals.selection.bg_fill = color);
+            }
         });
     }
 
