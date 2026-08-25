@@ -69,7 +69,7 @@ impl AppState {
                 .map(|(name, _)| *name);
 
             egui::ComboBox::new("accent_color", "Accent Color")
-                .selected_text(selected_name.unwrap_or("Blue"))
+                .selected_text(selected_name.unwrap_or("Custom"))
                 .show_ui(ui, |ui| {
                     for (name, preset_color) in Colors::ACCENT_COLORS {
                         if ui.selectable_value(&mut color, preset_color, name).clicked() {
