@@ -27,7 +27,7 @@ direnv allow
 cargo run --release
 ```
 
-Everything is configured in `flake.nix` and `nix/shell.nix`.
+Everything is configured in `flake.nix`.
 
 <br>
 
