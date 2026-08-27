@@ -42,6 +42,8 @@ pub struct AimbotConfig {
     pub fov: f32,
     pub smooth: f32,
     pub inertia: f32,
+    /// Seconds of target motion to lead when aiming.
+    pub prediction_time: f32,
     pub bones: Vec<Bones>,
     pub targeting_mode: TargetingMode,
 }
@@ -60,6 +62,7 @@ impl Default for AimbotConfig {
             fov: 2.5,
             smooth: 5.0,
             inertia: 1.0,
+            prediction_time: 0.05,
             bones: vec![
                 Bones::Head,
                 Bones::Neck,

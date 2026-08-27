@@ -1,12 +1,10 @@
-use egui::{Color32, Rgba};
-use serde::Serialize;
-
 use crate::cs2::{
     CS2,
     entity::{GrenadeInfo, base_entity::BaseEntity, grenade_info},
 };
+use egui::{Color32, Rgba};
 
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq)]
 pub struct Smoke {
     controller: BaseEntity,
 }

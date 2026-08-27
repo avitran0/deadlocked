@@ -131,6 +131,18 @@ impl AppState {
 
             if drag(
                 ui,
+                "Prediction",
+                DragValue::new(&mut self.weapon_config().aimbot.prediction_time)
+                    .range(0.0..=0.25)
+                    .suffix(" s")
+                    .speed(0.002)
+                    .max_decimals(2),
+            ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
                 "Start Bullet",
                 DragValue::new(&mut self.weapon_config().aimbot.start_bullet)
                     .range(0..=10)

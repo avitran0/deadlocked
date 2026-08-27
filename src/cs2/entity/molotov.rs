@@ -1,11 +1,9 @@
-use serde::Serialize;
-
 use crate::cs2::{
     CS2,
     entity::{MolotovInfo, base_entity::BaseEntity},
 };
 
-#[derive(Clone, PartialEq, Serialize)]
+#[derive(Clone, PartialEq)]
 pub struct Molotov {
     controller: BaseEntity,
 }

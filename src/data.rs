@@ -40,6 +40,7 @@ pub struct Data {
 pub struct PlayerData {
     pub steam_id: u64,
     pub health: i32,
+    pub max_health: i32,
     pub armor: i32,
     pub position: Vec3,
     pub head: Vec3,

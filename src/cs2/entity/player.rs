@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Deref};
 
 use glam::{Vec2, Vec3, vec2};
 
@@ -104,24 +104,8 @@ impl Player {
         Some(entity)
     }
 
-    pub fn health(&self, cs2: &CS2) -> i32 {
-        let health = cs2.process.read(*self.pawn + cs2.offsets.pawn.health);
-        if !(0..=100).contains(&health) {
-            return 0;
-        }
-        health
-    }
-
     pub fn armor(&self, cs2: &CS2) -> i32 {
         cs2.process.read(*self.pawn + cs2.offsets.pawn.armor)
-    }
-
-    pub fn team(&self, cs2: &CS2) -> u8 {
-        cs2.process.read(*self.pawn + cs2.offsets.pawn.team)
-    }
-
-    pub fn life_state(&self, cs2: &CS2) -> u8 {
-        cs2.process.read(*self.pawn + cs2.offsets.pawn.life_state)
     }
 
     pub fn steam_id(&self, cs2: &CS2) -> u64 {
@@ -263,22 +247,11 @@ impl Player {
         cs2.process.read(weapon + cs2.offsets.weapon.reserve_ammo)
     }
 
-    pub fn game_scene_node(&self, cs2: &CS2) -> usize {
-        cs2.process
-            .read(*self.pawn + cs2.offsets.pawn.game_scene_node)
-    }
-
     fn is_dormant(&self, cs2: &CS2) -> bool {
         let gs_node = self.game_scene_node(cs2);
         cs2.process
             .read::<u8>(gs_node + cs2.offsets.game_scene_node.dormant)
             != 0
-    }
-
-    pub fn position(&self, cs2: &CS2) -> Vec3 {
-        let gs_node = self.game_scene_node(cs2);
-        cs2.process
-            .read(gs_node + cs2.offsets.game_scene_node.origin)
     }
 
     pub fn eye_position(&self, cs2: &CS2) -> Vec3 {
@@ -352,7 +325,7 @@ impl Player {
             return false;
         }
 
-        if self.life_state(cs2) != 0 {
+        if !self.life_state(cs2).is_alive() {
             return false;
         }
 
@@ -520,10 +493,6 @@ impl Player {
         Some(player)
     }
 
-    pub fn velocity(&self, cs2: &CS2) -> Vec3 {
-        cs2.process.read(*self.pawn + cs2.offsets.pawn.velocity)
-    }
-
     fn is_in_air(&self, cs2: &CS2) -> bool {
         let flags = cs2.process.read::<i32>(*self.pawn + cs2.offsets.pawn.flags);
         // FL_ONGROUND = (1 << 0)
@@ -584,5 +553,13 @@ impl Player {
             cs2.process
                 .write(self.controller + cs2.offsets.controller.desired_fov, value);
         }
+    }
+}
+
+impl Deref for Player {
+    type Target = BaseEntity;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pawn
     }
 }

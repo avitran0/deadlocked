@@ -54,6 +54,9 @@ macro_rules! field_stmt {
     ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, class_size ($class:literal)) => {{
         $off.$field.$fdef = $client.get_class($class)?.size() as _;
     }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, fixed ($value:literal)) => {{
+        $off.$field.$fdef = $value;
+    }};
     ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, schema ($class:literal, $field_name:literal)) => {{
         $off.$field.$fdef = $client.get($class, $field_name)?;
     }};
@@ -202,7 +205,7 @@ schema! {
             team: schema("C_BaseEntity", "m_iTeamNum"),
             life_state: schema("C_BaseEntity", "m_lifeState"),
             game_scene_node: schema("C_BaseEntity", "m_pGameSceneNode"),
-            velocity: schema("C_BaseEntity", "m_vecAbsVelocity"),
+            velocity: schema("C_BaseEntity", "m_vecVelocity"),
         }
         pawn: PawnOffsets {
             controller: schema("C_BasePlayerPawn", "m_hController"),
@@ -225,11 +228,6 @@ schema! {
             weapon_services: schema("C_BasePlayerPawn", "m_pWeaponServices"),
             aim_punch_services: schema("C_CSPlayerPawn", "m_pAimPunchServices"),
             bullet_services: schema("C_CSPlayerPawn", "m_pBulletServices"),
-            health: schema("C_BaseEntity", "m_iHealth"),
-            team: schema("C_BaseEntity", "m_iTeamNum"),
-            life_state: schema("C_BaseEntity", "m_lifeState"),
-            game_scene_node: schema("C_BaseEntity", "m_pGameSceneNode"),
-            velocity: schema("C_BaseEntity", "m_vecAbsVelocity"),
         }
         game_scene_node: GameSceneNodeOffsets {
             dormant: schema("CGameSceneNode", "m_bDormant"),
@@ -305,6 +303,11 @@ schema! {
         }
         model_state: ModelState {
             skeleton_instance: schema("CBodyComponentSkeletonInstance", "m_skeletonInstance"),
+        }
+        network_velocity: NetworkVelocityOffsets {
+            x: fixed(0x10),
+            y: fixed(0x18),
+            z: fixed(0x20),
         }
         entity_identity: EntityIdentityOffsets {
             size: class_size("CEntityIdentity"),

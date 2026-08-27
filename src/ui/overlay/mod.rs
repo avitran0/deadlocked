@@ -279,14 +279,16 @@ impl AppState {
         }
     }
 
-    fn health_color(&self, health: i32, alpha: u8) -> Color32 {
-        let health = health.clamp(0, 100);
+    fn health_color(&self, health: i32, max_health: i32, alpha: u8) -> Color32 {
+        let max_health = max_health.max(1);
+        let health = health.clamp(0, max_health);
+        let percent = health as f32 / max_health as f32;
 
-        let (r, g) = if health <= 50 {
-            let factor = health as f32 / 50.0;
+        let (r, g) = if percent <= 0.5 {
+            let factor = percent * 2.0;
             (255, (255.0 * factor) as u8)
         } else {
-            let factor = 1.0 - (health - 50) as f32 / 50.0;
+            let factor = 1.0 - (percent - 0.5) * 2.0;
             ((255.0 * factor) as u8, 255)
         };
 

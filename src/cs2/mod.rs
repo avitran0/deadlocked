@@ -7,7 +7,7 @@ use crate::{
         Config,
         aim::{AimbotConfig, KeyMode, RcsConfig, TriggerbotConfig},
     },
-    constants::cs2::{self, TEAM_CT, TEAM_T},
+    constants::cs2,
     cs2::{
         bones::Bones,
         entity::{
@@ -27,6 +27,7 @@ use crate::{
 
 pub mod bones;
 pub mod bvh;
+pub mod class;
 pub mod entity;
 mod features;
 mod input;
@@ -148,7 +149,7 @@ impl CS2 {
             return;
         };
         let local_team = local_player.team(self);
-        if local_team != TEAM_T && local_team != TEAM_CT {
+        if !local_team.is_playing() {
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
@@ -169,6 +170,7 @@ impl CS2 {
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
+                max_health: player.max_health(self),
                 armor: player.armor(self),
                 position: player.position(self),
                 head: player.bone_position(self, Bones::Head.u64()),
@@ -203,6 +205,7 @@ impl CS2 {
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             health: local_player.health(self),
+            max_health: local_player.max_health(self),
             armor: local_player.armor(self),
             position: local_player.position(self),
             head: local_player.bone_position(self, Bones::Head.u64()),

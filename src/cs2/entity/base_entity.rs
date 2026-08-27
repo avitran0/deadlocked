@@ -1,12 +1,13 @@
 use std::ops::Deref;
 
+use crate::cs2::{
+    CS2,
+    class::{life_state::LifeState, net_vec::NetworkVelocityVector, team::Team},
+};
 use glam::Vec3;
-use serde::{Deserialize, Serialize};
-
-use crate::cs2::CS2;
 
 /// Common handle-backed functionality shared by all client entities.
-#[derive(Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BaseEntity {
     handle: usize,
 }
@@ -16,9 +17,28 @@ impl BaseEntity {
         Self { handle }
     }
 
+    pub fn health(&self, cs2: &CS2) -> i32 {
+        cs2.process.read(self.handle + cs2.offsets.entity.health)
+    }
+
+    pub fn max_health(&self, cs2: &CS2) -> i32 {
+        cs2.process
+            .read(self.handle + cs2.offsets.entity.max_health)
+    }
+
+    pub fn team(&self, cs2: &CS2) -> Team {
+        cs2.process
+            .read_as::<u8, Team>(self.handle + cs2.offsets.entity.team)
+    }
+
+    pub fn life_state(&self, cs2: &CS2) -> LifeState {
+        cs2.process
+            .read_as::<u8, LifeState>(self.handle + cs2.offsets.entity.life_state)
+    }
+
     pub fn game_scene_node(&self, cs2: &CS2) -> usize {
         cs2.process
-            .read(self.handle + cs2.offsets.pawn.game_scene_node)
+            .read(self.handle + cs2.offsets.entity.game_scene_node)
     }
 
     pub fn position(&self, cs2: &CS2) -> Vec3 {
@@ -28,15 +48,7 @@ impl BaseEntity {
 
     #[allow(dead_code)]
     pub fn velocity(&self, cs2: &CS2) -> Vec3 {
-        cs2.process.read(self.handle + cs2.offsets.pawn.velocity)
-    }
-}
-
-impl std::ops::Add<usize> for BaseEntity {
-    type Output = usize;
-
-    fn add(self, rhs: usize) -> Self::Output {
-        self.handle + rhs
+        NetworkVelocityVector::read(cs2, self.handle + cs2.offsets.entity.velocity).to_vec()
     }
 }
 

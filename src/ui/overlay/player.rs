@@ -95,8 +95,11 @@ impl AppState {
         let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
         let line_width = self.config.hud.line_width * esp_scale;
 
-        let health_color =
-            self.health_color(player.health, self.config.player.box_visible_color.a());
+        let health_color = self.health_color(
+            player.health,
+            player.max_health,
+            self.config.player.box_visible_color.a(),
+        );
         let mut color = match &self.config.player.draw_box {
             DrawMode::None => health_color,
             DrawMode::Health => health_color,
@@ -140,7 +143,10 @@ impl AppState {
             painter.line(
                 vec![
                     pos2(x, bl.y),
-                    pos2(x, bl.y - (delta * player.health as f32 / 100.0)),
+                    pos2(
+                        x,
+                        bl.y - (delta * player.health as f32 / player.max_health.max(1) as f32),
+                    ),
                 ],
                 Stroke::new(line_width, Self::alpha(health_color, alpha)),
             );
@@ -350,9 +356,11 @@ impl AppState {
 
         let mut color = match &self.config.player.draw_skeleton {
             DrawMode::None => return,
-            DrawMode::Health => {
-                self.health_color(player.health, self.config.player.skeleton_color.a())
-            }
+            DrawMode::Health => self.health_color(
+                player.health,
+                player.max_health,
+                self.config.player.skeleton_color.a(),
+            ),
             DrawMode::Color => self.config.player.skeleton_color,
         };
         if let Some(alpha) = alpha {
