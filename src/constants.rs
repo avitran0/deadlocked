@@ -8,13 +8,11 @@ pub mod cs2 {
     pub const INPUT_LIB: &str = "libinputsystem.so";
     pub const SDL_LIB: &str = "libSDL3.so.0";
     pub const SCHEMA_LIB: &str = "libschemasystem.so";
+    pub const PHYSICS_LIB: &str = "libvphysics2.so";
 
     pub const LIBS: [&str; 6] = [
         CLIENT_LIB, ENGINE_LIB, TIER0_LIB, INPUT_LIB, SDL_LIB, SCHEMA_LIB,
     ];
-
-    pub const TEAM_T: u8 = 2;
-    pub const TEAM_CT: u8 = 3;
 
     pub const WEAPON_UNKNOWN: &str = "unknown";
     pub const DEFAULT_FOV: u32 = 90;

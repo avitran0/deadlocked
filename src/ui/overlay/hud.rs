@@ -48,7 +48,7 @@ impl AppState {
         }
 
         let fraction = (data.bomb.timer / 40.0).clamp(0.0, 1.0);
-        let color = self.health_color((fraction * 100.0) as i32, 255);
+        let color = self.health_color((fraction * 100.0) as i32, 100, 255);
         painter.line(
             vec![
                 pos2(0.0, data.window_size.y),

@@ -6,6 +6,7 @@ use crate::{
     cs2::{
         CS2,
         entity::{
+            base_entity::BaseEntity,
             chicken::{Chicken, ChickenInfo},
             inferno::Inferno,
             molotov::Molotov,
@@ -17,6 +18,7 @@ use crate::{
     },
 };
 
+pub mod base_entity;
 pub mod chicken;
 pub mod inferno;
 pub mod molotov;
@@ -28,13 +30,13 @@ pub mod weapon_class;
 
 #[derive(Clone)]
 pub enum Entity {
-    Weapon { weapon: Weapon, entity: usize },
+    Weapon { weapon: Weapon, entity: BaseEntity },
     Inferno(Inferno),
     Smoke(Smoke),
     Molotov(Molotov),
-    Flashbang(usize),
-    HeGrenade(usize),
-    Decoy(usize),
+    Flashbang(BaseEntity),
+    HeGrenade(BaseEntity),
+    Decoy(BaseEntity),
     Chicken(Chicken),
 }
 
@@ -100,10 +102,10 @@ impl MolotovInfo {
     }
 }
 
-pub fn grenade_info(entity: usize, name: &'static str, cs2: &CS2) -> GrenadeInfo {
+pub fn grenade_info(entity: BaseEntity, name: &'static str, cs2: &CS2) -> GrenadeInfo {
     GrenadeInfo {
-        entity,
-        position: Player::entity(entity).position(cs2),
+        entity: *entity,
+        position: entity.position(cs2),
         name: name.to_owned(),
     }
 }
@@ -144,10 +146,10 @@ impl CS2 {
         const IDENTITIES_PER_BUCKET: usize = 512;
         let bucket = self.process.read_vec(
             bucket_ptr,
-            IDENTITIES_PER_BUCKET * self.offsets.entity_identity.size as usize,
+            IDENTITIES_PER_BUCKET * self.offsets.entity_identity.size,
         );
         for index_in_bucket in 0..IDENTITIES_PER_BUCKET {
-            let identity_offset = index_in_bucket * self.offsets.entity_identity.size as usize;
+            let identity_offset = index_in_bucket * self.offsets.entity_identity.size;
 
             let entity: usize =
                 *bytemuck::from_bytes(&bucket[identity_offset..identity_offset + 8]);
@@ -198,9 +200,13 @@ impl CS2 {
                     self.entities.push(Entity::Smoke(Smoke::new(entity)));
                 }
                 class::MOLOTOV => self.entities.push(Entity::Molotov(Molotov::new(entity))),
-                class::FLASHBANG => self.entities.push(Entity::Flashbang(entity)),
-                class::HE_GRENADE => self.entities.push(Entity::HeGrenade(entity)),
-                class::DECOY => self.entities.push(Entity::Decoy(entity)),
+                class::FLASHBANG => self
+                    .entities
+                    .push(Entity::Flashbang(BaseEntity::new(entity))),
+                class::HE_GRENADE => self
+                    .entities
+                    .push(Entity::HeGrenade(BaseEntity::new(entity))),
+                class::DECOY => self.entities.push(Entity::Decoy(BaseEntity::new(entity))),
                 class::CHICKEN => self.entities.push(Entity::Chicken(Chicken::new(entity))),
                 _ => {
                     // check if weapon
@@ -223,7 +229,10 @@ impl CS2 {
 
                         let weapon = Weapon::from_entity(entity, self);
 
-                        self.entities.push(Entity::Weapon { weapon, entity });
+                        self.entities.push(Entity::Weapon {
+                            weapon,
+                            entity: BaseEntity::new(entity),
+                        });
                     }
                 }
             }

@@ -7,7 +7,7 @@ use crate::{
         Config,
         aim::{AimbotConfig, KeyMode, RcsConfig, TriggerbotConfig},
     },
-    constants::cs2::{self, TEAM_CT, TEAM_T},
+    constants::cs2,
     cs2::{
         bones::Bones,
         entity::{
@@ -27,9 +27,9 @@ use crate::{
 
 pub mod bones;
 pub mod bvh;
+pub mod class;
 pub mod entity;
 mod features;
-mod find_offsets;
 mod input;
 pub mod key_codes;
 mod offsets;
@@ -149,7 +149,7 @@ impl CS2 {
             return;
         };
         let local_team = local_player.team(self);
-        if local_team != TEAM_T && local_team != TEAM_CT {
+        if !local_team.is_playing() {
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
@@ -170,6 +170,7 @@ impl CS2 {
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 health: player.health(self),
+                max_health: player.max_health(self),
                 armor: player.armor(self),
                 position: player.position(self),
                 head: player.bone_position(self, Bones::Head.u64()),
@@ -184,6 +185,9 @@ impl CS2 {
                 color: player.color(self),
                 rotation: player.rotation(self),
                 sound: player.is_making_sound(self),
+                collision_mins: player.collision_bounds(self).0,
+                collision_maxs: player.collision_bounds(self).1,
+                collision_transform: player.collision_transform(self),
             };
 
             if !is_ffa && player.team(self) == local_team {
@@ -204,6 +208,7 @@ impl CS2 {
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             health: local_player.health(self),
+            max_health: local_player.max_health(self),
             armor: local_player.armor(self),
             position: local_player.position(self),
             head: local_player.bone_position(self, Bones::Head.u64()),
@@ -221,6 +226,9 @@ impl CS2 {
             color: local_player.color(self),
             rotation: local_player.rotation(self),
             sound: None,
+            collision_mins: local_player.collision_bounds(self).0,
+            collision_maxs: local_player.collision_bounds(self).1,
+            collision_transform: local_player.collision_transform(self),
         };
 
         data.entities.clear();
@@ -228,10 +236,10 @@ impl CS2 {
             data.entities.push(match entity {
                 Entity::Weapon { weapon, entity } => EntityInfo::Weapon {
                     weapon: weapon.clone(),
-                    position: Player::entity(*entity).position(self),
+                    position: Player::entity(**entity).position(self),
                     ammo: (
-                        Weapon::clip_ammo(*entity, self),
-                        Weapon::reserve_ammo(*entity, self),
+                        Weapon::clip_ammo(**entity, self),
+                        Weapon::reserve_ammo(**entity, self),
                     ),
                 },
                 Entity::Inferno(inferno) => EntityInfo::Inferno(inferno.info(self)),

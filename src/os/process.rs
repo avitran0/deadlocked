@@ -96,6 +96,10 @@ impl Process {
         t
     }
 
+    pub fn read_as<T: Pod + Default, P: TryFrom<T> + Default>(&self, address: usize) -> P {
+        P::try_from(self.read::<T>(address)).unwrap_or_default()
+    }
+
     pub fn read_or_zeroed<T: Pod>(&self, address: usize) -> T {
         let mut t = T::zeroed();
         let buffer = bytemuck::bytes_of_mut(&mut t);

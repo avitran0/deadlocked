@@ -40,6 +40,7 @@ pub struct Data {
 pub struct PlayerData {
     pub steam_id: u64,
     pub health: i32,
+    pub max_health: i32,
     pub armor: i32,
     pub position: Vec3,
     pub head: Vec3,
@@ -54,6 +55,9 @@ pub struct PlayerData {
     pub color: i32,
     pub rotation: f32,
     pub sound: Option<SoundType>,
+    pub collision_mins: Vec3,
+    pub collision_maxs: Vec3,
+    pub collision_transform: Mat4,
 }
 
 #[derive(Default, Serialize, Deserialize)]

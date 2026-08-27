@@ -66,8 +66,11 @@ impl CS2 {
         let target_angle = {
             let mut smallest_fov = 360.0;
             let mut smallest_angle = glam::Vec2::ZERO;
+            let target_velocity = target.velocity(self);
+            let prediction_time = config.prediction_time.clamp(0.0, 0.25);
             for bone in &config.bones {
-                let bone_pos = target.bone_position(self, bone.u64());
+                let bone_pos =
+                    target.bone_position(self, bone.u64()) + target_velocity * prediction_time;
                 let angle =
                     self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
                 let fov = angles_to_fov(&local_player.view_angles(self), &angle);

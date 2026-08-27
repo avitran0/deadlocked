@@ -5,10 +5,10 @@ use serde::{Deserialize, Serialize};
 pub struct Colors;
 
 impl Colors {
-    pub const BACKDROP: Color32 = Color32::from_rgb(24, 24, 32);
-    pub const BASE: Color32 = Color32::from_rgb(30, 30, 40);
-    pub const HIGHLIGHT: Color32 = Color32::from_rgb(50, 50, 70);
-    pub const SUBTEXT: Color32 = Color32::from_rgb(180, 180, 180);
+    pub const BACKDROP: Color32 = Color32::from_rgb(24, 24, 28);
+    pub const BASE: Color32 = Color32::from_rgb(30, 30, 35);
+    pub const HIGHLIGHT: Color32 = Color32::from_rgb(50, 50, 60);
+    pub const SUBTEXT: Color32 = Color32::from_rgb(140, 140, 140);
     pub const TEXT: Color32 = Color32::from_rgb(255, 255, 255);
     pub const RED: Color32 = Color32::from_rgb(240, 100, 100);
     pub const ORANGE: Color32 = Color32::from_rgb(240, 140, 90);

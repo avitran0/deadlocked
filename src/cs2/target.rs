@@ -3,7 +3,6 @@ use strum::IntoEnumIterator;
 
 use crate::{
     config::{Config, aim::TargetingMode},
-    constants::cs2,
     cs2::{
         CS2,
         bones::Bones,
@@ -35,7 +34,7 @@ impl CS2 {
         };
 
         let team = local_player.team(self);
-        if team != cs2::TEAM_CT && team != cs2::TEAM_T {
+        if !team.is_playing() {
             self.target.reset();
             return;
         }

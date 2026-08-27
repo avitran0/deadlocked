@@ -231,7 +231,7 @@ impl AppState {
         // skeleton
         let color = match &self.config.player.draw_skeleton {
             DrawMode::None => return,
-            DrawMode::Health => self.health_color(100, self.config.player.skeleton_color.a()),
+            DrawMode::Health => self.health_color(100, 100, self.config.player.skeleton_color.a()),
             DrawMode::Color => self.config.player.skeleton_color,
         };
 
