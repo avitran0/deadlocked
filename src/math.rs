@@ -33,6 +33,8 @@ pub fn vec2_clamp(vec: &mut Vec2) {
     vec.y = (vec.y + 180.0).rem_euclid(360.0) - 180.0;
 }
 
+pub const CYLINDER_SAMPLES: usize = 64;
+
 pub fn world_to_screen(position: &Vec3, data: &Data) -> Option<egui::Pos2> {
     let vm = &data.view_matrix;
     let mut screen_position = Vec2::new(

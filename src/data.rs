@@ -55,6 +55,9 @@ pub struct PlayerData {
     pub color: i32,
     pub rotation: f32,
     pub sound: Option<SoundType>,
+    pub collision_mins: Vec3,
+    pub collision_maxs: Vec3,
+    pub collision_transform: Mat4,
 }
 
 #[derive(Default, Serialize, Deserialize)]

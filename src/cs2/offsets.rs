@@ -206,6 +206,11 @@ schema! {
             life_state: schema("C_BaseEntity", "m_lifeState"),
             game_scene_node: schema("C_BaseEntity", "m_pGameSceneNode"),
             velocity: schema("C_BaseEntity", "m_vecVelocity"),
+            collision: schema("C_BaseEntity", "m_pCollision"),
+        }
+        collision: CollisionOffsets {
+            mins: schema("CCollisionProperty", "m_vecMins"),
+            maxs: schema("CCollisionProperty", "m_vecMaxs"),
         }
         pawn: PawnOffsets {
             controller: schema("C_BasePlayerPawn", "m_hController"),
@@ -232,6 +237,7 @@ schema! {
         game_scene_node: GameSceneNodeOffsets {
             dormant: schema("CGameSceneNode", "m_bDormant"),
             origin: schema("CGameSceneNode", "m_vecAbsOrigin"),
+            node_to_world: schema("CGameSceneNode", "m_nodeToWorld"),
             model_state: schema("CSkeletonInstance", "m_modelState"),
         }
         smoke: SmokeOffsets {

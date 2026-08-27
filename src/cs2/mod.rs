@@ -185,6 +185,9 @@ impl CS2 {
                 color: player.color(self),
                 rotation: player.rotation(self),
                 sound: player.is_making_sound(self),
+                collision_mins: player.collision_bounds(self).0,
+                collision_maxs: player.collision_bounds(self).1,
+                collision_transform: player.collision_transform(self),
             };
 
             if !is_ffa && player.team(self) == local_team {
@@ -223,6 +226,9 @@ impl CS2 {
             color: local_player.color(self),
             rotation: local_player.rotation(self),
             sound: None,
+            collision_mins: local_player.collision_bounds(self).0,
+            collision_maxs: local_player.collision_bounds(self).1,
+            collision_transform: local_player.collision_transform(self),
         };
 
         data.entities.clear();
