@@ -4,7 +4,10 @@ use glam::{Vec2, Vec3, vec2};
 
 use crate::{
     constants::cs2,
-    cs2::{bones::Bones, entity::weapon::Weapon},
+    cs2::{
+        bones::Bones,
+        entity::{base_entity::BaseEntity, weapon::Weapon},
+    },
     data::SoundType,
 };
 
@@ -13,14 +16,14 @@ use super::{CS2, weapon_class::WeaponClass};
 #[derive(Clone, Copy, PartialEq)]
 pub struct Player {
     controller: usize,
-    pub(crate) pawn: usize,
+    pub(crate) pawn: BaseEntity,
 }
 
 impl Player {
     pub fn entity(entity: usize) -> Self {
         Self {
             controller: 0,
-            pawn: entity,
+            pawn: BaseEntity::new(entity),
         }
     }
 
@@ -31,7 +34,10 @@ impl Player {
         if pawn_handle == -1 {
             return None;
         }
-        Self::get_entity(cs2, pawn_handle).map(|pawn| Self { controller, pawn })
+        Self::get_entity(cs2, pawn_handle).map(|pawn| Self {
+            controller,
+            pawn: BaseEntity::new(pawn),
+        })
     }
 
     pub fn local_player(cs2: &CS2) -> Option<Self> {
@@ -43,7 +49,10 @@ impl Player {
         if pawn_handle == -1 {
             return None;
         }
-        Self::get_entity(cs2, pawn_handle).map(|pawn| Self { controller, pawn })
+        Self::get_entity(cs2, pawn_handle).map(|pawn| Self {
+            controller,
+            pawn: BaseEntity::new(pawn),
+        })
     }
 
     pub fn from_controller(controller: usize, cs2: &CS2) -> Option<Self> {
@@ -51,14 +60,10 @@ impl Player {
         if pawn_handle == -1 {
             return None;
         }
-        Self::get_entity(cs2, pawn_handle).map(|pawn| Self { controller, pawn })
-    }
-
-    pub fn pawn(pawn: usize) -> Self {
-        Self {
-            controller: 0,
-            pawn,
-        }
+        Self::get_entity(cs2, pawn_handle).map(|pawn| Self {
+            controller,
+            pawn: BaseEntity::new(pawn),
+        })
     }
 
     pub fn get_client_entity(cs2: &CS2, index: usize) -> Option<usize> {
@@ -72,7 +77,7 @@ impl Player {
         }
         let entity = cs2
             .process
-            .read(bucket_ptr + cs2.offsets.entity_identity.size as usize * index_in_bucket);
+            .read(bucket_ptr + cs2.offsets.entity_identity.size * index_in_bucket);
         if entity == 0 {
             return None;
         }
@@ -92,7 +97,7 @@ impl Player {
 
         let entity = cs2
             .process
-            .read(bucket_ptr + cs2.offsets.entity_identity.size as usize * index_in_bucket);
+            .read(bucket_ptr + cs2.offsets.entity_identity.size * index_in_bucket);
         if entity == 0 {
             return None;
         }
@@ -100,7 +105,7 @@ impl Player {
     }
 
     pub fn health(&self, cs2: &CS2) -> i32 {
-        let health = cs2.process.read(self.pawn + cs2.offsets.pawn.health);
+        let health = cs2.process.read(*self.pawn + cs2.offsets.pawn.health);
         if !(0..=100).contains(&health) {
             return 0;
         }
@@ -108,15 +113,15 @@ impl Player {
     }
 
     pub fn armor(&self, cs2: &CS2) -> i32 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.armor)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.armor)
     }
 
     pub fn team(&self, cs2: &CS2) -> u8 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.team)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.team)
     }
 
     pub fn life_state(&self, cs2: &CS2) -> u8 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.life_state)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.life_state)
     }
 
     pub fn steam_id(&self, cs2: &CS2) -> u64 {
@@ -133,7 +138,7 @@ impl Player {
     pub fn spectator_target(&self, cs2: &CS2) -> Option<Self> {
         let observer_services: usize = cs2
             .process
-            .read(self.pawn + cs2.offsets.pawn.observer_services);
+            .read(*self.pawn + cs2.offsets.pawn.observer_services);
         if observer_services == 0 {
             return None;
         }
@@ -146,12 +151,12 @@ impl Player {
         }
 
         let pawn = Player::get_entity(cs2, target)?;
-        Some(Player::pawn(pawn))
+        Some(Player::entity(pawn))
     }
 
     pub fn deathmatch_immunity(&self, cs2: &CS2) -> bool {
         cs2.process
-            .read::<u8>(self.pawn + cs2.offsets.pawn.deathmatch_immunity)
+            .read::<u8>(*self.pawn + cs2.offsets.pawn.deathmatch_immunity)
             != 0
     }
 
@@ -181,7 +186,7 @@ impl Player {
     fn weapon_handle(&self, cs2: &CS2) -> Option<i32> {
         let weapon_services: usize = cs2
             .process
-            .read(self.pawn + cs2.offsets.pawn.weapon_services);
+            .read(*self.pawn + cs2.offsets.pawn.weapon_services);
         if weapon_services == 0 {
             return None;
         }
@@ -214,7 +219,7 @@ impl Player {
         let mut weapons = vec![];
         let weapon_services: usize = cs2
             .process
-            .read(self.pawn + cs2.offsets.pawn.weapon_services);
+            .read(*self.pawn + cs2.offsets.pawn.weapon_services);
         if weapon_services == 0 {
             return weapons;
         }
@@ -260,7 +265,7 @@ impl Player {
 
     pub fn game_scene_node(&self, cs2: &CS2) -> usize {
         cs2.process
-            .read(self.pawn + cs2.offsets.pawn.game_scene_node)
+            .read(*self.pawn + cs2.offsets.pawn.game_scene_node)
     }
 
     fn is_dormant(&self, cs2: &CS2) -> bool {
@@ -278,7 +283,7 @@ impl Player {
 
     pub fn eye_position(&self, cs2: &CS2) -> Vec3 {
         let position = self.position(cs2);
-        let eye_offset: Vec3 = cs2.process.read(self.pawn + cs2.offsets.pawn.eye_offset);
+        let eye_offset: Vec3 = cs2.process.read(*self.pawn + cs2.offsets.pawn.eye_offset);
 
         position + eye_offset
     }
@@ -325,17 +330,17 @@ impl Player {
     }
 
     pub fn shots_fired(&self, cs2: &CS2) -> i32 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.shots_fired)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.shots_fired)
     }
 
     pub fn fov_multiplier(&self, cs2: &CS2) -> f32 {
         cs2.process
-            .read(self.pawn + cs2.offsets.pawn.fov_multiplier)
+            .read(*self.pawn + cs2.offsets.pawn.fov_multiplier)
     }
 
     pub fn spotted_mask(&self, cs2: &CS2) -> i64 {
         cs2.process
-            .read(self.pawn + cs2.offsets.pawn.spotted_state + cs2.offsets.spotted_state.mask)
+            .read(*self.pawn + cs2.offsets.pawn.spotted_state + cs2.offsets.spotted_state.mask)
     }
 
     pub fn is_valid(&self, cs2: &CS2) -> bool {
@@ -360,13 +365,13 @@ impl Player {
 
     pub fn is_flashed(&self, cs2: &CS2) -> bool {
         cs2.process
-            .read::<f32>(self.pawn + cs2.offsets.pawn.flash_duration)
+            .read::<f32>(*self.pawn + cs2.offsets.pawn.flash_duration)
             > 0.2
     }
 
     pub fn is_scoped(&self, cs2: &CS2) -> bool {
         cs2.process
-            .read::<u8>(self.pawn + cs2.offsets.pawn.is_scoped)
+            .read::<u8>(*self.pawn + cs2.offsets.pawn.is_scoped)
             != 0
     }
 
@@ -377,17 +382,17 @@ impl Player {
 
     pub fn rotation(&self, cs2: &CS2) -> f32 {
         cs2.process
-            .read(self.pawn + cs2.offsets.pawn.eye_angles + 0x04)
+            .read(*self.pawn + cs2.offsets.pawn.eye_angles + 0x04)
     }
 
     pub fn view_angles(&self, cs2: &CS2) -> Vec2 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.view_angles)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.view_angles)
     }
 
     pub fn aim_punch(&self, cs2: &CS2) -> Vec2 {
         let aim_punch_services: usize = cs2
             .process
-            .read(self.pawn + cs2.offsets.pawn.aim_punch_services);
+            .read(*self.pawn + cs2.offsets.pawn.aim_punch_services);
         if aim_punch_services == 0 {
             return Vec2::ZERO;
         }
@@ -410,7 +415,9 @@ impl Player {
     }
 
     pub fn has_defuser(&self, cs2: &CS2) -> bool {
-        let item_services: usize = cs2.process.read(self.pawn + cs2.offsets.pawn.item_services);
+        let item_services: usize = cs2
+            .process
+            .read(*self.pawn + cs2.offsets.pawn.item_services);
         if item_services == 0 {
             return false;
         }
@@ -421,7 +428,9 @@ impl Player {
     }
 
     pub fn has_helmet(&self, cs2: &CS2) -> bool {
-        let item_services: usize = cs2.process.read(self.pawn + cs2.offsets.pawn.item_services);
+        let item_services: usize = cs2
+            .process
+            .read(*self.pawn + cs2.offsets.pawn.item_services);
         if item_services == 0 {
             return false;
         }
@@ -495,7 +504,7 @@ impl Player {
     pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {
         let index: i32 = cs2
             .process
-            .read(self.pawn + cs2.offsets.pawn.crosshair_entity);
+            .read(*self.pawn + cs2.offsets.pawn.crosshair_entity);
         if index == -1 {
             return None;
         }
@@ -503,7 +512,7 @@ impl Player {
         let entity = Player::get_client_entity(cs2, index as usize)?;
         let player = Player {
             controller: 0,
-            pawn: entity,
+            pawn: BaseEntity::new(entity),
         };
         if !player.is_valid(cs2) {
             return None;
@@ -512,11 +521,11 @@ impl Player {
     }
 
     pub fn velocity(&self, cs2: &CS2) -> Vec3 {
-        cs2.process.read(self.pawn + cs2.offsets.pawn.velocity)
+        cs2.process.read(*self.pawn + cs2.offsets.pawn.velocity)
     }
 
     fn is_in_air(&self, cs2: &CS2) -> bool {
-        let flags = cs2.process.read::<i32>(self.pawn + cs2.offsets.pawn.flags);
+        let flags = cs2.process.read::<i32>(*self.pawn + cs2.offsets.pawn.flags);
         // FL_ONGROUND = (1 << 0)
         (flags & 1) == 0
     }
@@ -554,17 +563,17 @@ impl Player {
 
     pub fn no_flash(&self, cs2: &CS2, flash_alpha: f32) {
         let flash_alpha = flash_alpha.clamp(0.0, 255.0);
-        let current_alpha: f32 = cs2.process.read(self.pawn + cs2.offsets.pawn.flash_alpha);
+        let current_alpha: f32 = cs2.process.read(*self.pawn + cs2.offsets.pawn.flash_alpha);
         if current_alpha != flash_alpha {
             cs2.process
-                .write(self.pawn + cs2.offsets.pawn.flash_alpha, flash_alpha);
+                .write(*self.pawn + cs2.offsets.pawn.flash_alpha, flash_alpha);
         }
     }
 
     pub fn set_fov(&self, cs2: &CS2, value: u32) {
         let camera_service = cs2
             .process
-            .read::<usize>(self.pawn + cs2.offsets.pawn.camera_services);
+            .read::<usize>(*self.pawn + cs2.offsets.pawn.camera_services);
         if camera_service == 0 {
             return;
         }

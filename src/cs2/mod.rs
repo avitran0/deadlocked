@@ -29,7 +29,6 @@ pub mod bones;
 pub mod bvh;
 pub mod entity;
 mod features;
-mod find_offsets;
 mod input;
 pub mod key_codes;
 mod offsets;
@@ -228,10 +227,10 @@ impl CS2 {
             data.entities.push(match entity {
                 Entity::Weapon { weapon, entity } => EntityInfo::Weapon {
                     weapon: weapon.clone(),
-                    position: Player::entity(*entity).position(self),
+                    position: Player::entity(**entity).position(self),
                     ammo: (
-                        Weapon::clip_ammo(*entity, self),
-                        Weapon::reserve_ammo(*entity, self),
+                        Weapon::clip_ammo(**entity, self),
+                        Weapon::reserve_ammo(**entity, self),
                     ),
                 },
                 Entity::Inferno(inferno) => EntityInfo::Inferno(inferno.info(self)),

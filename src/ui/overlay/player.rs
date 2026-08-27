@@ -1,4 +1,7 @@
-use std::{collections::HashMap, time::{Duration, Instant}};
+use std::{
+    collections::HashMap,
+    time::{Duration, Instant},
+};
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use glam::vec3;

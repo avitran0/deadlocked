@@ -1,194 +1,337 @@
-#[derive(Default)]
-pub struct LibraryOffsets {
-    pub client: usize,
-    pub engine: usize,
-    pub tier0: usize,
-    pub input: usize,
-    pub sdl: usize,
-    pub schema: usize,
+use crate::{
+    constants::cs2,
+    cs2::{CS2, schema::Schema},
+};
+
+macro_rules! field_stmt {
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, lib ($lib:ident)) => {{
+        $off.$field.$fdef = $proc.module_base_address(cs2::$lib)?;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, interface ($lib:ident, $name:literal)) => {{
+        let Some($fdef) = $proc.get_interface_offset($off.library.$lib, $name) else {
+            utils::warn!(concat!(
+                "could not find '",
+                stringify!($fdef),
+                "' interface offset"
+            ));
+            return None;
+        };
+        $off.$field.$fdef = $fdef;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, convar ($name:literal)) => {{
+        let Some($fdef) = $proc.get_convar($off.interface.cvar, $name) else {
+            utils::warn!(concat!(
+                "could not find '",
+                stringify!($fdef),
+                "' convar offset"
+            ));
+            return None;
+        };
+        $off.$field.$fdef = $fdef;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, scan ($sig:literal, $lib:ident, rel($a:literal, $b:literal))) => {{
+        let Some($fdef) = $proc.scan($sig, $off.library.$lib) else {
+            utils::warn!(concat!("could not find '", stringify!($fdef), "' offset"));
+            return None;
+        };
+        $off.$field.$fdef = $proc.get_relative_address($fdef, $a, $b);
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, scan ($sig:literal, $lib:ident, rel($a:literal, $b:literal, $c:literal))) => {{
+        let Some($fdef) = $proc.scan($sig, $off.library.$lib) else {
+            utils::warn!(concat!("could not find '", stringify!($fdef), "' offset"));
+            return None;
+        };
+        $off.$field.$fdef = $proc.get_relative_address($fdef + $a, $b, $c);
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, scan_ptr ($sig:literal, $lib:ident, rel($a:literal, $b:literal))) => {{
+        let Some($fdef) = $proc.scan($sig, $off.library.$lib) else {
+            utils::warn!(concat!("could not find '", stringify!($fdef), "' offset"));
+            return None;
+        };
+        let $fdef = $proc.get_relative_address($fdef, $a, $b);
+        $off.$field.$fdef = $proc.read($fdef);
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, class_size ($class:literal)) => {{
+        $off.$field.$fdef = $client.get_class($class)?.size() as _;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, schema ($class:literal, $field_name:literal)) => {{
+        $off.$field.$fdef = $client.get($class, $field_name)?;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, phys ($class:literal, $field_name:literal)) => {{
+        $off.$field.$fdef = $physics.get($class, $field_name)?;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, schema_sub ($class:literal, $field_name:literal, $sub:literal)) => {{
+        $off.$field.$fdef = $client.get($class, $field_name)? - $sub;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, deref ($src:ident, $off_lit:literal, $add_lit:literal)) => {{
+        $off.$field.$fdef = $proc.read::<usize>($off.$field.$src + $off_lit) + $add_lit;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, interface_fn ($grp:ident, $src:ident, $idx:literal, $off_lit:literal)) => {{
+        $off.$field.$fdef = $proc
+            .read::<u32>($proc.get_interface_function($off.$grp.$src, $idx) + $off_lit)
+            as usize;
+    }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, module_export ($lib:ident, $name:literal, rel($a:literal, $b:literal, $c:literal, $d:literal))) => {{
+        let Some(window) = $proc.get_module_export($off.library.$lib, $name) else {
+            utils::warn!(concat!("could not find '", stringify!($fdef), "' offset"));
+            return None;
+        };
+        let window = $proc.get_relative_address(window, $a, $b);
+        let window = $proc.read(window);
+        $off.$field.$fdef = $proc.get_relative_address(window, $c, $d);
+    }};
 }
 
-#[derive(Default)]
-pub struct InterfaceOffsets {
-    pub resource: usize,
-    pub entity: usize,
-    pub cvar: usize,
-    pub input: usize,
+macro_rules! schema {
+    (@struct $field:ident : $name:ident { $($def:tt)* } $($rest:tt)*) => {
+        schema!(@sdef $name $($def)*);
+        schema!(@struct $($rest)*);
+    };
+    (@struct $scope:ident : { $($inner:tt)* } $($rest:tt)*) => {
+        schema!(@struct $($inner)*);
+        schema!(@struct $($rest)*);
+    };
+    (@struct) => {};
+
+    (@sdef $name:ident $($fdef:ident : $kind:ident $args:tt ,)*) => {
+        #[derive(Default)]
+        pub struct $name {
+            $(pub $fdef: usize,)*
+        }
+    };
+
+    (@offsets_acc { $($fields:tt)* } $field:ident : $name:ident { $($def:tt)* } $($rest:tt)*) => {
+        schema!(@offsets_acc { $($fields)* pub $field: $name, } $($rest)*);
+    };
+    (@offsets_acc { $($fields:tt)* } $scope:ident : { $($inner:tt)* } $($rest:tt)*) => {
+        schema!(@offsets_acc { $($fields)* } $($inner)* $($rest)*);
+    };
+    (@offsets_acc { $($fields:tt)* }) => {
+        #[derive(Default)]
+        pub struct Offsets {
+            $($fields)*
+        }
+    };
+
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident $field:ident : $name:ident { $($fdef:ident : $kind:ident $args:tt ,)* } $($rest:tt)+) => {
+        $(field_stmt!($proc, $off, $client, $physics, $field, $fdef, $kind $args);)*
+        schema!(@fn $proc $off $schema $client $physics $($rest)*);
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident $field:ident : $name:ident { $($fdef:ident : $kind:ident $args:tt ,)* }) => {
+        $(field_stmt!($proc, $off, $client, $physics, $field, $fdef, $kind $args);)*
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident client: { $($inner:tt)* } $($rest:tt)+) => {
+        let $schema = Schema::new($proc, $off.library.schema)?;
+        let $client = $schema.get_library(cs2::CLIENT_LIB)?;
+        schema!(@fn $proc $off $schema $client $physics $($inner)* $($rest)*);
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident client: { $($inner:tt)* }) => {
+        let $schema = Schema::new($proc, $off.library.schema)?;
+        let $client = $schema.get_library(cs2::CLIENT_LIB)?;
+        schema!(@fn $proc $off $schema $client $physics $($inner)*)
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident physics: { $($inner:tt)* } $($rest:tt)+) => {
+        let $physics = $schema.get_library(cs2::PHYSICS_LIB)?;
+        schema!(@fn $proc $off $schema $client $physics $($inner)* $($rest)*);
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident physics: { $($inner:tt)* }) => {
+        let $physics = $schema.get_library(cs2::PHYSICS_LIB)?;
+        schema!(@fn $proc $off $schema $client $physics $($inner)*)
+    };
+    (@fn $proc:ident $off:ident $schema:ident $client:ident $physics:ident) => {};
+
+    ($($group:tt)*) => {
+        schema!(@struct $($group)*);
+        schema!(@offsets_acc {} $($group)*);
+        macro_rules! find_offsets_body {
+            ($proc:ident, $off:ident, $schema:ident, $client:ident, $physics:ident) => {
+                schema!(@fn $proc $off $schema $client $physics $($group)*)
+            };
+        }
+    };
 }
 
-#[derive(Default)]
-pub struct DirectOffsets {
-    pub local_player: usize,
-    pub button_state: usize,
-    pub view_matrix: usize,
-    pub sdl_window: usize,
-    pub planted_c4: usize,
-    pub global_vars: usize,
-    pub vphys_world: usize,
+schema! {
+    library: LibraryOffsets {
+        client: lib(CLIENT_LIB),
+        engine: lib(ENGINE_LIB),
+        tier0: lib(TIER0_LIB),
+        input: lib(INPUT_LIB),
+        sdl: lib(SDL_LIB),
+        schema: lib(SCHEMA_LIB),
+        physics: lib(PHYSICS_LIB),
+    }
+
+    interface: InterfaceOffsets {
+        resource: interface(engine, "GameResourceServiceClientV0"),
+        entity: deref(resource, 0x50, 0x10),
+        cvar: interface(tier0, "VEngineCvar0"),
+        input: interface(input, "InputSystemVersion0"),
+    }
+
+    direct: DirectOffsets {
+        local_player: scan("48 83 3D ? ? ? ? 00 0F 95 C0 C3", client, rel(0x03, 0x08)),
+        button_state: interface_fn(interface, input, 19, 0x14),
+        view_matrix: scan("C6 83 ? ? 00 00 01 4C 8D 05", client, rel(0x0A, 0x00, 0x04)),
+        sdl_window: module_export(sdl, "SDL_GetKeyboardFocus", rel(0x02, 0x06, 0x03, 0x07)),
+        global_vars: scan("48 8D 05 ? ? ? ? 45 31 E4 48 8B 00 8B 78 10", client, rel(0x03, 0x07)),
+        vphys_world: scan_ptr("4c 8d 35 ? ? ? ? 49 8b 3e e8 ? ? ? ? 48 89 c2", client, rel(3, 7)),
+        build_date: scan("4c 89 e6 e8 ? ? ? ? 48 8d 35 ? ? ? ? 48 8d 3d", engine, rel(11, 15)),
+    }
+
+    convar: ConvarOffsets {
+        ffa: convar("mp_teammates_are_enemies"),
+        sensitivity: convar("sensitivity"),
+    }
+
+    client: {
+        controller: PlayerControllerOffsets {
+            steam_id: schema("CBasePlayerController", "m_steamID"),
+            color: schema("CCSPlayerController", "m_iCompTeammateColor"),
+            name: schema("CBasePlayerController", "m_iszPlayerName"),
+            pawn: schema("CBasePlayerController", "m_hPawn"),
+            desired_fov: schema("CBasePlayerController", "m_iDesiredFOV"),
+            owner_entity: schema("C_BaseEntity", "m_hOwnerEntity"),
+            rank: schema("CCSPlayerController", "m_iCompetitiveRanking"),
+            rank_type: schema("CCSPlayerController", "m_iCompetitiveRankType"),
+            action_tracking_services: schema("CCSPlayerController", "m_pActionTrackingServices"),
+        }
+        entity: EntityOffsets {
+            health: schema("C_BaseEntity", "m_iHealth"),
+            max_health: schema("C_BaseEntity", "m_iMaxHealth"),
+            team: schema("C_BaseEntity", "m_iTeamNum"),
+            life_state: schema("C_BaseEntity", "m_lifeState"),
+            game_scene_node: schema("C_BaseEntity", "m_pGameSceneNode"),
+            velocity: schema("C_BaseEntity", "m_vecAbsVelocity"),
+        }
+        pawn: PawnOffsets {
+            controller: schema("C_BasePlayerPawn", "m_hController"),
+            armor: schema("C_CSPlayerPawn", "m_ArmorValue"),
+            fov_multiplier: schema("C_BasePlayerPawn", "m_flFOVSensitivityAdjust"),
+            eye_offset: schema("C_BaseModelEntity", "m_vecViewOffset"),
+            shots_fired: schema("C_CSPlayerPawn", "m_iShotsFired"),
+            view_angles: schema("C_BasePlayerPawn", "v_angle"),
+            eye_angles: schema("C_CSPlayerPawn", "m_angEyeAngles"),
+            flags: schema("C_BaseEntity", "m_fFlags"),
+            crosshair_entity: schema("C_CSPlayerPawn", "m_iIDEntIndex"),
+            is_scoped: schema("C_CSPlayerPawn", "m_bIsScoped"),
+            deathmatch_immunity: schema("C_CSPlayerPawn", "m_bGunGameImmunity"),
+            observer_services: schema("C_BasePlayerPawn", "m_pObserverServices"),
+            spotted_state: schema("C_CSPlayerPawn", "m_entitySpottedState"),
+            flash_alpha: schema("C_CSPlayerPawnBase", "m_flFlashMaxAlpha"),
+            flash_duration: schema("C_CSPlayerPawnBase", "m_flFlashDuration"),
+            camera_services: schema("C_BasePlayerPawn", "m_pCameraServices"),
+            item_services: schema("C_BasePlayerPawn", "m_pItemServices"),
+            weapon_services: schema("C_BasePlayerPawn", "m_pWeaponServices"),
+            aim_punch_services: schema("C_CSPlayerPawn", "m_pAimPunchServices"),
+            bullet_services: schema("C_CSPlayerPawn", "m_pBulletServices"),
+            health: schema("C_BaseEntity", "m_iHealth"),
+            team: schema("C_BaseEntity", "m_iTeamNum"),
+            life_state: schema("C_BaseEntity", "m_lifeState"),
+            game_scene_node: schema("C_BaseEntity", "m_pGameSceneNode"),
+            velocity: schema("C_BaseEntity", "m_vecAbsVelocity"),
+        }
+        game_scene_node: GameSceneNodeOffsets {
+            dormant: schema("CGameSceneNode", "m_bDormant"),
+            origin: schema("CGameSceneNode", "m_vecAbsOrigin"),
+            model_state: schema("CSkeletonInstance", "m_modelState"),
+        }
+        smoke: SmokeOffsets {
+            did_smoke_effect: schema("C_SmokeGrenadeProjectile", "m_bDidSmokeEffect"),
+            smoke_color: schema("C_SmokeGrenadeProjectile", "m_vSmokeColor"),
+        }
+        molotov: MolotovOffsets {
+            is_incendiary: schema("C_MolotovProjectile", "m_bIsIncGrenade"),
+        }
+        inferno: InfernoOffsets {
+            is_burning: schema("C_Inferno", "m_bFireIsBurning"),
+            fire_count: schema("C_Inferno", "m_fireCount"),
+            fire_positions: schema("C_Inferno", "m_firePositions"),
+        }
+        spotted_state: SpottedStateOffsets {
+            spotted: schema("EntitySpottedState_t", "m_bSpotted"),
+            mask: schema("EntitySpottedState_t", "m_bSpottedByMask"),
+        }
+        camera_services: CameraServicesOffsets {
+            fov: schema("CCSPlayerBase_CameraServices", "m_iFOV"),
+        }
+        item_services: ItemServicesOffsets {
+            has_defuser: schema("CCSPlayer_ItemServices", "m_bHasDefuser"),
+            has_helmet: schema("CCSPlayer_ItemServices", "m_bHasHelmet"),
+        }
+        weapon_services: WeaponServicesOffsets {
+            weapons: schema("CPlayer_WeaponServices", "m_hMyWeapons"),
+            active_weapon: schema("CPlayer_WeaponServices", "m_hActiveWeapon"),
+        }
+        aim_punch_services: AimPunchServicesOffsets {
+            aim_punch_cache: schema_sub("CCSPlayer_AimPunchServices", "m_unpredictableBaseTick", 0x18),
+        }
+        action_tracking: ActionTrackingServicesOffsets {
+            round_kills: schema("CCSPlayerController_ActionTrackingServices", "m_iNumRoundKills"),
+            round_damage: schema("CCSPlayerController_ActionTrackingServices", "m_flTotalRoundDamageDealt"),
+            per_round_stats: schema("CCSPlayerController_ActionTrackingServices", "m_perRoundStats"),
+        }
+        bullet_services: BulletServicesOffsets {
+            total_hits: schema("CCSPlayer_BulletServices", "m_totalHitsOnServer"),
+        }
+        per_round_stats: PerRoundStatsOffsets {
+            kills: schema("CSPerRoundStats_t", "m_iKills"),
+            deaths: schema("CSPerRoundStats_t", "m_iDeaths"),
+            assists: schema("CSPerRoundStats_t", "m_iAssists"),
+            damage: schema("CSPerRoundStats_t", "m_iDamage"),
+            size: class_size("CSPerRoundStats_t"),
+        }
+        observer_services: ObserverServicesOffsets {
+            target: schema("CPlayer_ObserverServices", "m_hObserverTarget"),
+        }
+        econ_item_view: EconItemViewOffsets {
+            item_definition_index: schema("C_EconItemView", "m_iItemDefinitionIndex"),
+        }
+        weapon: WeaponOffsets {
+            attribute_manager: schema("C_EconEntity", "m_AttributeManager"),
+            item: schema("C_AttributeContainer", "m_Item"),
+            item_definition_index: schema("C_EconItemView", "m_iItemDefinitionIndex"),
+            clip_primary: schema("C_BasePlayerWeapon", "m_iClip1"),
+            reserve_ammo: schema("C_BasePlayerWeapon", "m_pReserveAmmo"),
+        }
+        planted_c4: PlantedC4Offsets {
+            is_ticking: schema("C_PlantedC4", "m_bBombTicking"),
+            blow_time: schema("C_PlantedC4", "m_flC4Blow"),
+            being_defused: schema("C_PlantedC4", "m_bBeingDefused"),
+            is_defused: schema("C_PlantedC4", "m_bBombDefused"),
+            has_exploded: schema("C_PlantedC4", "m_bHasExploded"),
+            defuse_time: schema("C_PlantedC4", "m_flDefuseCountDown"),
+            defuse_time_left: schema("C_PlantedC4", "m_flDefuseCountDown"),
+        }
+        model_state: ModelState {
+            skeleton_instance: schema("CBodyComponentSkeletonInstance", "m_skeletonInstance"),
+        }
+        entity_identity: EntityIdentityOffsets {
+            size: class_size("CEntityIdentity"),
+        }
+    }
+
+    physics: {
+        hull: PhysHullOffsets {
+            vertices: phys("RnHull_t", "m_VertexPositions"),
+            edges: phys("RnHull_t", "m_Edges"),
+            faces: phys("RnHull_t", "m_Faces"),
+            flags: phys("RnHull_t", "m_nFlags"),
+        }
+        mesh: PhysMeshOffsets {
+            vertices: phys("RnMesh_t", "m_Vertices"),
+            triangles: phys("RnMesh_t", "m_Triangles"),
+            materials: phys("RnMesh_t", "m_Materials"),
+            flags: phys("RnMesh_t", "m_nFlags"),
+        }
+    }
 }
 
-#[derive(Default)]
-pub struct ConvarOffsets {
-    pub ffa: usize,
-    pub sensitivity: usize,
-}
-
-#[derive(Default)]
-pub struct PlayerControllerOffsets {
-    pub steam_id: usize,                 // u64 (m_steamID)
-    pub name: usize,                     // Pointer -> String (m_iszPlayerName)
-    pub pawn: usize,                     // Handle -> Pawn (m_hPawn)
-    pub desired_fov: usize,              // u32 (m_iDesiredFOV)
-    pub owner_entity: usize,             // i32 (h_pOwnerEntity)
-    pub color: usize,                    // i32 (m_iCompTeammateColor)
-    pub action_tracking_services: usize, // Pointer -> ActionTrackingServices (m_pActionTrackingServices)
-}
-
-#[derive(Default)]
-pub struct PawnOffsets {
-    pub health: usize,              // i32 (m_iHealth)
-    pub armor: usize,               // i32 (m_ArmorValue)
-    pub team: usize,                // i32 (m_iTeamNum)
-    pub life_state: usize,          // i32 (m_lifeState)
-    pub fov_multiplier: usize,      // f32 (m_flFOVSensitivityAdjust)
-    pub game_scene_node: usize,     // Pointer -> GameSceneNode (m_pGameSceneNode)
-    pub eye_offset: usize,          // Vec3 (m_vecViewOffset)
-    pub eye_angles: usize,          // Vec3 (m_angEyeAngles)
-    pub velocity: usize,            // Vec3 (m_vecAbsVelocity)
-    pub flags: usize,               // i32 (m_fFlags)
-    pub shots_fired: usize,         // i32 (m_iShotsFired)
-    pub view_angles: usize,         // Vec2 (v_angle)
-    pub spotted_state: usize,       // SpottedState (m_entitySpottedState)
-    pub crosshair_entity: usize,    // EntityIndex (m_iIDEntIndex)
-    pub is_scoped: usize,           // bool (m_bIsScoped)
-    pub flash_alpha: usize,         // f32 (m_flFlashMaxAlpha)
-    pub flash_duration: usize,      // f32 (m_flFlashDuration)
-    pub deathmatch_immunity: usize, // bool (m_bGunGameImmunity)
-    pub camera_services: usize,     // Pointer -> CameraServices (m_pCameraServices)
-    pub item_services: usize,       // Pointer -> ItemServices (m_pItemServices)
-    pub weapon_services: usize,     // Pointer -> WeaponSercies (m_pWeaponServices)
-    pub observer_services: usize,   // Pointer -> ObserverServices (m_pObserverServices)
-    pub aim_punch_services: usize,  // Pointer -> AimPunchServices (m_pAimPunchServices)
-}
-
-#[derive(Default)]
-pub struct GameSceneNodeOffsets {
-    pub dormant: usize,     // bool (m_bDormant)
-    pub origin: usize,      // Vec3 (m_vecAbsOrigin)
-    pub model_state: usize, // Pointer -> ModelState (m_modelState)
-}
-
-#[derive(Default)]
-pub struct ModelState {
-    pub skeleton_instance: usize, // CSkeletonInstance (m_skeletonInstance)
-}
-
-#[derive(Default)]
-pub struct SmokeOffsets {
-    pub did_smoke_effect: usize, // bool (m_bDidSmokeEffect)
-    pub smoke_color: usize,      // Vec3 (m_vSmokeColor)
-}
-
-#[derive(Default)]
-pub struct MolotovOffsets {
-    pub is_incendiary: usize, // bool (m_bIsIncGrenade)
-}
-
-#[derive(Default)]
-pub struct InfernoOffsets {
-    pub is_burning: usize,     // bool[64] (m_bFireIsBurning)
-    pub fire_count: usize,     // i32 (m_fireCount)
-    pub fire_positions: usize, // Vec3[64] (m_firePositions)
-}
-
-#[derive(Default)]
-pub struct SpottedStateOffsets {
-    pub mask: usize, // i32[2] or u64? (m_bSpottedByMask)
-}
-
-#[derive(Default)]
-pub struct ActionTrackingServicesOffsets {
-    pub round_kills: usize,  // i32 (m_iNumRoundKills)
-    pub round_damage: usize, // f32 (m_flTotalRoundDamageDealt)
-}
-
-#[derive(Default)]
-pub struct CameraServicesOffsets {
-    pub fov: usize, // u32 (m_iFOV)
-}
-
-#[derive(Default)]
-pub struct ItemServicesOffsets {
-    pub has_defuser: usize, // bool (m_bHasDefuser)
-    pub has_helmet: usize,  // bool (m_bHasHelmet)
-}
-
-#[derive(Default)]
-pub struct WeaponServicesOffsets {
-    pub active_weapon: usize, // Handle<Weapon> (m_hActiveWeapon)
-    pub weapons: usize,       // Pointer -> Vec<Pointer -> Weapon> (m_hMyWeapons)
-}
-
-#[derive(Default)]
-pub struct ObserverServicesOffsets {
-    pub target: usize, // Handle -> BaseEntity (m_hObserverTarget)
-}
-
-#[derive(Default)]
-pub struct AimPunchServicesOffsets {
-    pub aim_punch_cache: usize, // Vec<Vec3> (m_unpredictableBaseTick - 0x18)
-}
-
-#[derive(Default)]
-pub struct WeaponOffsets {
-    pub attribute_manager: usize, // AttributeContainer (m_AttributeManager)
-    pub item: usize,              // EconItemView (m_Item)
-    pub clip_primary: usize,      // i32 (m_iClip1)
-    pub reserve_ammo: usize,      // i32[2] (m_pReserveAmmo)
-}
-
-#[derive(Default)]
-pub struct EconItemViewOffsets {
-    pub item_definition_index: usize, // u16 (m_iItemDefinitionIndex)
-}
-
-#[derive(Default)]
-pub struct PlantedC4Offsets {
-    pub is_ticking: usize,       // bool (m_bBombTicking)
-    pub blow_time: usize,        // f32 (m_flC4Blow)
-    pub being_defused: usize,    // bool (m_bBeingDefused)
-    pub is_defused: usize,       // bool (m_bBombDefused)
-    pub has_exploded: usize,     // bool (m_bHasExploded)
-    pub defuse_time_left: usize, // u64 (m_flDefuseCountDown)
-}
-
-#[derive(Default)]
-pub struct EntityIdentityOffsets {
-    pub size: i32,
-}
-
-#[derive(Default)]
-pub struct Offsets {
-    pub library: LibraryOffsets,
-    pub interface: InterfaceOffsets,
-    pub direct: DirectOffsets,
-    pub convar: ConvarOffsets,
-    pub controller: PlayerControllerOffsets,
-    pub pawn: PawnOffsets,
-    pub game_scene_node: GameSceneNodeOffsets,
-    pub model_state: ModelState,
-    pub smoke: SmokeOffsets,
-    pub molotov: MolotovOffsets,
-    pub inferno: InfernoOffsets,
-    pub spotted_state: SpottedStateOffsets,
-    pub action_tracking: ActionTrackingServicesOffsets,
-    pub camera_services: CameraServicesOffsets,
-    pub item_services: ItemServicesOffsets,
-    pub weapon_services: WeaponServicesOffsets,
-    pub observer_services: ObserverServicesOffsets,
-    pub aim_punch_services: AimPunchServicesOffsets,
-    pub weapon: WeaponOffsets,
-    pub econ_item_view: EconItemViewOffsets,
-    pub planted_c4: PlantedC4Offsets,
-    pub entity_identity: EntityIdentityOffsets,
+impl CS2 {
+    pub fn find_offsets(&self) -> Option<Offsets> {
+        let proc = &self.process;
+        let mut offsets = Offsets::default();
+        find_offsets_body!(proc, offsets, schema, client, physics);
+        Some(offsets)
+    }
 }
