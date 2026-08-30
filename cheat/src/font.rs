@@ -4,7 +4,7 @@ use egui::{FontData, FontDefinitions, FontFamily};
 use serde::{Deserialize, Serialize};
 use strum::{EnumIter, IntoEnumIterator};
 
-const ICONS: &[u8] = include_bytes!("../resources/Icons.ttf");
+const ICONS: &[u8] = include_bytes!("../assets/Icons.ttf");
 
 #[derive(Debug, Clone, Default, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum Font {
@@ -19,11 +19,11 @@ pub enum Font {
 impl Font {
     pub fn data(&self) -> &'static [u8] {
         match self {
-            Self::DMSans => include_bytes!("../resources/DMSans.ttf"),
-            Self::FiraSans => include_bytes!("../resources/FiraSans.ttf"),
-            Self::Inter => include_bytes!("../resources/Inter.ttf"),
-            Self::Nunito => include_bytes!("../resources/Nunito.ttf"),
-            Self::Ubuntu => include_bytes!("../resources/Ubuntu.ttf"),
+            Self::DMSans => include_bytes!("../assets/DMSans.ttf"),
+            Self::FiraSans => include_bytes!("../assets/FiraSans.ttf"),
+            Self::Inter => include_bytes!("../assets/Inter.ttf"),
+            Self::Nunito => include_bytes!("../assets/Nunito.ttf"),
+            Self::Ubuntu => include_bytes!("../assets/Ubuntu.ttf"),
         }
     }
 

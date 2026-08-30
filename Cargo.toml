@@ -1,42 +1,8 @@
-[package]
-name = "deadlocked"
-version = "1.0.5"
-edition = "2024"
-
-[profile.dev]
-overflow-checks = false
+[workspace]
+members = ["cheat"]
+resolver = "3"
 
 [profile.release]
 codegen-units = 1
 lto = true
 strip = true
-
-[dependencies]
-utils.git = "https://codeberg.org/avitrano/utils"
-bytemuck = "1.24"
-egui = "0.36"
-egui_glow = { version = "0.36", features = ["winit"] }
-egui-winit = { version = "0.36", default-features = false, features = ["x11"] }
-epaint = { version = "0.36", features = ["serde"] }
-glam = { version = "0.33", features = ["bytemuck", "serde"] }
-glutin = { version = "0.32", default-features = false, features = [
-    "x11",
-    "egl",
-] }
-glutin-winit = { version = "0.5", default-features = false, features = [
-    "x11",
-    "egl",
-] }
-nix = { version = "0.31", features = ["ioctl"] }
-rand = "0.10"
-rand_distr = "0.6"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-strum = { version = "0.28", features = ["derive"] }
-toml = "1.0"
-ureq = { version = "3", features = ["json"] }
-uuid = { version = "1.18", features = ["v4", "serde"] }
-winit = { version = "0.30", default-features = false, features = ["x11"] }
-
-[features]
-read-only = []
