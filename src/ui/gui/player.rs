@@ -38,6 +38,10 @@ impl AppState {
                 if color_picker(ui, "Skeleton", &mut self.config.player.skeleton_color) {
                     self.send_config();
                 }
+
+                if color_picker(ui, "Tracers", &mut self.config.player.tracers_color) {
+                    self.send_config();
+                }
             });
         });
     }
@@ -58,6 +62,10 @@ impl AppState {
                 "ESP Hotkey",
                 &mut self.config.player.esp_hotkey,
             ) {
+                self.send_config();
+            }
+
+            if checkbox(ui, "Tracers by Zemfan", &mut self.config.player.tracers) {
                 self.send_config();
             }
 
@@ -86,6 +94,10 @@ impl AppState {
                 self.send_config();
             }
 
+            if combo_box(ui, "draw_tracers", "Tracers Mode", &mut self.config.player.tracers_mode) {
+                self.send_config();
+            }
+
             if checkbox(ui, "Head Circle", &mut self.config.player.head_circle) {
                 self.send_config();
             }
@@ -96,6 +108,28 @@ impl AppState {
                 "Only show visible players",
                 &mut self.config.player.visible_only,
             ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Max Tracer Distance Detect Distance",
+                DragValue::new(&mut self.config.player.max_tracers_dd_distance)
+                    .range(1..=10000)
+                    .max_decimals(0)
+                    .speed(1)
+                ) {
+                self.send_config();
+            }
+
+            if drag(
+                ui,
+                "Tracers Y Value %",
+                DragValue::new(&mut self.config.player.tracers_y_value)
+                    .range(1..=100)
+                    .max_decimals(2)
+                    .speed(1)
+                ) {
                 self.send_config();
             }
         });

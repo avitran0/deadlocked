@@ -6,11 +6,11 @@ use std::{
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
 
 use crate::{
-    config::player::{BoxMode, DrawMode},
+    config::player::{BoxMode, TracersMode, DrawMode},
     config::text::TextPosition,
     cs2::bones::Bones,
     data::{Data, PlayerData, SoundType},
-    math::{CYLINDER_SAMPLES, world_to_screen},
+    math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
     ui::app::AppState,
 };
 
@@ -29,6 +29,7 @@ impl AppState {
 
         self.player_box(painter, player, data, sound_alpha);
         self.skeleton(painter, player, data, sound_alpha);
+        self.player_tracers(painter, player, data, sound_alpha);
     }
 
     fn player_sound_alpha(
@@ -243,6 +244,36 @@ impl AppState {
                 );
             }
         }
+    }
+
+    fn player_tracers(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
+        if self.config.player.tracers == false || (self.config.player.visible_only && !player.visible) {
+            return;
+        }
+
+        let mode = &self.config.player.tracers_mode;
+
+        let alpha_col = alpha.unwrap_or(255.0) as u8;
+
+        let color: Color32 = match mode {
+            TracersMode::Color => {self.config.player.tracers_color},
+            TracersMode::Distance => {let dist: u8 = (data.local_player.position.distance(player.position).min(self.config.player.max_tracers_dd_distance as f32) / self.config.player.max_tracers_dd_distance as f32 * 255.0) as u8; Color32::from_rgba_unmultiplied(255 - dist, dist, 0, alpha_col)},
+            TracersMode::Health =>  {let h: u8 = ((player.health as f32 / player.max_health as f32) * 255.0) as u8; Color32::from_rgba_unmultiplied((255 - h) as u8, h, 0, alpha_col)},
+        };
+
+        let stroke = Stroke::new(self.config.hud.line_width, color);
+
+        let target_pos = player.position;
+
+        let center = Pos2::new(data.window_size.x / 2.0, data.window_size.y / 100.0 * self.config.player.tracers_y_value);
+        let target = world_to_screen_normalized(&target_pos, &data);
+
+        let points = vec![center, target];
+
+        painter.line(
+            points,
+            stroke
+        );
     }
 
     pub fn calculate_box_corners<K>(
