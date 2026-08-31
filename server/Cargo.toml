@@ -8,7 +8,7 @@ shared.workspace = true
 utils.workspace = true
 
 serde_json.workspace = true
+uuid.workspace = true
 
 axum = { version = "0.8", features = ["ws"] }
 tokio = { version = "1.53", features = ["full"] }
-uuid = { version = "1.26", features = ["v4"] }
