@@ -1,7 +1,6 @@
-use crate::cs2::{
-    CS2,
-    entity::{MolotovInfo, base_entity::BaseEntity},
-};
+use shared::MolotovInfo;
+
+use crate::cs2::{CS2, entity::base_entity::BaseEntity};
 
 #[derive(Clone, PartialEq)]
 pub struct Molotov {

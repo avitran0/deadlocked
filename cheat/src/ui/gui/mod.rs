@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use egui::{Align, Ui};
+use shared::Data;
 
 use crate::{
     config::{aim::WeaponConfig, write_config},
-    data::Data,
     message::{GameMessage, GameStatus},
     ui::{
         app::{App, AppState},

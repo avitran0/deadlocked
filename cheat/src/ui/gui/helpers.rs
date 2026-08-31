@@ -38,7 +38,7 @@ pub fn drag(ui: &mut Ui, label: &str, drag: DragValue) -> bool {
     .changed()
 }
 
-pub fn combo_box<T: std::fmt::Debug + strum::IntoEnumIterator + PartialEq>(
+pub fn combo_box<T: std::fmt::Display + strum::IntoEnumIterator + PartialEq>(
     ui: &mut Ui,
     id: &str,
     label: &str,
@@ -46,10 +46,10 @@ pub fn combo_box<T: std::fmt::Debug + strum::IntoEnumIterator + PartialEq>(
 ) -> bool {
     let mut changed = false;
     egui::ComboBox::new(id, label)
-        .selected_text(format!("{:?}", *value))
+        .selected_text(format!("{}", *value))
         .show_ui(ui, |ui| {
             for mode in T::iter() {
-                let text = format!("{:?}", mode);
+                let text = format!("{}", mode);
                 if ui.selectable_value(value, mode, text).clicked() {
                     changed = true;
                 }

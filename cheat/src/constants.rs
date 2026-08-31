@@ -1,5 +1,5 @@
 pub mod cs2 {
-    use crate::cs2::entity::weapon::Weapon;
+    use shared::Weapon;
 
     pub const PROCESS_NAME: &str = "cs2";
     pub const CLIENT_LIB: &str = "libclient.so";
@@ -14,7 +14,6 @@ pub mod cs2 {
         CLIENT_LIB, ENGINE_LIB, TIER0_LIB, INPUT_LIB, SDL_LIB, SCHEMA_LIB,
     ];
 
-    pub const WEAPON_UNKNOWN: &str = "unknown";
     pub const DEFAULT_FOV: u32 = 90;
 
     pub const SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT: f32 = 2000.0;
@@ -24,7 +23,7 @@ pub mod cs2 {
     pub const GRENADES: &[Weapon] = &[
         Weapon::Decoy,
         Weapon::Flashbang,
-        Weapon::HeGrenade,
+        Weapon::HE,
         Weapon::Incendiary,
         Weapon::Molotov,
         Weapon::Smoke,

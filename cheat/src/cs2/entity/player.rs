@@ -1,17 +1,13 @@
 use std::{collections::HashMap, ops::Deref};
 
 use glam::{Vec2, Vec3, vec2};
+use shared::{Bones, SoundType, Weapon, WeaponClass};
+use strum::IntoEnumIterator;
 
-use crate::{
-    constants::cs2,
-    cs2::{
-        bones::Bones,
-        entity::{base_entity::BaseEntity, weapon::Weapon},
-    },
-    data::SoundType,
+use crate::cs2::{
+    CS2,
+    entity::{base_entity::BaseEntity, weapon::weapon_from_handle},
 };
-
-use super::{CS2, weapon_class::WeaponClass};
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Player {
@@ -144,27 +140,8 @@ impl Player {
             != 0
     }
 
-    pub fn weapon_name(&self, cs2: &CS2) -> String {
-        // CEntityInstance
-        let Some(weapon_entity_instance) = self.weapon_address(cs2) else {
-            return String::from(cs2::WEAPON_UNKNOWN);
-        };
-        // CEntityIdentity, 0x10 = m_pEntity
-        let weapon_entity_identity: usize = cs2.process.read(weapon_entity_instance + 0x10);
-        if weapon_entity_identity == 0 {
-            return String::from(cs2::WEAPON_UNKNOWN);
-        }
-        // 0x20 = m_designerName (pointer -> string)
-        let weapon_name_pointer = cs2.process.read(weapon_entity_identity + 0x20);
-        if weapon_name_pointer == 0 {
-            return String::from(cs2::WEAPON_UNKNOWN);
-        }
-        let name = cs2.process.read_string(weapon_name_pointer);
-        name.replace("weapon_", "")
-    }
-
     pub fn weapon_class(&self, cs2: &CS2) -> WeaponClass {
-        WeaponClass::from_string(&self.weapon_name(cs2))
+        self.weapon(cs2).weapon_class()
     }
 
     fn weapon_handle(&self, cs2: &CS2) -> Option<i32> {
@@ -193,10 +170,10 @@ impl Player {
 
     pub fn weapon(&self, cs2: &CS2) -> Weapon {
         let Some(weapon_handle) = self.weapon_handle(cs2) else {
-            return Weapon::Unknown;
+            return Weapon::None;
         };
 
-        Weapon::from_handle(weapon_handle, cs2).unwrap_or_default()
+        weapon_from_handle(weapon_handle, cs2).unwrap_or_default()
     }
 
     pub fn all_weapons(&self, cs2: &CS2) -> Vec<Weapon> {
@@ -221,7 +198,7 @@ impl Player {
         for i in 0..length as usize {
             let weapon_handle = cs2.process.read(weapon_list + 0x04 * i);
 
-            let Some(weapon) = Weapon::from_handle(weapon_handle, cs2) else {
+            let Some(weapon) = weapon_from_handle(weapon_handle, cs2) else {
                 continue;
             };
 
@@ -277,8 +254,6 @@ impl Player {
     }
 
     pub fn all_bones(&self, cs2: &CS2) -> HashMap<Bones, Vec3> {
-        use strum::IntoEnumIterator;
-
         let mut bones = HashMap::with_capacity(20);
         let gs_node = self.game_scene_node(cs2);
         let bone_data: usize = cs2.process.read(
@@ -520,8 +495,7 @@ impl Player {
             return None;
         }
 
-        // awp and scout are not the only snipers...
-        if is_scoped && WeaponClass::from_string(current_weapon.as_ref()) == WeaponClass::Sniper {
+        if is_scoped && current_weapon.weapon_class() == WeaponClass::Sniper {
             Some(SoundType::Weapon)
         } else if speed > 150.0 || is_jumping || velocity.z < -200.0 {
             Some(SoundType::Footstep)

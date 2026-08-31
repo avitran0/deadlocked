@@ -4,12 +4,11 @@ use std::{
 };
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
+use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
     config::player::{BoxMode, DrawMode},
     config::text::TextPosition,
-    cs2::bones::Bones,
-    data::{Data, PlayerData, SoundType},
     math::{CYLINDER_SAMPLES, world_to_screen},
     ui::app::AppState,
 };
@@ -225,7 +224,7 @@ impl AppState {
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
-                player.weapon.to_icon(),
+                player.weapon.to_icon().to_string(),
                 icon_anchor,
                 icon_cat.align.to_align2(),
                 Self::alpha(icon_cat.color, alpha),

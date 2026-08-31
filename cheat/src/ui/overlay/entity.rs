@@ -1,14 +1,10 @@
 use std::{collections::HashMap, time::Instant};
 
 use egui::{Color32, Painter, Pos2, Stroke, vec2};
+use shared::{ChickenBones, ChickenInfo, Data, EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo};
 
 use crate::{
     config::player::DrawMode,
-    cs2::entity::{
-        EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo,
-        chicken::{ChickenBones, ChickenInfo},
-    },
-    data::Data,
     math::world_to_screen,
     ui::{app::AppState, overlay::convex_hull, trail::Trail},
 };

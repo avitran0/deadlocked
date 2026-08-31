@@ -2,9 +2,10 @@ use std::{collections::HashMap, fs::read_to_string};
 
 use glam::{Vec2, Vec3};
 use serde::{Deserialize, Serialize};
+use shared::Weapon;
 use uuid::Uuid;
 
-use crate::{config::BASE_PATH, constants::GRENADE_FILE_NAME, cs2::entity::weapon::Weapon};
+use crate::{config::BASE_PATH, constants::GRENADE_FILE_NAME};
 
 pub type GrenadeList = HashMap<String, Vec<Grenade>>;
 

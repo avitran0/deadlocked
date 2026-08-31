@@ -1,15 +1,11 @@
 use egui::{DragValue, Ui};
+use shared::Bones;
 use strum::IntoEnumIterator as _;
 
-use crate::{
-    cs2::bones::Bones,
-    ui::{
-        app::AppState,
-        drag_range::DragRange,
-        gui::helpers::{
-            checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, scroll,
-        },
-    },
+use crate::ui::{
+    app::AppState,
+    drag_range::DragRange,
+    gui::helpers::{checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, scroll},
 };
 
 #[derive(PartialEq)]

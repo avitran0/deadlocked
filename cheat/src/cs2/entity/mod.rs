@@ -1,19 +1,12 @@
-use glam::Vec3;
-use serde::{Deserialize, Serialize};
+use shared::{GrenadeInfo, Weapon};
 
 use crate::{
     constants::cs2::class,
     cs2::{
         CS2,
         entity::{
-            base_entity::BaseEntity,
-            chicken::{Chicken, ChickenInfo},
-            inferno::Inferno,
-            molotov::Molotov,
-            planted_c4::PlantedC4,
-            player::Player,
-            smoke::Smoke,
-            weapon::Weapon,
+            base_entity::BaseEntity, chicken::Chicken, inferno::Inferno, molotov::Molotov,
+            planted_c4::PlantedC4, player::Player, smoke::Smoke, weapon::weapon_from_entity,
         },
     },
 };
@@ -26,9 +19,7 @@ pub mod planted_c4;
 pub mod player;
 pub mod smoke;
 pub mod weapon;
-pub mod weapon_class;
 
-#[derive(Clone)]
 pub enum Entity {
     Weapon { weapon: Weapon, entity: BaseEntity },
     Inferno(Inferno),
@@ -38,68 +29,6 @@ pub enum Entity {
     HeGrenade(BaseEntity),
     Decoy(BaseEntity),
     Chicken(Chicken),
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub enum EntityInfo {
-    Weapon {
-        weapon: Weapon,
-        position: Vec3,
-        ammo: (i32, i32),
-    },
-    Inferno(InfernoInfo),
-    Molotov(MolotovInfo),
-    Smoke(GrenadeInfo),
-    Flashbang(GrenadeInfo),
-    HeGrenade(GrenadeInfo),
-    Decoy(GrenadeInfo),
-    ChickenInfo(ChickenInfo),
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct GrenadeInfo {
-    pub entity: usize,
-    pub position: Vec3,
-    pub name: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct InfernoInfo {
-    pub entity: usize,
-    pub position: Vec3,
-    pub hull: Vec<Vec3>,
-}
-
-impl InfernoInfo {
-    pub fn grenade(&self) -> GrenadeInfo {
-        GrenadeInfo {
-            entity: self.entity,
-            position: self.position,
-            name: "Inferno".to_owned(),
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub struct MolotovInfo {
-    pub entity: usize,
-    pub position: Vec3,
-    pub is_incendiary: bool,
-}
-
-impl MolotovInfo {
-    pub fn grenade(&self) -> GrenadeInfo {
-        GrenadeInfo {
-            entity: self.entity,
-            position: self.position,
-            name: if self.is_incendiary {
-                "Incendiary"
-            } else {
-                "Molotov"
-            }
-            .to_owned(),
-        }
-    }
 }
 
 pub fn grenade_info(entity: BaseEntity, name: &'static str, cs2: &CS2) -> GrenadeInfo {
@@ -227,7 +156,7 @@ impl CS2 {
                             continue;
                         }
 
-                        let weapon = Weapon::from_entity(entity, self);
+                        let weapon = weapon_from_entity(entity, self);
 
                         self.entities.push(Entity::Weapon {
                             weapon,

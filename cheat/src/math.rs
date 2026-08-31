@@ -1,6 +1,5 @@
 use glam::{Vec2, Vec3};
-
-use crate::data::Data;
+use shared::Data;
 
 pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     let yaw = forward.y.atan2(forward.x).to_degrees();

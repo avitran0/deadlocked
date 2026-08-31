@@ -3,10 +3,7 @@ use std::collections::HashMap;
 use glam::{Mat4, Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 
-use crate::cs2::{
-    bones::Bones,
-    entity::{EntityInfo, weapon::Weapon},
-};
+use crate::{bones::Bones, entity::EntityInfo, weapon::Weapon};
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SoundType {
@@ -36,7 +33,7 @@ pub struct Data {
     pub esp_active: bool,
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct PlayerData {
     pub steam_id: u64,
     pub health: i32,

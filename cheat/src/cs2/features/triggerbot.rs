@@ -2,14 +2,11 @@ use std::time::{Duration, Instant};
 
 use glam::Vec2;
 use rand::rng;
+use shared::{Bones, WeaponClass};
 
 use crate::{
     config::Config,
-    cs2::{
-        CS2,
-        bones::Bones,
-        entity::{player::Player, weapon_class::WeaponClass},
-    },
+    cs2::{CS2, entity::player::Player},
     math::angles_to_fov,
     os::mouse::Mouse,
 };

@@ -1,0 +1,14 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+shared.workspace = true
+utils.workspace = true
+
+serde_json.workspace = true
+
+axum = { version = "0.8", features = ["ws"] }
+tokio = { version = "1.53", features = ["full"] }
+uuid = { version = "1.26", features = ["v4"] }

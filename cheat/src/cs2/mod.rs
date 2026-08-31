@@ -1,6 +1,7 @@
 use std::time::{Duration, Instant};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
+use shared::{Bones, Data, EntityInfo, PlayerData, Weapon};
 
 use crate::{
     config::{
@@ -9,9 +10,11 @@ use crate::{
     },
     constants::cs2,
     cs2::{
-        bones::Bones,
         entity::{
-            Entity, EntityInfo, grenade_info, planted_c4::PlantedC4, player::Player, weapon::Weapon,
+            Entity, grenade_info,
+            planted_c4::PlantedC4,
+            player::Player,
+            weapon::{weapon_clip_ammo, weapon_reserve_ammo},
         },
         features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
         input::Input,
@@ -19,13 +22,11 @@ use crate::{
         offsets::Offsets,
         target::Target,
     },
-    data::{Data, PlayerData},
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
     parser::{bvh::Bvh, read_map},
 };
 
-pub mod bones;
 pub mod bvh;
 pub mod class;
 pub mod entity;
@@ -238,8 +239,8 @@ impl CS2 {
                     weapon: weapon.clone(),
                     position: Player::entity(**entity).position(self),
                     ammo: (
-                        Weapon::clip_ammo(**entity, self),
-                        Weapon::reserve_ammo(**entity, self),
+                        weapon_clip_ammo(**entity, self),
+                        weapon_reserve_ammo(**entity, self),
                     ),
                 },
                 Entity::Inferno(inferno) => EntityInfo::Inferno(inferno.info(self)),

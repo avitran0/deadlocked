@@ -1,11 +1,9 @@
 use glam::{Vec2, vec2};
+use shared::WeaponClass;
 
 use crate::{
     config::Config,
-    cs2::{
-        CS2,
-        entity::{player::Player, weapon_class::WeaponClass},
-    },
+    cs2::{CS2, entity::player::Player},
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
 };

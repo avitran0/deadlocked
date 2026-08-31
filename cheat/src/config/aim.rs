@@ -2,9 +2,10 @@ use std::{collections::HashMap, ops::RangeInclusive};
 
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
+use shared::{Bones, Weapon};
 use strum::{EnumIter, IntoEnumIterator};
 
-use crate::cs2::{bones::Bones, entity::weapon::Weapon, key_codes::KeyCode};
+use crate::cs2::key_codes::KeyCode;
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
@@ -101,10 +102,30 @@ pub enum KeyMode {
     Toggle,
 }
 
+impl std::fmt::Display for KeyMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Hold => "Hold",
+            Self::Toggle => "Toggle",
+        }
+        .fmt(f)
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
 pub enum TargetingMode {
     Fov,
     Distance,
+}
+
+impl std::fmt::Display for TargetingMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Fov => "FOV",
+            Self::Distance => "Distance",
+        }
+        .fmt(f)
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

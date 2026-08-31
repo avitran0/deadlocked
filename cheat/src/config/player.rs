@@ -11,10 +11,31 @@ pub enum DrawMode {
     Color,
 }
 
+impl std::fmt::Display for DrawMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => "None",
+            Self::Health => "Health",
+            Self::Color => "Color",
+        }
+        .fmt(f)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum BoxMode {
     Gap,
     Full,
+}
+
+impl std::fmt::Display for BoxMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Gap => "Gap",
+            Self::Full => "Full",
+        }
+        .fmt(f)
+    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

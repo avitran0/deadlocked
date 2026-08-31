@@ -1,8 +1,8 @@
 use egui::{Color32, Painter, Pos2, Stroke, pos2, vec2};
+use shared::{Data, WeaponClass};
 
 use crate::{
-    config::aim::KeyMode, config::text::TextPosition, cs2::entity::weapon_class::WeaponClass,
-    data::Data, math::world_to_screen, ui::app::AppState,
+    config::aim::KeyMode, config::text::TextPosition, math::world_to_screen, ui::app::AppState,
 };
 
 impl AppState {
@@ -214,7 +214,7 @@ impl AppState {
 
     pub fn draw_sniper_crosshair(&self, painter: &Painter, data: &Data) {
         if !self.config.hud.sniper_crosshair.enabled
-            || WeaponClass::from_string(data.weapon.as_ref()) != WeaponClass::Sniper
+            || data.weapon.weapon_class() != WeaponClass::Sniper
         {
             return;
         }

@@ -1,10 +1,9 @@
 use egui::{Align2, Color32, Painter, Pos2, Shape, Stroke, Ui, pos2};
 use glam::{Vec3, vec3};
+use shared::{Data, Weapon};
 
 use crate::{
     config::aim::AimbotConfig,
-    cs2::entity::weapon::Weapon,
-    data::Data,
     math::world_to_screen,
     ui::{app::AppState, grenades::Grenade},
 };
@@ -234,7 +233,7 @@ impl AppState {
             let mut offset = cat.font_size;
             self.text_sized(
                 painter,
-                format!("{}", grenade.weapon,),
+                format!("{}", grenade.weapon),
                 anchor + egui::vec2(0.0, offset),
                 align,
                 cat.color,

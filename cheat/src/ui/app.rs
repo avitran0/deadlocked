@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use shared::{Data, SoundType, Weapon};
 use utils::{Channel, Mutex};
 use winit::{
     application::ApplicationHandler,
@@ -19,8 +20,6 @@ use crate::{
         application::{ApplicationConfig, read_app_config},
         available_configs, parse_config, write_config,
     },
-    cs2::entity::weapon::Weapon,
-    data::{Data, SoundType},
     message::{GameMessage, GameStatus, UiMessage},
     ui::{
         grenades::{Grenade, GrenadeList, read_grenades},
@@ -111,7 +110,7 @@ impl AppState {
             current_grenade: None,
             current_tab: Tab::Aimbot,
             aimbot_tab: AimbotTab::Global,
-            aimbot_weapon: Weapon::Ak47,
+            aimbot_weapon: Weapon::AK47,
             update_status,
             text_popup: None,
             update_popup,

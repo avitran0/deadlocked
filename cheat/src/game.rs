@@ -4,12 +4,12 @@ use std::{
     time::{Duration, Instant},
 };
 
+use shared::Data;
 use utils::{Channel, Mutex};
 
 use crate::{
     config::Config,
     cs2::CS2,
-    data::Data,
     message::{GameMessage, GameStatus, UiMessage},
     os::mouse::Mouse,
 };

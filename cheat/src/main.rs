@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
+use shared::Data;
 use utils::{Channel, Mutex, log::LoggerOptions};
 use winit::platform::x11::EventLoopBuilderExtX11;
 
-use crate::{config::BASE_PATH, data::Data, os::mouse::check_uinput, ui::app::App};
+use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
 
 mod config;
 mod constants;
 mod cs2;
-mod data;
 mod font;
 mod game;
 mod math;

@@ -1,13 +1,11 @@
 use std::collections::VecDeque;
 
 use glam::Vec2;
+use shared::WeaponClass;
 
 use crate::{
     config::Config,
-    cs2::{
-        CS2,
-        entity::{player::Player, weapon_class::WeaponClass},
-    },
+    cs2::{CS2, entity::player::Player},
     math::{compute_max_acceleration_component, record_acceleration, soft_clamp_acceleration},
     os::mouse::Mouse,
 };

@@ -1,9 +1,7 @@
 use glam::Vec3;
+use shared::InfernoInfo;
 
-use crate::cs2::{
-    CS2,
-    entity::{InfernoInfo, base_entity::BaseEntity},
-};
+use crate::cs2::{CS2, entity::base_entity::BaseEntity};
 
 #[derive(Clone, PartialEq)]
 pub struct Inferno {
