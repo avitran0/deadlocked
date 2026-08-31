@@ -141,9 +141,30 @@ impl Default for TriggerbotConfig {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
+pub struct GrenadeAlignConfig {
+    pub enabled: bool,
+    pub hotkey: KeyCode,
+    pub fov: f32,
+    pub smooth: f32,
+}
+
+impl Default for GrenadeAlignConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            hotkey: KeyCode::None,
+            fov: 10.0,
+            smooth: 25.0,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct AimConfig {
     pub aimbot_hotkey: KeyCode,
     pub triggerbot_hotkey: KeyCode,
+    pub grenade_align: GrenadeAlignConfig,
     pub global: WeaponConfig,
     pub weapons: HashMap<Weapon, WeaponConfig>,
 }
@@ -158,6 +179,7 @@ impl Default for AimConfig {
         Self {
             aimbot_hotkey: KeyCode::Mouse5,
             triggerbot_hotkey: KeyCode::Mouse4,
+            grenade_align: GrenadeAlignConfig::default(),
             global: WeaponConfig::enabled(true),
             weapons,
         }
