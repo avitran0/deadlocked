@@ -13,7 +13,10 @@ use crate::{
         entity::{
             Entity, EntityInfo, grenade_info, planted_c4::PlantedC4, player::Player, weapon::Weapon,
         },
-        features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
+        features::{
+            aimbot::Aimbot, esp_toggle::EspToggle, grenade_align::GrenadeAlign, rcs::Recoil,
+            triggerbot::Triggerbot,
+        },
         input::Input,
         key_codes::KeyCode,
         offsets::Offsets,
@@ -23,6 +26,7 @@ use crate::{
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
     parser::{bvh::Bvh, read_map},
+    ui::grenades::{GrenadeList, read_grenades},
 };
 
 pub mod bones;
@@ -51,6 +55,9 @@ pub struct CS2 {
     aim: Aimbot,
     trigger: Triggerbot,
     esp: EspToggle,
+    grenade_align: GrenadeAlign,
+    grenades: GrenadeList,
+    last_grenades_read: Instant,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
     last_cache: Instant,
@@ -120,9 +127,16 @@ impl CS2 {
 
         self.find_target(config);
 
+        if self.last_grenades_read.elapsed() > Duration::from_secs(1) {
+            self.grenades = read_grenades();
+            self.last_grenades_read = Instant::now();
+        }
+
         if !self.aimbot(config, mouse) {
             self.rcs(config, mouse);
         }
+
+        self.grenade_align(config, mouse);
     }
 
     pub fn data(&self, config: &Config, data: &mut Data) {
@@ -270,6 +284,7 @@ impl CS2 {
         } else {
             false
         };
+        data.grenade_align_active = self.input.is_key_pressed(config.aim.grenade_align.hotkey);
         data.esp_active = self.esp_enabled(config);
 
         data.view_matrix = self.process.read::<Mat4>(self.offsets.direct.view_matrix);
@@ -302,6 +317,9 @@ impl CS2 {
             aim: Aimbot::default(),
             trigger: Triggerbot::default(),
             esp: EspToggle::default(),
+            grenade_align: GrenadeAlign::default(),
+            grenades: read_grenades(),
+            last_grenades_read: Instant::now(),
             weapon: Weapon::default(),
             planted_c4: None,
             last_cache: Instant::now(),

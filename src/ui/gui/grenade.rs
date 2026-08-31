@@ -6,13 +6,46 @@ use crate::{
         app::AppState,
         color::Colors,
         grenades::{Grenade, write_grenades},
-        gui::helpers::{collapsing_open, scroll},
+        gui::helpers::{checkbox, collapsing_open, drag, keybind, scroll},
     },
 };
 
 impl AppState {
     pub fn grenade_settings(&mut self, ui: &mut Ui) {
         scroll(ui, "hud", |ui| {
+            let mut changed = false;
+
+            collapsing_open(ui, "Lineup Alignment", |ui| {
+                changed |= checkbox(ui, "Enabled", &mut self.config.aim.grenade_align.enabled);
+                changed |= keybind(
+                    ui,
+                    "grenade_align_hotkey",
+                    "Hotkey",
+                    &mut self.config.aim.grenade_align.hotkey,
+                );
+                changed |= drag(
+                    ui,
+                    "FOV",
+                    egui::DragValue::new(&mut self.config.aim.grenade_align.fov)
+                        .range(0.1..=180.0)
+                        .speed(0.1)
+                        .max_decimals(1)
+                        .suffix("°"),
+                );
+                changed |= drag(
+                    ui,
+                    "Smooth",
+                    egui::DragValue::new(&mut self.config.aim.grenade_align.smooth)
+                        .range(0.0..=50.0)
+                        .speed(0.1)
+                        .max_decimals(1),
+                );
+            });
+
+            if changed {
+                self.send_config();
+            }
+
             if self.current_grenade.is_some() {
                 self.edit_grenade(ui);
             } else {

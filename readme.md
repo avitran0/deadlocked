@@ -121,6 +121,7 @@ cargo run --release
 
 - Sniper crosshair
 - Bomb timer
+- Grenade lineup alignment
 
 ### Unsafe
 
