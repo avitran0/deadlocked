@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
-use shared::{Bones, Data, EntityInfo, PlayerData, Weapon};
+use shared::{Bones, Data, EntityInfo, PlayerData, Weapon, WeaponInfo};
 
 use crate::{
     config::{
@@ -235,14 +235,14 @@ impl CS2 {
         data.entities.clear();
         for entity in &self.entities {
             data.entities.push(match entity {
-                Entity::Weapon { weapon, entity } => EntityInfo::Weapon {
+                Entity::Weapon { weapon, entity } => EntityInfo::Weapon(WeaponInfo {
                     weapon: weapon.clone(),
                     position: Player::entity(**entity).position(self),
                     ammo: (
                         weapon_clip_ammo(**entity, self),
                         weapon_reserve_ammo(**entity, self),
                     ),
-                },
+                }),
                 Entity::Inferno(inferno) => EntityInfo::Inferno(inferno.info(self)),
                 Entity::Smoke(smoke) => EntityInfo::Smoke(smoke.info(self)),
                 Entity::Molotov(molotov) => EntityInfo::Molotov(molotov.info(self)),

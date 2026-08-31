@@ -4,6 +4,7 @@ use strum::EnumIter;
 use crate::WeaponClass;
 
 #[derive(Default, Clone, Serialize, Deserialize, PartialEq, Eq, Hash, EnumIter)]
+#[serde(rename_all = "snake_case")]
 pub enum Weapon {
     #[default]
     None,

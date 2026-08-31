@@ -12,31 +12,27 @@ use crate::{
 impl AppState {
     pub fn draw_entity(&self, painter: &Painter, entity: &EntityInfo, data: &Data) {
         match entity {
-            EntityInfo::Weapon {
-                weapon,
-                position,
-                ammo,
-            } => {
+            EntityInfo::Weapon(info) => {
                 if !self.config.hud.dropped_weapons {
                     return;
                 }
-                let Some(screen) = world_to_screen(position, data) else {
+                let Some(screen) = world_to_screen(&info.position, data) else {
                     return;
                 };
                 let cat = &self.config.hud.overlay_text.weapon_name;
                 let anchor = super::hud::point_anchor(screen, cat.position, cat.font_size * 0.3);
                 self.text_sized(
                     painter,
-                    format!("{weapon}"),
+                    format!("{}", info.weapon),
                     anchor,
                     cat.align.to_align2(),
                     cat.color,
                     cat.font_size,
                 );
-                if ammo.0 >= 0 {
+                if info.ammo.0 >= 0 {
                     self.text_sized(
                         painter,
-                        format!("{}/{}", ammo.0, ammo.1),
+                        format!("{}/{}", info.ammo.0, info.ammo.1),
                         anchor + vec2(0.0, cat.font_size),
                         cat.align.to_align2(),
                         cat.color,

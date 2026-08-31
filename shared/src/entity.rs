@@ -6,12 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::{bones::ChickenBones, weapon::Weapon};
 
 #[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
 pub enum EntityInfo {
-    Weapon {
-        weapon: Weapon,
-        position: Vec3,
-        ammo: (i32, i32),
-    },
+    Weapon(WeaponInfo),
     Inferno(InfernoInfo),
     Molotov(MolotovInfo),
     Smoke(GrenadeInfo),
@@ -19,6 +16,13 @@ pub enum EntityInfo {
     HeGrenade(GrenadeInfo),
     Decoy(GrenadeInfo),
     Chicken(ChickenInfo),
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct WeaponInfo {
+    pub weapon: Weapon,
+    pub position: Vec3,
+    pub ammo: (i32, i32),
 }
 
 #[derive(Clone, Serialize, Deserialize)]
