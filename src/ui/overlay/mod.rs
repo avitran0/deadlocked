@@ -59,6 +59,7 @@ impl AppState {
         self.draw_keybind_list(&painter, data);
         self.draw_spectator_list(&painter, data);
 
+        let mut status_offset = 0.0;
         if data.aimbot_active {
             let cat = &self.config.hud.overlay_text.status_text;
             self.text_sized(
@@ -68,12 +69,13 @@ impl AppState {
                     [data.window_size.x, data.window_size.y],
                     cat.position,
                     8.0,
-                    8.0,
+                    8.0 + status_offset,
                 ),
                 cat.align.to_align2(),
                 cat.color,
                 cat.font_size,
             );
+            status_offset += cat.font_size;
         }
 
         if data.triggerbot_active {
@@ -85,7 +87,25 @@ impl AppState {
                     [data.window_size.x, data.window_size.y],
                     cat.position,
                     8.0,
-                    8.0 + cat.font_size,
+                    8.0 + status_offset,
+                ),
+                cat.align.to_align2(),
+                cat.color,
+                cat.font_size,
+            );
+            status_offset += cat.font_size;
+        }
+
+        if data.grenade_align_active {
+            let cat = &self.config.hud.overlay_text.status_text;
+            self.text_sized(
+                &painter,
+                "grenade align active",
+                hud::screen_anchor(
+                    [data.window_size.x, data.window_size.y],
+                    cat.position,
+                    8.0,
+                    8.0 + status_offset,
                 ),
                 cat.align.to_align2(),
                 cat.color,
