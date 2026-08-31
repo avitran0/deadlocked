@@ -18,7 +18,7 @@ pub enum EntityInfo {
     Flashbang(GrenadeInfo),
     HeGrenade(GrenadeInfo),
     Decoy(GrenadeInfo),
-    ChickenInfo(ChickenInfo),
+    Chicken(ChickenInfo),
 }
 
 #[derive(Clone, Serialize, Deserialize)]

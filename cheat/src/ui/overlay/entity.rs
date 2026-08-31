@@ -58,7 +58,7 @@ impl AppState {
             EntityInfo::Decoy(info) => {
                 self.draw_grenade(painter, data, info, self.config.hud.grenade_trails.decoy)
             }
-            EntityInfo::ChickenInfo(info) => self.draw_chicken(painter, data, info),
+            EntityInfo::Chicken(info) => self.draw_chicken(painter, data, info),
         };
     }
 

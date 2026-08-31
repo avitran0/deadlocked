@@ -46,6 +46,8 @@ async fn main() {
 
     tokio::spawn(async move { periodic_clean(state).await });
 
+    utils::info!("starting server on port 6346");
+
     if let Err(err) = axum::serve(listener, app).await {
         utils::error!("failed to serve application: {err}");
     }

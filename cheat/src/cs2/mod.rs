@@ -253,7 +253,7 @@ impl CS2 {
                     EntityInfo::HeGrenade(grenade_info(*entity, "HE Grenade", self))
                 }
                 Entity::Decoy(entity) => EntityInfo::Decoy(grenade_info(*entity, "Decoy", self)),
-                Entity::Chicken(chicken) => EntityInfo::ChickenInfo(chicken.info(self)),
+                Entity::Chicken(chicken) => EntityInfo::Chicken(chicken.info(self)),
             });
         }
 
