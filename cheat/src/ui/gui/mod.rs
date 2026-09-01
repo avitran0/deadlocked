@@ -25,6 +25,7 @@ mod grenade;
 mod helpers;
 mod hud;
 mod player;
+mod radar;
 mod r#unsafe;
 
 #[derive(PartialEq)]
@@ -34,6 +35,7 @@ pub enum Tab {
     Hud,
     Grenades,
     Unsafe,
+    Radar,
     Config,
     Application,
 }
@@ -64,6 +66,7 @@ impl AppState {
                 ui.selectable_value(&mut self.current_tab, Tab::Hud, "Hud");
                 ui.selectable_value(&mut self.current_tab, Tab::Grenades, "Grenades");
                 ui.selectable_value(&mut self.current_tab, Tab::Unsafe, "Unsafe");
+                ui.selectable_value(&mut self.current_tab, Tab::Radar, "Radar");
                 ui.selectable_value(&mut self.current_tab, Tab::Config, "Config");
                 ui.selectable_value(&mut self.current_tab, Tab::Application, "Application");
 
@@ -98,6 +101,7 @@ impl AppState {
             Tab::Hud => self.hud_settings(ui),
             Tab::Grenades => self.grenade_settings(ui),
             Tab::Unsafe => self.unsafe_settings(ui),
+            Tab::Radar => self.radar_settings(ui),
             Tab::Config => self.config_settings(ui),
             Tab::Application => self.application_settings(ui),
         });
