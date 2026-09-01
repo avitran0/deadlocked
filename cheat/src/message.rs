@@ -27,3 +27,9 @@ pub enum UiMessage {
     Status(GameStatus),
     FrameTime(Duration),
 }
+
+#[derive(Clone)]
+pub enum RadarMessage {
+    Enabled(bool),
+    SetUrl(String),
+}

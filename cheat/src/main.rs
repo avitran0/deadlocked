@@ -15,6 +15,7 @@ mod math;
 mod message;
 mod os;
 mod parser;
+mod radar;
 mod ui;
 mod update;
 
@@ -41,11 +42,17 @@ fn main() {
     }
 
     let (channel_gui, channel_game) = Channel::new();
+    let (channel_gui_radar, channel_radar) = Channel::new();
     let data = Arc::new(Mutex::new(Data::default()));
     let data_game = data.clone();
+    let data_radar = data.clone();
 
     std::thread::spawn(move || {
         game::GameManager::new(channel_game, data_game).run();
+    });
+
+    std::thread::spawn(move || {
+        radar::Radar::new(channel_radar, data_radar).run();
     });
 
     let event_loop = match winit::event_loop::EventLoop::builder().with_x11().build() {
