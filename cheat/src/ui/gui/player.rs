@@ -24,7 +24,7 @@ impl AppState {
                     "Box (visible)",
                     &mut self.config.player.box_visible_color,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -32,11 +32,11 @@ impl AppState {
                     "Box (invisible)",
                     &mut self.config.player.box_invisible_color,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(ui, "Skeleton", &mut self.config.player.skeleton_color) {
-                    self.send_config();
+                    self.send_config_game();
                 }
             });
         });
@@ -45,11 +45,11 @@ impl AppState {
     fn player_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "Players", |ui| {
             if checkbox(ui, "Player", &mut self.config.player.enabled) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if checkbox(ui, "Chicken", &mut self.config.player.chicken) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if keybind(
@@ -58,7 +58,7 @@ impl AppState {
                 "ESP Hotkey",
                 &mut self.config.player.esp_hotkey,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if checkbox(
@@ -66,15 +66,15 @@ impl AppState {
                 "Show Friendlies",
                 &mut self.config.player.show_friendlies,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if combo_box(ui, "draw_box", "Box", &mut self.config.player.draw_box) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if combo_box(ui, "box_mode", "Box Mode", &mut self.config.player.box_mode) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if combo_box(
@@ -83,11 +83,11 @@ impl AppState {
                 "Skeleton",
                 &mut self.config.player.draw_skeleton,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if checkbox(ui, "Head Circle", &mut self.config.player.head_circle) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if checkbox_hover(
@@ -96,7 +96,7 @@ impl AppState {
                 "Only show visible players",
                 &mut self.config.player.visible_only,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
         });
     }
@@ -107,14 +107,14 @@ impl AppState {
                 .checkbox(&mut self.config.player.health_bar, "Health Bar")
                 .changed()
             {
-                self.send_config();
+                self.send_config_game();
             }
 
             if ui
                 .checkbox(&mut self.config.player.armor_bar, "Armor Bar")
                 .changed()
             {
-                self.send_config();
+                self.send_config_game();
             }
 
             ui.horizontal(|ui| {
@@ -122,7 +122,7 @@ impl AppState {
                     .checkbox(&mut self.config.player.player_name, "Player Name")
                     .changed()
                 {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_name");
             });
@@ -132,7 +132,7 @@ impl AppState {
                     .checkbox(&mut self.config.player.weapon_icon, "Weapon Icon")
                     .changed()
                 {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "weapon_icon");
             });
@@ -147,7 +147,7 @@ impl AppState {
                     .checkbox(&mut self.config.player.tags, "Show Tags")
                     .changed()
                 {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_tags");
             });
@@ -160,7 +160,7 @@ impl AppState {
                 "Show a circle under players when they make sound",
                 &mut self.config.player.sound.enabled,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -170,7 +170,7 @@ impl AppState {
                     .range(0.0..=10.0)
                     .speed(0.01),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if checkbox(
@@ -178,7 +178,7 @@ impl AppState {
                 "Show Visible",
                 &mut self.config.player.sound.show_visible,
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             ui.collapsing("Ranges", |ui| {
@@ -194,10 +194,10 @@ impl AppState {
                     if ui.button("↺").on_hover_text("Reset").clicked() {
                         self.config.player.sound.footstep_diameter =
                             crate::constants::cs2::SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT;
-                        self.send_config();
+                        self.send_config_game();
                     }
                     if response.changed() {
-                        self.send_config();
+                        self.send_config_game();
                     }
                 });
 
@@ -213,10 +213,10 @@ impl AppState {
                     if ui.button("↺").on_hover_text("Reset").clicked() {
                         self.config.player.sound.gunshot_diameter =
                             crate::constants::cs2::SOUND_ESP_GUNSHOT_DIAMETER_DEFAULT;
-                        self.send_config();
+                        self.send_config_game();
                     }
                     if response.changed() {
-                        self.send_config();
+                        self.send_config_game();
                     }
                 });
 
@@ -232,10 +232,10 @@ impl AppState {
                     if ui.button("↺").on_hover_text("Reset").clicked() {
                         self.config.player.sound.weapon_diameter =
                             crate::constants::cs2::SOUND_ESP_WEAPON_DIAMETER_DEFAULT;
-                        self.send_config();
+                        self.send_config_game();
                     }
                     if response.changed() {
-                        self.send_config();
+                        self.send_config_game();
                     }
                 });
             });

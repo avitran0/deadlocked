@@ -1,33 +1,46 @@
-use std::{net::TcpStream, ops::Deref, str::FromStr, sync::Arc, time::Duration};
+use std::{
+    net::{TcpStream, ToSocketAddrs},
+    ops::Deref,
+    str::FromStr,
+    sync::Arc,
+    time::Duration,
+};
 
 use shared::Data;
-use tungstenite::{Message, WebSocket, stream::MaybeTlsStream};
+use tungstenite::{Message, WebSocket, client::IntoClientRequest, stream::MaybeTlsStream};
 use utils::{Channel, Mutex};
 use uuid::Uuid;
 
-use crate::message::RadarMessage;
+use crate::{
+    config::radar::RadarConfig,
+    message::{RadarMessage, RadarStatus},
+};
 
 pub struct Radar {
-    channel: Channel<(), RadarMessage>,
+    channel: Channel<RadarStatus, RadarMessage>,
     data: Arc<Mutex<Data>>,
     state: Option<RadarState>,
-    enabled: bool,
-    url: String,
+    config: RadarConfig,
 }
 
 struct RadarState {
     websocket: WebSocket<MaybeTlsStream<TcpStream>>,
-    uuid: Uuid,
+    _uuid: Uuid,
 }
 
 impl Radar {
-    pub fn new(channel: Channel<(), RadarMessage>, data: Arc<Mutex<Data>>) -> Self {
+    pub fn new(channel: Channel<RadarStatus, RadarMessage>, data: Arc<Mutex<Data>>) -> Self {
         Self {
             channel,
             data,
             state: None,
-            enabled: true,
-            url: String::new(),
+            config: RadarConfig::default(),
+        }
+    }
+
+    fn send_message(&self, message: RadarStatus) {
+        if self.channel.send(message).is_err() {
+            std::process::exit(1);
         }
     }
 
@@ -44,7 +57,7 @@ impl Radar {
     fn tick(&mut self) -> bool {
         self.process_messages();
 
-        if !self.enabled {
+        if !self.config.enabled {
             self.state = None;
             return false;
         }
@@ -52,6 +65,9 @@ impl Radar {
         // try to connect to the given url
         if self.state.is_none() {
             self.state = self.establish_connection();
+            if self.state.is_none() {
+                self.send_message(RadarStatus::FailedToConnect);
+            }
         }
 
         let Some(state) = &mut self.state else {
@@ -64,6 +80,7 @@ impl Radar {
 
         if state.websocket.send(Message::Text(message.into())).is_err() {
             self.state = None;
+            self.send_message(RadarStatus::FailedToConnect);
             false
         } else {
             true
@@ -71,11 +88,19 @@ impl Radar {
     }
 
     fn establish_connection(&self) -> Option<RadarState> {
-        let client = ureq::agent();
-        let res = match client.get(format!("http://{}/register", self.url)).call() {
+        const TIMEOUT: Duration = Duration::from_secs(5);
+        let client = ureq::Agent::config_builder()
+            .timeout_global(Some(TIMEOUT))
+            .build()
+            .new_agent();
+
+        let res = match client
+            .get(format!("http://{}/register", self.config.url))
+            .call()
+        {
             Ok(res) => res,
             Err(err) => {
-                utils::error!("failed to connect to {}: {err}", &self.url);
+                utils::error!("failed to connect to {}: {err}", self.config.url);
                 return None;
             }
         };
@@ -96,33 +121,58 @@ impl Radar {
             }
         };
 
-        let (mut websocket, _response) =
-            match tungstenite::connect(format!("ws://{}/update", self.url)) {
-                Ok(ws) => ws,
-                Err(err) => {
-                    utils::error!("failed to connect to websocket server {}: {err}", self.url);
-                    return None;
-                }
-            };
+        let address = self.config.url.to_socket_addrs().ok()?.next()?;
+        let stream = match TcpStream::connect_timeout(&address, TIMEOUT) {
+            Ok(stream) => stream,
+            Err(err) => {
+                utils::error!("failed to connect to {}: {err}", self.config.url);
+                return None;
+            }
+        };
+
+        stream.set_read_timeout(Some(TIMEOUT)).ok()?;
+        stream.set_write_timeout(Some(TIMEOUT)).ok()?;
+
+        let (mut websocket, _response) = match tungstenite::client(
+            format!("ws://{}/update", self.config.url)
+                .into_client_request()
+                .ok()?,
+            MaybeTlsStream::Plain(stream),
+        ) {
+            Ok(ws) => ws,
+            Err(err) => {
+                utils::error!(
+                    "failed to connect to websocket server {}: {err}",
+                    self.config.url
+                );
+                return None;
+            }
+        };
 
         // need to send the uuid once
         websocket.send(format!("{uuid}").into()).ok()?;
 
-        Some(RadarState { websocket, uuid })
+        self.send_message(RadarStatus::Connected(uuid));
+        Some(RadarState {
+            websocket,
+            _uuid: uuid,
+        })
     }
 
     fn process_messages(&mut self) {
         while let Ok(message) = self.channel.try_receive() {
-            match message {
-                RadarMessage::Enabled(enabled) => self.enabled = enabled,
-                RadarMessage::SetUrl(url) => {
-                    let url = Self::normalize_url(&url);
+            let url = Self::normalize_url(&message.0.url);
+            // reset if url changed
+            if url != self.config.url {
+                self.send_message(RadarStatus::Disconnected);
+                self.state = None;
+            }
 
-                    if self.url != url {
-                        self.url = url;
-                        self.state = None;
-                    }
-                }
+            self.config = RadarConfig { url, ..message.0 };
+
+            if !self.config.enabled {
+                self.send_message(RadarStatus::Disabled);
+                self.state = None;
             }
         }
     }

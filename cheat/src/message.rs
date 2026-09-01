@@ -1,8 +1,9 @@
 use std::{fmt::Display, time::Duration};
 
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
-use crate::config::Config;
+use crate::config::{Config, radar::RadarConfig};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GameStatus {
@@ -29,7 +30,12 @@ pub enum UiMessage {
 }
 
 #[derive(Clone)]
-pub enum RadarMessage {
-    Enabled(bool),
-    SetUrl(String),
+pub struct RadarMessage(pub RadarConfig);
+
+#[derive(Clone)]
+pub enum RadarStatus {
+    Connected(Uuid),
+    FailedToConnect,
+    Disconnected,
+    Disabled,
 }

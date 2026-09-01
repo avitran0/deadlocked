@@ -23,7 +23,7 @@ impl AppState {
                     "Crosshair Color",
                     &mut self.config.hud.sniper_crosshair.color,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
             });
 
@@ -33,7 +33,7 @@ impl AppState {
                     "Enable Grenade Trails",
                     &mut self.config.hud.grenade_trails.enabled,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if checkbox(
@@ -41,7 +41,7 @@ impl AppState {
                     "Inferno Polygon",
                     &mut self.config.hud.grenade_trails.inferno_poly,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -49,7 +49,7 @@ impl AppState {
                     "Smoke Trail Color",
                     &mut self.config.hud.grenade_trails.smoke,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -57,7 +57,7 @@ impl AppState {
                     "Molotov Trail Color",
                     &mut self.config.hud.grenade_trails.molotov,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -65,7 +65,7 @@ impl AppState {
                     "Incendiary Trail Color",
                     &mut self.config.hud.grenade_trails.incendiary,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -73,7 +73,7 @@ impl AppState {
                     "Flash Trail Color",
                     &mut self.config.hud.grenade_trails.flash,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -81,7 +81,7 @@ impl AppState {
                     "HE Grenade Trail Color",
                     &mut self.config.hud.grenade_trails.he,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
 
                 if color_picker(
@@ -89,7 +89,7 @@ impl AppState {
                     "Decoy Trail Color",
                     &mut self.config.hud.grenade_trails.decoy,
                 ) {
-                    self.send_config();
+                    self.send_config_game();
                 }
             });
         });
@@ -99,32 +99,32 @@ impl AppState {
         collapsing_open(ui, "HUD", |ui| {
             ui.horizontal(|ui| {
                 if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb_timer) {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "bomb_timer");
             });
 
             if checkbox(ui, "FOV Circle", &mut self.config.hud.fov_circle) {
-                self.send_config();
+                self.send_config_game();
             }
 
             ui.horizontal(|ui| {
                 if checkbox(ui, "Dropped Weapons", &mut self.config.hud.dropped_weapons) {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "weapon_name");
             });
 
             ui.horizontal(|ui| {
                 if checkbox(ui, "Keybind List", &mut self.config.hud.keybind_list) {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "keybind_list");
             });
 
             ui.horizontal(|ui| {
                 if checkbox(ui, "Spectator List", &mut self.config.hud.spectator_list) {
-                    self.send_config();
+                    self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "spectator_list");
             });
@@ -132,7 +132,7 @@ impl AppState {
 
         ui.collapsing("Sniper Crosshair", |ui| {
             if checkbox(ui, "Enabled", &mut self.config.hud.sniper_crosshair.enabled) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -143,7 +143,7 @@ impl AppState {
                     .max_decimals(1)
                     .speed(0.2),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -154,7 +154,7 @@ impl AppState {
                     .max_decimals(1)
                     .speed(0.005),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -165,7 +165,7 @@ impl AppState {
                     .max_decimals(1)
                     .speed(0.2),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
         });
     }
@@ -173,7 +173,7 @@ impl AppState {
     fn hud_right(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "Appearance", |ui| {
             if checkbox(ui, "Text Outline", &mut self.config.hud.text_outline) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -184,7 +184,7 @@ impl AppState {
                     .speed(0.02)
                     .max_decimals(1),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if combo_box(ui, "font", "Font", &mut self.config.font) {
@@ -192,7 +192,7 @@ impl AppState {
                 if let Some(ctx) = &self.overlay_egui {
                     self.config.font.set(ctx);
                 }
-                self.send_config();
+                self.send_config_game();
             }
 
             ui.separator();
@@ -215,7 +215,7 @@ impl AppState {
 
         ui.collapsing("Advanced", |ui| {
             if checkbox(ui, "Debug Overlay", &mut self.config.hud.debug) {
-                self.send_config();
+                self.send_config_game();
             }
 
             if drag(
@@ -223,7 +223,7 @@ impl AppState {
                 "FPS",
                 DragValue::new(&mut self.config.fps).range(30..=500),
             ) {
-                self.send_config();
+                self.send_config_game();
             }
         });
     }

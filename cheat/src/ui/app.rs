@@ -20,7 +20,7 @@ use crate::{
         application::{ApplicationConfig, read_app_config},
         available_configs, parse_config, write_config,
     },
-    message::{GameMessage, GameStatus, UiMessage},
+    message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     ui::{
         grenades::{Grenade, GrenadeList, read_grenades},
         gui::{Tab, aimbot::AimbotTab},
@@ -31,7 +31,8 @@ use crate::{
 };
 
 pub struct AppState {
-    pub channel: Channel<GameMessage, UiMessage>,
+    pub channel_game: Channel<GameMessage, UiMessage>,
+    pub channel_radar: Channel<RadarMessage, RadarStatus>,
     pub data: Arc<Mutex<Data>>,
 
     pub game_status: GameStatus,
@@ -60,6 +61,8 @@ pub struct AppState {
     pub text_popup: Option<String>,
     pub update_popup: bool,
     pub overlay_egui: Option<egui::Context>,
+
+    pub radar_status: RadarStatus,
 }
 
 pub struct App {
@@ -83,7 +86,11 @@ impl DerefMut for App {
 }
 
 impl AppState {
-    pub fn new(channel: Channel<GameMessage, UiMessage>, data: Arc<Mutex<Data>>) -> Self {
+    pub fn new(
+        channel_game: Channel<GameMessage, UiMessage>,
+        channel_radar: Channel<RadarMessage, RadarStatus>,
+        data: Arc<Mutex<Data>>,
+    ) -> Self {
         let config = parse_config(&CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
         write_config(&config, &CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
         let grenades = read_grenades();
@@ -93,7 +100,8 @@ impl AppState {
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
 
         Self {
-            channel,
+            channel_game,
+            channel_radar,
             data,
             app_config,
             config,
@@ -115,20 +123,26 @@ impl AppState {
             text_popup: None,
             update_popup,
             overlay_egui: None,
+            radar_status: RadarStatus::Disabled,
         }
     }
 }
 
 impl App {
-    pub fn new(channel: Channel<GameMessage, UiMessage>, data: Arc<Mutex<Data>>) -> Self {
-        let state = AppState::new(channel, data);
+    pub fn new(
+        channel_game: Channel<GameMessage, UiMessage>,
+        channel_radar: Channel<RadarMessage, RadarStatus>,
+        data: Arc<Mutex<Data>>,
+    ) -> Self {
+        let state = AppState::new(channel_game, channel_radar, data);
         let ret = Self {
             gui: None,
             overlay: None,
             next_frame_time: Instant::now() + Duration::from_millis(16),
             state,
         };
-        ret.send_config();
+        ret.send_config_game();
+        ret.send_config_radar();
         ret
     }
 
@@ -185,7 +199,7 @@ impl ApplicationHandler for App {
         window_id: winit::window::WindowId,
         window_event: WindowEvent,
     ) {
-        while let Ok(message) = self.state.channel.try_receive() {
+        while let Ok(message) = self.state.channel_game.try_receive() {
             match message {
                 UiMessage::Status(status) => self.state.game_status = status,
                 UiMessage::FrameTime(time) => {
@@ -195,6 +209,10 @@ impl ApplicationHandler for App {
                     self.state.frame_times.push_back(time);
                 }
             }
+        }
+
+        while let Ok(message) = self.state.channel_radar.try_receive() {
+            self.radar_status = message;
         }
 
         let Some(gui) = &self.gui else {

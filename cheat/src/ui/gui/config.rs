@@ -50,7 +50,7 @@ impl AppState {
         collapsing_open(ui, "Config", |ui| {
             if ui.button("Reset").clicked() {
                 self.config = Config::default();
-                self.send_config();
+                self.send_config_game();
                 utils::info!("loaded default config");
             }
 
@@ -81,7 +81,7 @@ impl AppState {
                             self.config.accent_color = color;
                             ui.ctx()
                                 .global_style_mut(|style| style.visuals.selection.bg_fill = color);
-                            self.send_config();
+                            self.send_config_game();
                         }
                     }
                 });
@@ -114,7 +114,7 @@ impl AppState {
         if let Some(config_path) = clicked_config {
             self.config = parse_config(&config_path);
             self.current_config = config_path;
-            self.send_config();
+            self.send_config_game();
             ui.ctx().global_style_mut(|style| {
                 style.visuals.selection.bg_fill = self.config.accent_color
             });

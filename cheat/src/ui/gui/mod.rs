@@ -5,7 +5,7 @@ use shared::Data;
 
 use crate::{
     config::{aim::WeaponConfig, write_config},
-    message::{GameMessage, GameStatus},
+    message::{GameMessage, GameStatus, RadarMessage},
     ui::{
         app::{App, AppState},
         color::Colors,
@@ -41,13 +41,24 @@ pub enum Tab {
 }
 
 impl AppState {
-    pub fn send_config(&self) {
-        self.send_message(GameMessage(Box::new(self.config.clone())));
+    pub fn send_config_game(&self) {
+        self.send_message_game(GameMessage(Box::new(self.config.clone())));
         self.save();
     }
 
-    pub fn send_message(&self, message: GameMessage) {
-        if self.channel.send(message).is_err() {
+    pub fn send_message_game(&self, message: GameMessage) {
+        if self.channel_game.send(message).is_err() {
+            std::process::exit(1);
+        }
+    }
+
+    pub fn send_config_radar(&self) {
+        self.send_message_radar(RadarMessage(self.config.radar.clone()));
+        self.save();
+    }
+
+    pub fn send_message_radar(&self, message: RadarMessage) {
+        if self.channel_radar.send(message).is_err() {
             std::process::exit(1);
         }
     }
@@ -234,7 +245,7 @@ impl AppState {
             "spectator_list",
         );
         if changed {
-            self.send_config();
+            self.send_config_game();
         }
     }
 }

@@ -41,7 +41,7 @@ fn main() {
         return;
     }
 
-    let (channel_gui, channel_game) = Channel::new();
+    let (channel_gui_game, channel_game) = Channel::new();
     let (channel_gui_radar, channel_radar) = Channel::new();
     let data = Arc::new(Mutex::new(Data::default()));
     let data_game = data.clone();
@@ -63,6 +63,6 @@ fn main() {
         }
     };
     event_loop.set_control_flow(winit::event_loop::ControlFlow::Poll);
-    let mut app = App::new(channel_gui, data);
+    let mut app = App::new(channel_gui_game, channel_gui_radar, data);
     event_loop.run_app(&mut app).unwrap();
 }
