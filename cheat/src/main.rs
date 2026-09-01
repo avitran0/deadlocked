@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use shared::Data;
-use utils::{Channel, Mutex, log::LoggerOptions};
+use utils::{
+    Channel, Mutex,
+    log::{Level, LoggerOptions},
+};
 use winit::platform::x11::EventLoopBuilderExtX11;
 
 use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
@@ -23,8 +26,10 @@ mod update;
 compile_error!("only linux is supported.");
 
 fn main() {
+    let debug = std::env::args().any(|arg| arg == "--debug");
     utils::log::init(
         LoggerOptions::default()
+            .level(if debug { Level::Debug } else { Level::Info })
             .file(BASE_PATH.join("deadlocked.log"))
             .truncate(true),
         |w, rec| {

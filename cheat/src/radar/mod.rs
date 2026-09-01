@@ -88,47 +88,70 @@ impl Radar {
     }
 
     fn establish_connection(&self) -> Option<RadarState> {
+        let stream = self.connect_tcp()?;
+        let uuid = self.register()?;
+        self.establish_websocket(stream, uuid)
+    }
+
+    fn connect_tcp(&self) -> Option<TcpStream> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
+
+        match self.config.url.to_socket_addrs() {
+            Ok(mut addresses) => {
+                addresses.find_map(
+                    |address| match TcpStream::connect_timeout(&address, TIMEOUT) {
+                        Ok(stream) => Some(stream),
+                        Err(err) => {
+                            utils::debug!("failed to connect to {address}: {err}");
+                            None
+                        }
+                    },
+                )
+            }
+            Err(err) => {
+                utils::debug!("failed to resolve {}: {err}", self.config.url);
+                None
+            }
+        }
+    }
+
+    fn register(&self) -> Option<Uuid> {
         const TIMEOUT: Duration = Duration::from_secs(5);
         let client = ureq::Agent::config_builder()
             .timeout_global(Some(TIMEOUT))
             .build()
             .new_agent();
 
-        let res = match client
+        let response = match client
             .get(format!("http://{}/register", self.config.url))
             .call()
         {
-            Ok(res) => res,
+            Ok(response) => response,
             Err(err) => {
-                utils::error!("failed to connect to {}: {err}", self.config.url);
+                utils::debug!("failed to register with {}: {err}", self.config.url);
                 return None;
             }
         };
 
-        let res_str = match res.into_body().read_to_string() {
-            Ok(res) => res,
+        let payload = match response.into_body().read_to_string() {
+            Ok(payload) => payload,
             Err(err) => {
-                utils::error!("invalid server payload: {err}");
+                utils::debug!("failed to read registration response: {err}");
                 return None;
             }
         };
 
-        let uuid = match Uuid::from_str(&res_str) {
-            Ok(uuid) => uuid,
+        match Uuid::from_str(&payload) {
+            Ok(uuid) => Some(uuid),
             Err(err) => {
-                utils::error!("invalid uuid: {err}");
-                return None;
+                utils::debug!("invalid session id from server: {err}");
+                None
             }
-        };
+        }
+    }
 
-        let address = self.config.url.to_socket_addrs().ok()?.next()?;
-        let stream = match TcpStream::connect_timeout(&address, TIMEOUT) {
-            Ok(stream) => stream,
-            Err(err) => {
-                utils::error!("failed to connect to {}: {err}", self.config.url);
-                return None;
-            }
-        };
+    fn establish_websocket(&self, stream: TcpStream, uuid: Uuid) -> Option<RadarState> {
+        const TIMEOUT: Duration = Duration::from_secs(5);
 
         stream.set_read_timeout(Some(TIMEOUT)).ok()?;
         stream.set_write_timeout(Some(TIMEOUT)).ok()?;
@@ -139,9 +162,9 @@ impl Radar {
                 .ok()?,
             MaybeTlsStream::Plain(stream),
         ) {
-            Ok(ws) => ws,
+            Ok(websocket) => websocket,
             Err(err) => {
-                utils::error!(
+                utils::debug!(
                     "failed to connect to websocket server {}: {err}",
                     self.config.url
                 );
@@ -149,8 +172,10 @@ impl Radar {
             }
         };
 
-        // need to send the uuid once
-        websocket.send(format!("{uuid}").into()).ok()?;
+        if let Err(err) = websocket.send(format!("{uuid}").into()) {
+            utils::debug!("failed to send session id: {err}");
+            return None;
+        }
 
         self.send_message(RadarStatus::Connected(uuid));
         Some(RadarState {
