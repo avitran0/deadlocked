@@ -3,29 +3,49 @@
     import type { PlayerData } from "./data";
     import { worldToRadar, type MapData } from "./map_data";
     import Marker from "./Marker.svelte";
-    import WeaponIcon from "./WeaponIcon.svelte";
 
     type Props = {
         player: PlayerData;
         friendly: boolean;
         map: MapData;
+        size: number;
     };
 
-    const { player, friendly, map }: Props = $props();
+    const { player, friendly, map, size }: Props = $props();
     let position = $derived(worldToRadar(player.position, map));
 </script>
 
-<div class="marker" style:left={`${position[0]}%`} style:top={`${position[1]}%`}>
+<div
+    class="marker"
+    style:left={`${position[0]}%`}
+    style:top={`${position[1]}%`}
+    style:width={`${size}%`}
+    style:height={`${size}%`}
+>
     <Marker rotation={player.rotation} color={friendly ? playerColor(player) : "#f06464"} />
-    <WeaponIcon icon={player.weapon} />
+    <p>{player.name}</p>
 </div>
 
 <style>
     .marker {
         position: absolute;
-        width: 2.5%;
-        height: 2.5%;
         transform: translate(-50%, -50%);
+        container-type: size;
+    }
+
+    .marker p {
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin: 0.15rem 0 0;
+        transform: translateX(-50%);
+        color: var(--color-text);
+        font-size: clamp(0.65rem, 40cqw, 1.2rem);
+        line-height: 1;
+        text-align: center;
+        text-shadow: 0 1px 2px var(--color-backdrop);
+        white-space: nowrap;
+        pointer-events: none;
     }
 
     :global(.marker > svg) {
@@ -33,14 +53,5 @@
         inset: 0;
         width: 100%;
         height: 100%;
-    }
-
-    :global(.marker > img) {
-        position: absolute;
-        top: 100%;
-        left: 50%;
-        width: 65%;
-        height: auto;
-        transform: translateX(-50%);
     }
 </style>

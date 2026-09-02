@@ -1,11 +1,56 @@
 <script lang="ts">
+    import type { RadarSettings } from "./settings";
+
     type Props = {
-        open?: boolean;
+        settings: RadarSettings;
     };
 
-    let { open = false }: Props = $props();
+    let { settings = $bindable() }: Props = $props();
 </script>
 
-{#if open}
-    <div id="settings"></div>
-{/if}
+<details id="settings" class="container">
+    <summary>Settings</summary>
+
+    <label>
+        Marker size
+        <input
+            type="range"
+            min="1"
+            max="5"
+            step="0.1"
+            bind:value={settings.markerSize}
+        />
+        <output>{settings.markerSize.toFixed(1)}%</output>
+    </label>
+</details>
+
+<style>
+    #settings {
+        position: fixed;
+        top: 0.75rem;
+        left: 0.75rem;
+        z-index: 100;
+        padding: 0.4rem 0.6rem;
+    }
+
+    summary {
+        cursor: pointer;
+    }
+
+    label {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding-top: 0.6rem;
+        white-space: nowrap;
+    }
+
+    input[type="range"] {
+        width: 7rem;
+    }
+
+    output {
+        min-width: 2.5rem;
+        text-align: right;
+    }
+</style>

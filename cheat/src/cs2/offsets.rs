@@ -190,6 +190,11 @@ schema! {
     client: {
         controller: PlayerControllerOffsets {
             steam_id: schema("CBasePlayerController", "m_steamID"),
+            money_services: schema("CCSPlayerController", "m_pInGameMoneyServices"),
+            money: schema(
+                "CCSPlayerController_InGameMoneyServices",
+                "m_iAccount"
+            ),
             color: schema("CCSPlayerController", "m_iCompTeammateColor"),
             name: schema("CBasePlayerController", "m_iszPlayerName"),
             pawn: schema("CBasePlayerController", "m_hPawn"),

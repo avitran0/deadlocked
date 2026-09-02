@@ -1,14 +1,17 @@
 <script lang="ts">
     import type { Data } from "./data";
+    import EntityMarker from "./EntityMarker.svelte";
     import { MAP_DATA } from "./map_data";
     import PlayerCard from "./PlayerCard.svelte";
     import PlayerMarker from "./PlayerMarker.svelte";
+    import type { RadarSettings } from "./settings";
 
     type Props = {
         data: Data | null;
+        settings: RadarSettings;
     };
 
-    const { data }: Props = $props();
+    const { data, settings }: Props = $props();
     const map = $derived(MAP_DATA[data?.map_name ?? ""]);
 
     let scale = $state(1);
@@ -91,6 +94,7 @@
 <div id="radar-container">
     <div
         id="radar"
+        class="container"
         class:dragging
         onwheel={onWheel}
         onpointerdown={onPointerDown}
@@ -101,14 +105,34 @@
     >
         <div id="map" style:transform={`translate(${x}px, ${y}px) scale(${scale})`}>
             <div id="map-image" style:background-image={`url(/images/${data?.map_name}.png)`}></div>
+            {#if map}
+                {#each data?.entities ?? [] as entity}
+                    <EntityMarker {entity} {map} size={settings.markerSize} />
+                {/each}
+            {/if}
             {#each data?.players as player}
-                <PlayerMarker {player} friendly={false} {map} />
+                <PlayerMarker
+                    {player}
+                    friendly={false}
+                    {map}
+                    size={settings.markerSize}
+                />
             {/each}
             {#each data?.friendlies as player}
-                <PlayerMarker {player} friendly={true} {map} />
+                <PlayerMarker
+                    {player}
+                    friendly={true}
+                    {map}
+                    size={settings.markerSize}
+                />
             {/each}
             {#if data?.local_player}
-                <PlayerMarker player={data?.local_player} friendly={true} {map} />
+                <PlayerMarker
+                    player={data?.local_player}
+                    friendly={true}
+                    {map}
+                    size={settings.markerSize}
+                />
             {/if}
         </div>
         <button
@@ -149,9 +173,6 @@
         grid-column: 2;
         width: 100%;
         aspect-ratio: 1 / 1;
-        background-color: var(--color-backdrop);
-        border: var(--border);
-        border-radius: var(--border-radius);
         cursor: grab;
         position: relative;
         touch-action: none;

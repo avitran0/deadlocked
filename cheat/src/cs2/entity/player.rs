@@ -109,6 +109,17 @@ impl Player {
             .read(self.controller + cs2.offsets.controller.steam_id)
     }
 
+    pub fn money(&self, cs2: &CS2) -> i32 {
+        let services: usize = cs2
+            .process
+            .read(self.controller + cs2.offsets.controller.money_services);
+        if services == 0 {
+            return 0;
+        }
+
+        cs2.process.read(services + cs2.offsets.controller.money)
+    }
+
     pub fn name(&self, cs2: &CS2) -> String {
         cs2.process
             .read_string_uncached(self.controller + cs2.offsets.controller.name)

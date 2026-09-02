@@ -15,6 +15,7 @@ export type Team = "Unassigned" | "Spectator" | "T" | "CT";
 export interface PlayerData {
     team: Team;
     steam_id: number;
+    money: number;
     health: number;
     max_health: number;
     armor: number;

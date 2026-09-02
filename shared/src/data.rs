@@ -44,6 +44,7 @@ pub struct Data {
 #[derive(Default, Serialize, Deserialize)]
 pub struct PlayerData {
     pub steam_id: u64,
+    pub money: i32,
     pub team: Team,
     pub health: i32,
     pub max_health: i32,

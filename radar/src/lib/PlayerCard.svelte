@@ -18,10 +18,10 @@
     );
 </script>
 
-<article class="player-card" style:border-color={color}>
+<article class="player-card container" style:border-color={color}>
     <div class="heading">
         <strong>{player.name || "Unknown player"}</strong>
-        <span style:color>{player.team}</span>
+        <span class="money">${player.money.toLocaleString()}</span>
     </div>
 
     <div class="health-row">
@@ -54,10 +54,7 @@
         width: 15rem;
         max-width: 100%;
         padding: 0.5rem 0.65rem;
-        border: var(--border);
-        border-radius: var(--border-radius);
-        background: var(--color-backdrop);
-        box-shadow: var(--box-shadow);
+
     }
 
     .heading,
