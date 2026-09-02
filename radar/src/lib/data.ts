@@ -44,6 +44,7 @@ export type EntityInfo =
     | { type: "Decoy"; position: Vec3; name: string }
     | { type: "Chicken"; position: Vec3; visible: boolean };
 
+export type Vec2 = [x: number, y: number];
 export type Vec3 = [x: number, y: number, z: number];
 export type Ammo = [clip: number, reserve: number];
 

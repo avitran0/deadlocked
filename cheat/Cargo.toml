@@ -32,6 +32,7 @@ rand_distr = "0.6"
 toml = "1.0"
 tungstenite = "0.30"
 ureq = { version = "3", features = ["json"] }
+urlencoding = "2.1"
 winit = { version = "0.30", default-features = false, features = ["x11"] }
 
 [features]
