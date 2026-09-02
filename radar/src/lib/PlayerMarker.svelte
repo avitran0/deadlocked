@@ -39,8 +39,9 @@
         position: absolute;
         top: 100%;
         left: 50%;
-        width: 65%;
-        height: auto;
+        height: 55%;
+        width: auto;
+        max-width: 140%;
         transform: translateX(-50%);
     }
 </style>
