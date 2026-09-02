@@ -51,7 +51,5 @@
 </script>
 
 <main>
-    {data?.map_name}
-
     <Radar {data} />
 </main>

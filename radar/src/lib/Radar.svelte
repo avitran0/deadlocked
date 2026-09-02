@@ -105,6 +105,8 @@
 <style>
     #radar-container {
         position: relative;
+        width: min(90vw, 90vh);
+        height: min(90vw, 90vh);
     }
 
     #radar {
