@@ -14,13 +14,13 @@
 <div id="radar" style:background-image={`url(/images/${data?.map_name}.png)`}>
     {data?.weapon}
     {#each data?.players as player}
-        <PlayerMarker {player} {map} />
+        <PlayerMarker {player} friendly={false} {map} />
     {/each}
     {#each data?.friendlies as player}
-        <PlayerMarker {player} {map} />
+        <PlayerMarker {player} friendly={true} {map} />
     {/each}
     {#if data?.local_player}
-        <PlayerMarker player={data?.local_player} {map} />
+        <PlayerMarker player={data?.local_player} friendly={true} {map} />
     {/if}
 </div>
 

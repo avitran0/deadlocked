@@ -1,16 +1,21 @@
 <script lang="ts">
+    import { playerColor } from "./color";
     import type { PlayerData } from "./data";
     import { worldToRadar, type MapData } from "./map_data";
     import Marker from "./Marker.svelte";
 
-    type Props = { player: PlayerData; map: MapData };
+    type Props = {
+        player: PlayerData;
+        friendly: boolean;
+        map: MapData;
+    };
 
-    const { player, map }: Props = $props();
+    const { player, friendly, map }: Props = $props();
     let position = $derived(worldToRadar(player.position, map));
 </script>
 
 <div id="marker" style:left={`${position[0]}%`} style:top={`${position[1]}%`}>
-    <Marker rotation={player.rotation} />
+    <Marker rotation={player.rotation} color={friendly ? playerColor(player) : "#f06464"} />
 </div>
 
 <style>
