@@ -52,6 +52,7 @@
 <style>
     .player-card {
         width: 15rem;
+        max-width: 100%;
         padding: 0.5rem 0.65rem;
         border: var(--border);
         border-radius: var(--border-radius);
@@ -128,5 +129,12 @@
         flex-wrap: wrap;
         gap: 0.35rem;
         margin-top: 0.4rem;
+    }
+
+    @media (max-width: 800px) {
+        .player-card {
+            width: min(15rem, 78vw);
+            flex: 0 0 min(15rem, 78vw);
+        }
     }
 </style>

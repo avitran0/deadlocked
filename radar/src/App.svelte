@@ -8,6 +8,9 @@
     let uuid: string | null = null;
     let error: string | null = null;
     let data: Data | null = $state(null);
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectAttempts = 0;
+    let stopped = false;
 
     onMount(() => {
         const query = new URLSearchParams(window.location.search);
@@ -24,29 +27,65 @@
             return;
         }
 
-        ws = new WebSocket(`ws://${url}/client`);
-        ws.onopen = wsOpen;
-        ws.onclose = wsClose;
-        ws.onerror = wsError;
-        ws.onmessage = wsMessage;
+        connect();
+
+        return () => {
+            stopped = true;
+            if (reconnectTimer !== null) {
+                clearTimeout(reconnectTimer);
+            }
+            ws?.close();
+        };
     });
 
-    function wsOpen(event: Event) {
+    function connect() {
+        if (stopped || url === null || uuid === null) return;
+
+        const socket = new WebSocket(`ws://${url}/client`);
+        ws = socket;
+        socket.onopen = () => wsOpen(socket);
+        socket.onclose = (event) => wsClose(socket, event);
+        socket.onerror = () => wsError(socket);
+        socket.onmessage = wsMessage;
+    }
+
+    function scheduleReconnect() {
+        if (stopped || reconnectTimer !== null) return;
+
+        const delay = Math.min(10_000, 1_000 * 2 ** reconnectAttempts);
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => {
+            reconnectTimer = null;
+            connect();
+        }, delay);
+    }
+
+    function wsOpen(socket: WebSocket) {
+        reconnectAttempts = 0;
         if (uuid !== null) {
-            ws?.send(uuid);
+            socket.send(uuid);
         }
     }
 
-    function wsClose(event: CloseEvent) {
+    function wsClose(socket: WebSocket, event: CloseEvent) {
         console.error(`websocket closed: ${event.code}`);
+        if (ws === socket) {
+            ws = null;
+            scheduleReconnect();
+        }
     }
 
-    function wsError(event: Event) {
+    function wsError(socket: WebSocket) {
         console.error("websocket error");
+        socket.close();
     }
 
     function wsMessage(event: MessageEvent) {
-        data = JSON.parse(event.data);
+        try {
+            data = JSON.parse(event.data);
+        } catch (error) {
+            console.error("failed to parse websocket message", error);
+        }
     }
 </script>
 

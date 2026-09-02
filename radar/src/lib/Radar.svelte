@@ -15,11 +15,17 @@
     let x = $state(0);
     let y = $state(0);
 
-    let terrorists = $derived(data?.players.filter((player) => player.team === "T") ?? []);
-    let counterTerrorists = $derived([
+    let allPlayers = $derived([
+        ...(data?.players ?? []),
         ...(data?.friendlies ?? []),
         ...(data?.local_player ? [data.local_player] : []),
-    ].filter((player) => player.team === "CT"));
+    ]);
+    let terrorists = $derived(
+        allPlayers.filter((player) => player.team === "T"),
+    );
+    let counterTerrorists = $derived(
+        allPlayers.filter((player) => player.team === "CT"),
+    );
 
     let dragging = $state(false);
     let startX = 0;
@@ -105,6 +111,13 @@
                 <PlayerMarker player={data?.local_player} friendly={true} {map} />
             {/if}
         </div>
+        <button
+            id="reset"
+            onclick={resetView}
+            onpointerdown={(event) => event.stopPropagation()}
+        >
+            Reset
+        </button>
     </div>
 
     <aside class="player-cards terrorists">
@@ -118,18 +131,23 @@
             <PlayerCard {player} />
         {/each}
     </aside>
-
-    <button id="reset" onclick={resetView}>Reset</button>
 </div>
 
 <style>
     #radar-container {
         position: relative;
-        width: min(90vw, 90vh);
-        height: min(90vw, 90vh);
+        display: grid;
+        grid-template-columns: 15rem minmax(0, 1fr) 15rem;
+        width: min(100vw, calc(90vh + 31.5rem));
+        height: auto;
+        gap: 0.75rem;
+        padding: 0 0.75rem;
+        align-items: center;
     }
 
     #radar {
+        grid-column: 2;
+        width: 100%;
         aspect-ratio: 1 / 1;
         background-color: var(--color-backdrop);
         border: var(--border);
@@ -159,22 +177,23 @@
     }
 
     .player-cards {
-        position: absolute;
-        top: 0;
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
-        max-height: 100%;
+        max-height: 90vh;
         overflow-y: auto;
         scrollbar-width: thin;
+        align-self: center;
     }
 
     .player-cards.terrorists {
-        right: calc(100% + 0.75rem);
+        grid-column: 1;
+        grid-row: 1;
     }
 
     .player-cards.counter-terrorists {
-        left: calc(100% + 0.75rem);
+        grid-column: 3;
+        grid-row: 1;
     }
 
     #reset {
@@ -183,5 +202,23 @@
         top: 0.5rem;
         right: 0.5rem;
         z-index: 5;
+    }
+
+    @media (max-width: 1000px) {
+        #radar-container {
+            display: block;
+            width: 100vw;
+            padding: 0.5rem;
+        }
+
+        #radar {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1;
+        }
+
+        .player-cards {
+            display: none;
+        }
     }
 </style>
