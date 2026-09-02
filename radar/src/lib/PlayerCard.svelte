@@ -43,9 +43,15 @@
     </div>
 
     <div class="statuses">
-        {#if player.has_helmet}<span>Helmet</span>{/if}
-        {#if player.has_defuser}<span>Defuser</span>{/if}
-        {#if player.has_bomb}<span>Bomb</span>{/if}
+        {#if player.has_helmet}
+            <img class="status-icon" src="/icons/helmet.svg" alt="Helmet" title="Helmet" />
+        {/if}
+        {#if player.has_defuser}
+            <img class="status-icon" src="/icons/defuser.svg" alt="Defuser" title="Defuser" />
+        {/if}
+        {#if player.has_bomb}
+            <img class="status-icon" src="/icons/c4.svg" alt="Bomb" title="Bomb" />
+        {/if}
     </div>
 </article>
 
@@ -129,6 +135,13 @@
         flex-wrap: wrap;
         gap: 0.35rem;
         margin-top: 0.4rem;
+    }
+
+    .status-icon {
+        width: 1.1rem;
+        height: 1.1rem;
+        object-fit: contain;
+        opacity: 0.85;
     }
 
     @media (max-width: 800px) {
