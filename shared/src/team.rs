@@ -1,5 +1,7 @@
+use serde::{Deserialize, Serialize};
+
 #[repr(u8)]
-#[derive(Default, Clone, Copy, PartialEq, Eq)]
+#[derive(Default, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Team {
     #[default]
     Unassigned = 0,

@@ -2,9 +2,10 @@ use std::ops::Deref;
 
 use crate::cs2::{
     CS2,
-    class::{life_state::LifeState, net_vec::NetworkVelocityVector, team::Team},
+    class::{life_state::LifeState, net_vec::NetworkVelocityVector},
 };
 use glam::{Mat4, Quat, Vec3};
+use shared::Team;
 
 /// Common handle-backed functionality shared by all client entities.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]

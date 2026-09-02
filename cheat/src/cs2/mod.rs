@@ -170,6 +170,7 @@ impl CS2 {
 
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
+                team: player.team(self),
                 health: player.health(self),
                 max_health: player.max_health(self),
                 armor: player.armor(self),
@@ -208,6 +209,7 @@ impl CS2 {
 
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
+            team: local_player.team(self),
             health: local_player.health(self),
             max_health: local_player.max_health(self),
             armor: local_player.armor(self),

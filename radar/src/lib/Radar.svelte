@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Data } from "./data";
     import { MAP_DATA } from "./map_data";
+    import PlayerCard from "./PlayerCard.svelte";
     import PlayerMarker from "./PlayerMarker.svelte";
 
     type Props = {
@@ -13,6 +14,12 @@
     let scale = $state(1);
     let x = $state(0);
     let y = $state(0);
+
+    let terrorists = $derived(data?.players.filter((player) => player.team === "T") ?? []);
+    let counterTerrorists = $derived([
+        ...(data?.friendlies ?? []),
+        ...(data?.local_player ? [data.local_player] : []),
+    ].filter((player) => player.team === "CT"));
 
     let dragging = $state(false);
     let startX = 0;
@@ -99,6 +106,19 @@
             {/if}
         </div>
     </div>
+
+    <aside class="player-cards terrorists">
+        {#each terrorists as player}
+            <PlayerCard {player} />
+        {/each}
+    </aside>
+
+    <aside class="player-cards counter-terrorists">
+        {#each counterTerrorists as player}
+            <PlayerCard {player} />
+        {/each}
+    </aside>
+
     <button id="reset" onclick={resetView}>Reset</button>
 </div>
 
@@ -111,6 +131,7 @@
 
     #radar {
         aspect-ratio: 1 / 1;
+        background-color: var(--color-backdrop);
         border: var(--border);
         border-radius: var(--border-radius);
         cursor: grab;
@@ -135,6 +156,25 @@
         background-size: cover;
         width: 100%;
         height: 100%;
+    }
+
+    .player-cards {
+        position: absolute;
+        top: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        max-height: 100%;
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
+
+    .player-cards.terrorists {
+        right: calc(100% + 0.75rem);
+    }
+
+    .player-cards.counter-terrorists {
+        left: calc(100% + 0.75rem);
     }
 
     #reset {
