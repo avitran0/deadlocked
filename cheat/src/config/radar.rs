@@ -11,7 +11,7 @@ impl Default for RadarConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            url: "".to_owned(),
+            url: "localhost".to_owned(),
         }
     }
 }

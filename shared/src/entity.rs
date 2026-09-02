@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::{bones::ChickenBones, weapon::Weapon};
 
 #[derive(Serialize, Deserialize)]
-#[serde(tag = "type")]
 pub enum EntityInfo {
     Weapon(WeaponInfo),
     Inferno(InfernoInfo),

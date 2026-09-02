@@ -8,15 +8,15 @@ pub type ServerState = Arc<RwLock<State>>;
 
 #[derive(Default)]
 pub struct State {
-    pub games: HashMap<Uuid, GameState>,
+    pub sessions: HashMap<Uuid, SessionState>,
 }
 
-pub struct GameState {
+pub struct SessionState {
     pub data: Data,
     pub last_update: Instant,
 }
 
-impl Default for GameState {
+impl Default for SessionState {
     fn default() -> Self {
         Self {
             data: Data::default(),

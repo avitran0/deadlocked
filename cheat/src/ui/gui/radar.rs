@@ -25,11 +25,12 @@ impl AppState {
             {
                 ui.ctx().open_url(OpenUrl::new_tab(format!(
                     "https://radar.avitrano.com/?url={}&game={uuid}",
-                    urlencoding::encode(&self.config.radar.url)
+                    urlencoding::encode(&format!("{}:6347", self.config.radar.url))
                 )));
             }
         });
 
+        ui.label("Server host (without protocol or port):");
         if ui
             .text_edit_singleline(&mut self.config.radar.url)
             .changed()

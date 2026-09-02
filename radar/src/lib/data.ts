@@ -35,14 +35,44 @@ export interface BombData {
 }
 
 export type EntityInfo =
-    | { type: "Weapon"; weapon: string; position: Vec3; ammo: Ammo }
-    | { type: "Inferno"; position: Vec3; hull: Vec3[] }
-    | { type: "Molotov"; position: Vec3; is_incendiary: boolean }
-    | { type: "Smoke"; position: Vec3; name: string }
-    | { type: "Flashbang"; position: Vec3; name: string }
-    | { type: "HeGrenade"; position: Vec3; name: string }
-    | { type: "Decoy"; position: Vec3; name: string }
-    | { type: "Chicken"; position: Vec3; visible: boolean };
+    | { Weapon: WeaponInfo }
+    | { Inferno: InfernoInfo }
+    | { Molotov: MolotovInfo }
+    | { Smoke: GrenadeInfo }
+    | { Flashbang: GrenadeInfo }
+    | { HeGrenade: GrenadeInfo }
+    | { Decoy: GrenadeInfo }
+    | { Chicken: ChickenInfo };
+
+export interface WeaponInfo {
+    weapon: string;
+    position: Vec3;
+    ammo: Ammo;
+}
+
+export interface GrenadeInfo {
+    entity: number;
+    position: Vec3;
+    name: string;
+}
+
+export interface InfernoInfo {
+    entity: number;
+    position: Vec3;
+    hull: Vec3[];
+}
+
+export interface MolotovInfo {
+    entity: number;
+    position: Vec3;
+    is_incendiary: boolean;
+}
+
+export interface ChickenInfo {
+    position: Vec3;
+    visible: boolean;
+    bones: Record<string, Vec3>;
+}
 
 export type Vec2 = [x: number, y: number];
 export type Vec3 = [x: number, y: number, z: number];

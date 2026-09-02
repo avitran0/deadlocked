@@ -13,6 +13,7 @@ shared.path = "shared"
 utils.git = "https://codeberg.org/avitrano/utils"
 
 glam = { version = "0.33", features = ["bytemuck", "serde"] }
+postcard = { version = "1.1", features = ["use-std"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 strum = { version = "0.28", features = ["derive"] }

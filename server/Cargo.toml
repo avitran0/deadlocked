@@ -7,6 +7,7 @@ edition = "2024"
 shared.workspace = true
 utils.workspace = true
 
+postcard.workspace = true
 serde_json.workspace = true
 uuid.workspace = true
 

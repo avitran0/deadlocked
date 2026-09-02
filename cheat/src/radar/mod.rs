@@ -1,14 +1,16 @@
 use std::{
+    io::Write,
     net::{TcpStream, ToSocketAddrs},
     ops::Deref,
-    str::FromStr,
     sync::Arc,
     time::Duration,
 };
 
-use shared::Data;
-use tungstenite::{Message, WebSocket, client::IntoClientRequest, stream::MaybeTlsStream};
-use utils::{Channel, Mutex};
+use shared::{Data, MAX_FRAME_SIZE, PROTO_VERSION};
+use utils::{
+    Channel, Mutex,
+    io::{Endian, EndianReaderWriter},
+};
 use uuid::Uuid;
 
 use crate::{
@@ -19,13 +21,13 @@ use crate::{
 pub struct Radar {
     channel: Channel<RadarStatus, RadarMessage>,
     data: Arc<Mutex<Data>>,
+    uuid: Uuid,
     state: Option<RadarState>,
     config: RadarConfig,
 }
 
 struct RadarState {
-    websocket: WebSocket<MaybeTlsStream<TcpStream>>,
-    _uuid: Uuid,
+    stream: EndianReaderWriter<TcpStream>,
 }
 
 impl Radar {
@@ -33,6 +35,7 @@ impl Radar {
         Self {
             channel,
             data,
+            uuid: Uuid::new_v4(),
             state: None,
             config: RadarConfig::default(),
         }
@@ -70,15 +73,28 @@ impl Radar {
             }
         }
 
+        self.send_packet()
+    }
+
+    fn send_packet(&mut self) -> bool {
         let Some(state) = &mut self.state else {
             return false;
         };
 
-        let Ok(message) = serde_json::to_string(self.data.lock().deref()) else {
+        let Ok(message) = postcard::to_stdvec(self.data.lock().deref()) else {
             return false;
         };
 
-        if state.websocket.send(Message::Text(message.into())).is_err() {
+        if message.len() > MAX_FRAME_SIZE as usize {
+            utils::error!("serialized radar data exceeds maximum frame size");
+            self.state = None;
+            self.send_message(RadarStatus::FailedToConnect);
+            return false;
+        }
+
+        if state.stream.write_u32(message.len() as u32).is_err()
+            || state.stream.write_all(&message).is_err()
+        {
             self.state = None;
             self.send_message(RadarStatus::FailedToConnect);
             false
@@ -89,99 +105,49 @@ impl Radar {
 
     fn establish_connection(&self) -> Option<RadarState> {
         let stream = self.connect_tcp()?;
-        let uuid = self.register()?;
-        self.establish_websocket(stream, uuid)
+        self.connect_server(stream)
     }
 
     fn connect_tcp(&self) -> Option<TcpStream> {
         const TIMEOUT: Duration = Duration::from_secs(5);
 
-        match self.config.url.to_socket_addrs() {
-            Ok(mut addresses) => {
-                addresses.find_map(
-                    |address| match TcpStream::connect_timeout(&address, TIMEOUT) {
-                        Ok(stream) => Some(stream),
-                        Err(err) => {
-                            utils::debug!("failed to connect to {address}: {err}");
-                            None
-                        }
-                    },
-                )
-            }
+        let mut addresses = match (self.config.url.as_ref(), 6346).to_socket_addrs() {
+            Ok(addresses) => addresses,
             Err(err) => {
                 utils::debug!("failed to resolve {}: {err}", self.config.url);
-                None
+                return None;
             }
-        }
+        };
+
+        addresses.find_map(|address| {
+            let stream = match TcpStream::connect_timeout(&address, TIMEOUT) {
+                Ok(stream) => stream,
+                Err(err) => {
+                    utils::debug!("failed to connect to {address}: {err}");
+                    return None;
+                }
+            };
+
+            stream.set_read_timeout(Some(TIMEOUT)).ok()?;
+            stream.set_write_timeout(Some(TIMEOUT)).ok()?;
+
+            Some(stream)
+        })
     }
 
-    fn register(&self) -> Option<Uuid> {
-        const TIMEOUT: Duration = Duration::from_secs(5);
-        let client = ureq::Agent::config_builder()
-            .timeout_global(Some(TIMEOUT))
-            .build()
-            .new_agent();
+    fn connect_server(&self, stream: TcpStream) -> Option<RadarState> {
+        let mut stream = EndianReaderWriter::new(stream, Endian::Big);
 
-        let response = match client
-            .get(format!("http://{}/register", self.config.url))
-            .call()
-        {
-            Ok(response) => response,
-            Err(err) => {
-                utils::debug!("failed to register with {}: {err}", self.config.url);
-                return None;
-            }
-        };
+        stream.write_u32(PROTO_VERSION).ok()?;
+        stream.write_u128(self.uuid.as_u128()).ok()?;
+        let uuid = Uuid::from_u128(stream.read_u128().ok()?);
 
-        let payload = match response.into_body().read_to_string() {
-            Ok(payload) => payload,
-            Err(err) => {
-                utils::debug!("failed to read registration response: {err}");
-                return None;
-            }
-        };
-
-        match Uuid::from_str(&payload) {
-            Ok(uuid) => Some(uuid),
-            Err(err) => {
-                utils::debug!("invalid session id from server: {err}");
-                None
-            }
-        }
-    }
-
-    fn establish_websocket(&self, stream: TcpStream, uuid: Uuid) -> Option<RadarState> {
-        const TIMEOUT: Duration = Duration::from_secs(5);
-
-        stream.set_read_timeout(Some(TIMEOUT)).ok()?;
-        stream.set_write_timeout(Some(TIMEOUT)).ok()?;
-
-        let (mut websocket, _response) = match tungstenite::client(
-            format!("ws://{}/update", self.config.url)
-                .into_client_request()
-                .ok()?,
-            MaybeTlsStream::Plain(stream),
-        ) {
-            Ok(websocket) => websocket,
-            Err(err) => {
-                utils::debug!(
-                    "failed to connect to websocket server {}: {err}",
-                    self.config.url
-                );
-                return None;
-            }
-        };
-
-        if let Err(err) = websocket.send(format!("{uuid}").into()) {
-            utils::debug!("failed to send session id: {err}");
+        if uuid != self.uuid {
             return None;
         }
 
         self.send_message(RadarStatus::Connected(uuid));
-        Some(RadarState {
-            websocket,
-            _uuid: uuid,
-        })
+        Some(RadarState { stream })
     }
 
     fn process_messages(&mut self) {

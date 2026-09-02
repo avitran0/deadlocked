@@ -8,6 +8,7 @@ shared.workspace = true
 utils.workspace = true
 
 glam.workspace = true
+postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 strum.workspace = true
@@ -30,7 +31,6 @@ nix = { version = "0.31", features = ["ioctl"] }
 rand = "0.10"
 rand_distr = "0.6"
 toml = "1.0"
-tungstenite = "0.30"
 ureq = { version = "3", features = ["json"] }
 urlencoding = "2.1"
 winit = { version = "0.30", default-features = false, features = ["x11"] }
