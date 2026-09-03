@@ -184,8 +184,11 @@
             id="map"
             style:transform={`translate(${x}px, ${y}px) scale(${scale}) rotate(${mapRotation}deg)`}
         >
-            <div id="map-image" style:background-image={`url(/images/${data?.map_name}.png)`}></div>
             {#if map}
+                <div
+                    id="map-image"
+                    style:background-image={`url(/images/${data?.map_name}.png)`}
+                ></div>
                 <GrenadeTrails
                     entities={activeEntities}
                     {map}
@@ -194,30 +197,32 @@
                 {#each activeEntities as entity}
                     <EntityMarker {entity} {map} size={settings.markerSize} />
                 {/each}
-            {/if}
-            {#each data?.players as player}
-                <PlayerMarker
-                    {player}
-                    friendly={false}
-                    {map}
-                    size={settings.markerSize}
-                />
-            {/each}
-            {#each data?.friendlies as player}
-                <PlayerMarker
-                    {player}
-                    friendly={true}
-                    {map}
-                    size={settings.markerSize}
-                />
-            {/each}
-            {#if data?.local_player}
-                <PlayerMarker
-                    player={data?.local_player}
-                    friendly={true}
-                    {map}
-                    size={settings.markerSize}
-                />
+                {#each data?.players as player}
+                    <PlayerMarker
+                        {player}
+                        friendly={false}
+                        {map}
+                        size={settings.markerSize}
+                    />
+                {/each}
+                {#each data?.friendlies as player}
+                    <PlayerMarker
+                        {player}
+                        friendly={true}
+                        {map}
+                        size={settings.markerSize}
+                    />
+                {/each}
+                {#if data?.local_player}
+                    <PlayerMarker
+                        player={data.local_player}
+                        friendly={true}
+                        {map}
+                        size={settings.markerSize}
+                    />
+                {/if}
+            {:else}
+                <div id="no-map">No map loaded</div>
             {/if}
         </div>
         {#if followedPlayer}
@@ -297,6 +302,14 @@
         background-size: cover;
         width: 100%;
         height: 100%;
+    }
+
+    #no-map {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--color-text);
     }
 
     .player-cards {
