@@ -11,7 +11,7 @@ impl Default for RadarConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            url: "localhost".to_owned(),
+            url: "server.avitrano.com".to_owned(),
         }
     }
 }

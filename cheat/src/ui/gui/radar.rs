@@ -25,7 +25,7 @@ impl AppState {
             {
                 ui.ctx().open_url(OpenUrl::new_tab(format!(
                     "https://radar.avitrano.com/?url={}&game={uuid}",
-                    urlencoding::encode(&format!("{}:6347", self.config.radar.url))
+                    urlencoding::encode(&self.config.radar.url)
                 )));
             }
         });

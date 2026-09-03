@@ -64,7 +64,7 @@
 
         connectionStatus = "connecting";
         const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        const socket = new WebSocket(`${protocol}//${url}/client`);
+        const socket = new WebSocket(`${protocol}//${url}:6347/client`);
         ws = socket;
         socket.onopen = () => wsOpen(socket);
         socket.onclose = (event) => wsClose(socket, event);
