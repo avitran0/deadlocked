@@ -10,4 +10,4 @@ Please download deadlocked by cloning the Git repository: 'git clone https://git
 [[ -d '.git' ]] || fail
 
 git pull
-cargo run --release
+cargo run --release --bin deadlocked
