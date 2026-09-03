@@ -2,6 +2,7 @@
     import type { Data, PlayerData } from "./data";
     import EntityMarker from "./EntityMarker.svelte";
     import { MAP_DATA, worldToRadar } from "./map_data";
+    import GrenadeTrails from "./GrenadeTrails.svelte";
     import PlayerCard from "./PlayerCard.svelte";
     import PlayerMarker from "./PlayerMarker.svelte";
     import type { RadarSettings } from "./settings";
@@ -14,8 +15,6 @@
     const { data, settings }: Props = $props();
     const map = $derived(MAP_DATA[data?.map_name ?? ""]);
 
-    // Steam bots all use steam_id 0, so include the name in a stable player
-    // identity hash rather than using the Steam ID by itself.
     function playerKey(player: PlayerData): string {
         const identity = `${player.steam_id}:${player.name}`;
         let hash = 2166136261;
@@ -39,6 +38,22 @@
         ...(data?.friendlies ?? []),
         ...(data?.local_player ? [data.local_player] : []),
     ]);
+    let activeEntities = $derived(
+        (data?.entities ?? []).filter((entity) => {
+            if ("Inferno" in entity) return entity.Inferno.hull.length > 0;
+            if ("Weapon" in entity) {
+                return ![
+                    "flashbang",
+                    "h_e",
+                    "smoke",
+                    "molotov",
+                    "incendiary",
+                    "decoy",
+                ].includes(entity.Weapon.weapon);
+            }
+            return true;
+        }),
+    );
     let terrorists = $derived(
         allPlayers.filter((player) => player.team === "T"),
     );
@@ -48,8 +63,6 @@
     let followedPlayer = $derived(
         allPlayers.find((player) => playerKey(player) === followedPlayerKey),
     );
-    // Keep the followed player's view direction pointing up. Player markers
-    // use `-rotation + 90deg`, so the map needs the inverse rotation.
     let mapRotation = $derived(
         followedPlayer ? followedPlayer.rotation - 90 : 0,
     );
@@ -172,7 +185,12 @@
         >
             <div id="map-image" style:background-image={`url(/images/${data?.map_name}.png)`}></div>
             {#if map}
-                {#each data?.entities ?? [] as entity}
+                <GrenadeTrails
+                    entities={activeEntities}
+                    {map}
+                    mapName={data?.map_name ?? ""}
+                />
+                {#each activeEntities as entity}
                     <EntityMarker {entity} {map} size={settings.markerSize} />
                 {/each}
             {/if}

@@ -55,16 +55,19 @@ export interface WeaponInfo {
 }
 
 export interface GrenadeInfo {
+    entity: number;
     position: Vec3;
     name: string;
 }
 
 export interface InfernoInfo {
+    entity: number;
     position: Vec3;
     hull: Vec3[];
 }
 
 export interface MolotovInfo {
+    entity: number;
     position: Vec3;
     is_incendiary: boolean;
 }
