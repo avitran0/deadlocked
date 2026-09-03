@@ -1,0 +1,9 @@
+[package]
+name = "shared"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+glam.workspace = true
+serde.workspace = true
+strum.workspace = true
