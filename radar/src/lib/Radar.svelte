@@ -160,6 +160,7 @@
     });
 
     function resetView() {
+        followedPlayerKey = null;
         scale = 1;
         x = 0;
         y = 0;
