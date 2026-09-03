@@ -105,3 +105,25 @@ select:disabled {
     cursor: not-allowed;
     opacity: 0.6;
 }
+
+input[type="text"] {
+    background-color: var(--color-highlight);
+    border: var(--border);
+    border-radius: var(--border-radius);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    font-size: var(--font-size-medium);
+    padding: var(--padding);
+    transition: var(--transition);
+}
+
+input[type="text"]:hover,
+input[type="text"]:focus-visible {
+    border-color: var(--color-blue);
+    outline: none;
+}
+
+input[type="text"]:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}

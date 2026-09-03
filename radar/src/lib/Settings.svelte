@@ -13,14 +13,11 @@
 
     <label>
         Font
-        <select bind:value={settings.font}>
-            <option value="Lexend">Lexend</option>
-            <option value="Inter">Inter</option>
-            <option value="Fira Sans">Fira Sans</option>
-            <option value="Nunito">Nunito</option>
-            <option value="Ubuntu">Ubuntu</option>
-            <option value="DM Sans">DM Sans</option>
-        </select>
+        <input
+            type="text"
+            bind:value={settings.font}
+            placeholder="Google Font name"
+        />
     </label>
 
     <label>
@@ -55,6 +52,10 @@
         gap: 0.4rem;
         padding-top: 0.6rem;
         white-space: nowrap;
+    }
+
+    input[type="text"] {
+        width: 12rem;
     }
 
     input[type="range"] {

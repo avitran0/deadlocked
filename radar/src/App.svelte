@@ -20,8 +20,13 @@
         const font = settings.font.trim();
         if (!font) return;
 
-        const fontFace = new FontFace(font, `url("/fonts/${encodeURIComponent(font)}.woff2")`);
-        fontFace.load().then((loadedFont) => document.fonts.add(loadedFont));
+        const family = encodeURIComponent(font).replace(/%20/g, "+");
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = `https://fonts.googleapis.com/css2?family=${family}&display=swap`;
+        document.head.appendChild(link);
+
+        return () => link.remove();
     });
 
     $effect(() => {
