@@ -19,7 +19,7 @@
         if ("Flashbang" in entity) return entity.Flashbang.position;
         if ("HeGrenade" in entity) return entity.HeGrenade.position;
         if ("Decoy" in entity) return entity.Decoy.position;
-        return entity.Chicken.position;
+        return [0, 0, 0];
     }
 
     function iconOf(entity: EntityInfo): string | null {
@@ -39,7 +39,6 @@
         if ("Decoy" in entity) return entity.Decoy.name;
         if ("Molotov" in entity) return entity.Molotov.is_incendiary ? "Incendiary" : "Molotov";
         if ("Inferno" in entity) return "Inferno";
-        if ("Chicken" in entity) return "Chicken";
         return "";
     }
 
@@ -59,12 +58,6 @@
         <WeaponIcon icon={entity.Weapon.weapon} />
     {:else if icon !== null}
         <img src={`/icons/${icon}.svg`} alt={label} />
-    {:else}
-        <span class="chicken-marker" aria-label={label}>●</span>
-    {/if}
-
-    {#if label}
-        <span class="label">{label}</span>
     {/if}
 </div>
 
@@ -96,15 +89,5 @@
         color: var(--color-yellow);
         font-size: 1rem;
         line-height: 1;
-    }
-
-    .label {
-        position: absolute;
-        top: 100%;
-        padding: 0.1rem 0.25rem;
-        border-radius: var(--border-radius);
-        background: var(--color-base);
-        color: var(--color-text);
-        font-size: var(--font-size-xsmall);
     }
 </style>

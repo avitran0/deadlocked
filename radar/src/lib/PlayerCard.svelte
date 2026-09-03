@@ -5,9 +5,11 @@
 
     type Props = {
         player: PlayerData;
+        onclick?: (player: PlayerData) => void;
+        followed?: boolean;
     };
 
-    let { player }: Props = $props();
+    let { player, onclick, followed = false }: Props = $props();
     let color = $derived(teamColor(player.team));
     let healthColorValue = $derived(healthColor(player.health, player.max_health));
     let armorPercent = $derived(Math.max(0, Math.min(100, player.armor)));
@@ -18,7 +20,15 @@
     );
 </script>
 
-<article class="player-card container" style:border-color={color}>
+<button
+    type="button"
+    class="player-card container"
+    class:followed
+    style:border-color={color}
+    aria-label={`Follow ${player.name || "Unknown player"}`}
+    aria-pressed={followed}
+    onclick={() => onclick?.(player)}
+>
     <div class="heading">
         <strong>{player.name || "Unknown player"}</strong>
         <span class="money">${player.money.toLocaleString()}</span>
@@ -47,14 +57,28 @@
         {#if player.has_defuser}<span>Defuser</span>{/if}
         {#if player.has_bomb}<span>Bomb</span>{/if}
     </div>
-</article>
+</button>
 
 <style>
     .player-card {
+        display: block;
         width: 15rem;
         max-width: 100%;
         padding: 0.5rem 0.65rem;
+        text-align: left;
+        cursor: pointer;
+        transition: var(--transition-linear);
+    }
 
+    .player-card:hover,
+    .player-card:focus-visible,
+    .player-card.followed {
+        background: var(--color-highlight);
+    }
+
+    .player-card:focus-visible {
+        outline: 2px solid var(--color-text);
+        outline-offset: 2px;
     }
 
     .heading,

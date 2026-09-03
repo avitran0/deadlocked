@@ -17,19 +17,19 @@
 
 <div
     class="marker"
-    style:left={`${position[0]}%`}
-    style:top={`${position[1]}%`}
+    style:left={`${position[0] - size / 2}%`}
+    style:top={`${position[1] - size / 2}%`}
     style:width={`${size}%`}
     style:height={`${size}%`}
+    style:transform={`rotate(${-player.rotation + 90}deg)`}
 >
-    <Marker rotation={player.rotation} color={friendly ? playerColor(player) : "#f06464"} />
+    <Marker color={friendly ? playerColor(player) : "#f06464"} />
     <p>{player.name}</p>
 </div>
 
 <style>
     .marker {
         position: absolute;
-        transform: translate(-50%, -50%);
         container-type: size;
     }
 
@@ -37,7 +37,7 @@
         position: absolute;
         top: 100%;
         left: 50%;
-        margin: 0.15rem 0 0;
+        margin: 0;
         transform: translateX(-50%);
         color: var(--color-text);
         font-size: clamp(0.65rem, 40cqw, 1.2rem);

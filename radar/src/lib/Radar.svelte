@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type { Data } from "./data";
+    import type { Data, PlayerData } from "./data";
     import EntityMarker from "./EntityMarker.svelte";
-    import { MAP_DATA } from "./map_data";
+    import { MAP_DATA, worldToRadar } from "./map_data";
     import PlayerCard from "./PlayerCard.svelte";
     import PlayerMarker from "./PlayerMarker.svelte";
     import type { RadarSettings } from "./settings";
@@ -14,9 +14,25 @@
     const { data, settings }: Props = $props();
     const map = $derived(MAP_DATA[data?.map_name ?? ""]);
 
+    // Steam bots all use steam_id 0, so include the name in a stable player
+    // identity hash rather than using the Steam ID by itself.
+    function playerKey(player: PlayerData): string {
+        const identity = `${player.steam_id}:${player.name}`;
+        let hash = 2166136261;
+
+        for (let index = 0; index < identity.length; index++) {
+            hash ^= identity.charCodeAt(index);
+            hash = Math.imul(hash, 16777619) >>> 0;
+        }
+
+        return hash.toString(16);
+    }
+
     let scale = $state(1);
     let x = $state(0);
     let y = $state(0);
+    let radarElement: HTMLDivElement;
+    let followedPlayerKey = $state<string | null>(null);
 
     let allPlayers = $derived([
         ...(data?.players ?? []),
@@ -28,6 +44,14 @@
     );
     let counterTerrorists = $derived(
         allPlayers.filter((player) => player.team === "CT"),
+    );
+    let followedPlayer = $derived(
+        allPlayers.find((player) => playerKey(player) === followedPlayerKey),
+    );
+    // Keep the followed player's view direction pointing up. Player markers
+    // use `-rotation + 90deg`, so the map needs the inverse rotation.
+    let mapRotation = $derived(
+        followedPlayer ? followedPlayer.rotation - 90 : 0,
     );
 
     let dragging = $state(false);
@@ -84,6 +108,44 @@
         dragging = false;
     }
 
+    function centerPlayer(player: PlayerData) {
+        if (!radarElement || !map) return;
+
+        const position = worldToRadar(player.position, map);
+        const width = radarElement.clientWidth;
+        const height = radarElement.clientHeight;
+
+        const dx = (position[0] / 100 - 0.5) * width;
+        const dy = (position[1] / 100 - 0.5) * height;
+        const angle = ((player.rotation - 90) * Math.PI) / 180;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        const rotatedX = dx * cos - dy * sin;
+        const rotatedY = dx * sin + dy * cos;
+
+        x = -rotatedX * scale;
+        y = -rotatedY * scale;
+    }
+
+    function followPlayer(player: PlayerData) {
+        if (followedPlayerKey === playerKey(player)) {
+            unfollowPlayer();
+            return;
+        }
+
+        followedPlayerKey = playerKey(player);
+        centerPlayer(player);
+    }
+
+    function unfollowPlayer() {
+        followedPlayerKey = null;
+        resetView();
+    }
+
+    $effect(() => {
+        if (followedPlayer) centerPlayer(followedPlayer);
+    });
+
     function resetView() {
         scale = 1;
         x = 0;
@@ -95,6 +157,7 @@
     <div
         id="radar"
         class="container"
+        bind:this={radarElement}
         class:dragging
         onwheel={onWheel}
         onpointerdown={onPointerDown}
@@ -103,7 +166,10 @@
         onpointercancel={onPointerUp}
         role="region"
     >
-        <div id="map" style:transform={`translate(${x}px, ${y}px) scale(${scale})`}>
+        <div
+            id="map"
+            style:transform={`translate(${x}px, ${y}px) scale(${scale}) rotate(${mapRotation}deg)`}
+        >
             <div id="map-image" style:background-image={`url(/images/${data?.map_name}.png)`}></div>
             {#if map}
                 {#each data?.entities ?? [] as entity}
@@ -135,6 +201,15 @@
                 />
             {/if}
         </div>
+        {#if followedPlayer}
+            <button
+                id="unfollow"
+                onclick={unfollowPlayer}
+                onpointerdown={(event) => event.stopPropagation()}
+            >
+                Unfollow
+            </button>
+        {/if}
         <button
             id="reset"
             onclick={resetView}
@@ -146,13 +221,21 @@
 
     <aside class="player-cards terrorists">
         {#each terrorists as player}
-            <PlayerCard {player} />
+            <PlayerCard
+                {player}
+                onclick={followPlayer}
+                followed={followedPlayerKey === playerKey(player)}
+            />
         {/each}
     </aside>
 
     <aside class="player-cards counter-terrorists">
         {#each counterTerrorists as player}
-            <PlayerCard {player} />
+            <PlayerCard
+                {player}
+                onclick={followPlayer}
+                followed={followedPlayerKey === playerKey(player)}
+            />
         {/each}
     </aside>
 </div>
@@ -217,12 +300,20 @@
         grid-row: 1;
     }
 
-    #reset {
+    #reset,
+    #unfollow {
         cursor: pointer;
         position: absolute;
         top: 0.5rem;
-        right: 0.5rem;
         z-index: 5;
+    }
+
+    #reset {
+        right: 0.5rem;
+    }
+
+    #unfollow {
+        left: 0.5rem;
     }
 
     @media (max-width: 1000px) {

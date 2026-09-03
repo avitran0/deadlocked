@@ -46,8 +46,7 @@ export type EntityInfo =
     | { Smoke: GrenadeInfo }
     | { Flashbang: GrenadeInfo }
     | { HeGrenade: GrenadeInfo }
-    | { Decoy: GrenadeInfo }
-    | { Chicken: ChickenInfo };
+    | { Decoy: GrenadeInfo };
 
 export interface WeaponInfo {
     weapon: string;
@@ -56,27 +55,18 @@ export interface WeaponInfo {
 }
 
 export interface GrenadeInfo {
-    entity: number;
     position: Vec3;
     name: string;
 }
 
 export interface InfernoInfo {
-    entity: number;
     position: Vec3;
     hull: Vec3[];
 }
 
 export interface MolotovInfo {
-    entity: number;
     position: Vec3;
     is_incendiary: boolean;
-}
-
-export interface ChickenInfo {
-    position: Vec3;
-    visible: boolean;
-    bones: Record<string, Vec3>;
 }
 
 export type Vec2 = [x: number, y: number];
@@ -85,9 +75,9 @@ export type Ammo = [clip: number, reserve: number];
 
 // todo: cross-check this
 export enum Color {
-    Yellow = 0,
-    Purple = 1,
-    Green = 2,
-    Blue = 3,
-    Orange = 4,
+    Blue = 0,
+    Green = 1,
+    Yellow = 2,
+    Orange = 3,
+    Purple = 4,
 }
