@@ -83,3 +83,25 @@ button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
 }
+
+select {
+    background-color: var(--color-highlight);
+    border: var(--border);
+    border-radius: var(--border-radius);
+    color: var(--color-text);
+    cursor: pointer;
+    font-family: var(--font-family);
+    font-size: var(--font-size-medium);
+    padding: var(--padding);
+    transition: var(--transition);
+}
+
+select:hover,
+select:focus-visible {
+    border-color: var(--color-blue);
+}
+
+select:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}

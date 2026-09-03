@@ -12,6 +12,18 @@
     <summary>Settings</summary>
 
     <label>
+        Font
+        <select bind:value={settings.font}>
+            <option value="Lexend">Lexend</option>
+            <option value="Inter">Inter</option>
+            <option value="Fira Sans">Fira Sans</option>
+            <option value="Nunito">Nunito</option>
+            <option value="Ubuntu">Ubuntu</option>
+            <option value="DM Sans">DM Sans</option>
+        </select>
+    </label>
+
+    <label>
         Marker size
         <input
             type="range"
@@ -46,7 +58,7 @@
     }
 
     input[type="range"] {
-        width: 7rem;
+        width: 8rem;
     }
 
     output {

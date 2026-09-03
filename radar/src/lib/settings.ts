@@ -1,9 +1,11 @@
 export interface RadarSettings {
     markerSize: number;
+    font: string;
 }
 
 export const DEFAULT_SETTINGS: RadarSettings = {
     markerSize: 3,
+    font: "Lexend",
 };
 
 const STORAGE_KEY = "settings";

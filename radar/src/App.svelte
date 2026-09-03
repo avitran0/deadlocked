@@ -17,6 +17,14 @@
     let connectionStatus = $state<"connecting" | "connected" | "disconnected">("connecting");
 
     $effect(() => {
+        const font = settings.font.trim();
+        if (!font) return;
+
+        const fontFace = new FontFace(font, `url("/fonts/${encodeURIComponent(font)}.woff2")`);
+        fontFace.load().then((loadedFont) => document.fonts.add(loadedFont));
+    });
+
+    $effect(() => {
         saveSettings(settings);
     });
 
@@ -101,7 +109,10 @@
     }
 </script>
 
-<main>
+<main
+    style:--font-family={`"${settings.font}", sans-serif`}
+    style:font-family={`"${settings.font}", sans-serif`}
+>
     <Settings bind:settings />
     <div id="connection-status" class={connectionStatus}>
         {connectionStatus === "connecting"
