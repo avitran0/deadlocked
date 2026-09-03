@@ -61,6 +61,7 @@ pub struct AppState {
     pub text_popup: Option<String>,
     pub update_popup: bool,
     pub overlay_egui: Option<egui::Context>,
+    pub gui_focused: bool,
 
     pub radar_status: RadarStatus,
 }
@@ -123,6 +124,7 @@ impl AppState {
             text_popup: None,
             update_popup,
             overlay_egui: None,
+            gui_focused: true,
             radar_status: RadarStatus::Disabled,
         }
     }
@@ -213,6 +215,15 @@ impl ApplicationHandler for App {
 
         while let Ok(message) = self.state.channel_radar.try_receive() {
             self.radar_status = message;
+        }
+
+        if self
+            .gui
+            .as_ref()
+            .is_some_and(|gui| gui.window().id() == window_id)
+            && let WindowEvent::Focused(focused) = &window_event
+        {
+            self.gui_focused = *focused;
         }
 
         let Some(gui) = &self.gui else {
