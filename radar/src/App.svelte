@@ -58,7 +58,8 @@
         if (stopped || url === null || uuid === null) return;
 
         connectionStatus = "connecting";
-        const socket = new WebSocket(`ws://${url}/client`);
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        const socket = new WebSocket(`${protocol}//${url}/client`);
         ws = socket;
         socket.onopen = () => wsOpen(socket);
         socket.onclose = (event) => wsClose(socket, event);
