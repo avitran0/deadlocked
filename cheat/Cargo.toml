@@ -1,0 +1,39 @@
+[package]
+name = "deadlocked"
+version = "1.1.1"
+edition = "2024"
+
+[dependencies]
+shared.workspace = true
+utils.workspace = true
+
+glam.workspace = true
+postcard.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+strum.workspace = true
+uuid.workspace = true
+
+bytemuck = "1.24"
+egui = "0.36"
+egui_glow = { version = "0.36", features = ["winit"] }
+egui-winit = { version = "0.36", default-features = false, features = ["links", "x11"] }
+epaint = { version = "0.36", features = ["serde"] }
+glutin = { version = "0.32", default-features = false, features = [
+    "x11",
+    "egl",
+] }
+glutin-winit = { version = "0.5", default-features = false, features = [
+    "x11",
+    "egl",
+] }
+nix = { version = "0.31", features = ["ioctl"] }
+rand = "0.10"
+rand_distr = "0.6"
+toml = "1.0"
+ureq = { version = "3", features = ["json"] }
+urlencoding = "2.1"
+winit = { version = "0.30", default-features = false, features = ["x11"] }
+
+[features]
+read-only = []
