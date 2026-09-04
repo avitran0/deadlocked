@@ -25,7 +25,7 @@ The built-in update checker compares against the latest release tag and will pro
 > [!NOTE]
 > Running NixOS, Fedora Atomic, Hyprland (Legacy .conf config)?
 > 
-> See the [compatibility,md](compatibility.md).
+> See the [compatibility.md](compatibility.md).
 
 Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
 
@@ -47,6 +47,12 @@ You only need to do this once, even when updating to newer versions.
 
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
+
+> [!WARNING]
+> Prebuilt binaries from GitHub Releases are only as portable as the machine they
+> were built on. A binary built on a very new glibc (for example Arch with
+> `GLIBC_2.43`) will not run on Debian/Kali/Ubuntu until you **build from source**
+> on that distro. `rustc` 1.85+ is required (`edition = "2024"`).
 
 <br>
 
@@ -163,7 +169,7 @@ Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherw
 * i3
 * OpenBox
 * XFCE
-* Hyprland (tweaks may be needed, no guarantees; see [compatibility,md](compatibility.md/#hyprland))
+* Hyprland (tweaks may be needed, no guarantees; see [compatibility.md](compatibility.md#hyprland))
 
 </details>
 
