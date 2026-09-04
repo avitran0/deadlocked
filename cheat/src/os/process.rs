@@ -1,6 +1,4 @@
 use std::{
-    cell::RefCell,
-    collections::HashMap,
     fs::{File, OpenOptions, read_dir, read_link},
     io::{BufRead, BufReader},
     ops::RangeInclusive,
@@ -18,7 +16,6 @@ pub struct Process {
     file: File,
     path: PathBuf,
     pub data_range: RangeInclusive<usize>,
-    string_cache: RefCell<HashMap<usize, String>>,
 }
 
 impl Process {
@@ -29,7 +26,6 @@ impl Process {
                 path: PathBuf::from(format!("/proc/{pid}")),
                 file: OpenOptions::new().read(true).open("/dev/null").unwrap(),
                 data_range: 0..=0,
-                string_cache: RefCell::new(HashMap::new()),
             };
         }
 
@@ -45,7 +41,6 @@ impl Process {
             path: PathBuf::from(format!("/proc/{pid}")),
             file,
             data_range: 0..=0,
-            string_cache: RefCell::new(HashMap::new()),
         };
 
         let libs: Vec<usize> = cs2::LIBS
@@ -197,17 +192,6 @@ impl Process {
     }
 
     pub fn read_string(&self, address: usize) -> String {
-        if let Some(cached) = self.string_cache.borrow().get(&address).cloned() {
-            return cached;
-        }
-        let string = self.read_string_uncached(address);
-        self.string_cache
-            .borrow_mut()
-            .insert(address, string.clone());
-        string
-    }
-
-    pub fn read_string_uncached(&self, address: usize) -> String {
         let max_len = 1024;
         let chunk = self.read_vec(address, max_len);
         let len = chunk.iter().position(|&b| b == 0).unwrap_or(max_len);
@@ -315,7 +299,7 @@ impl Process {
 
         loop {
             let entry_name_address: usize = self.read(interface_entry + 8);
-            let entry_name = self.read_string_uncached(entry_name_address);
+            let entry_name = self.read_string(entry_name_address);
             if entry_name.starts_with(interface_name) {
                 let vfunc_address = self.read::<usize>(interface_entry);
                 return Some(
@@ -340,7 +324,7 @@ impl Process {
 
         while self.read::<u32>(symbol_table) != 0 {
             let st_name = self.read::<u32>(symbol_table);
-            let name = self.read_string_uncached(string_table + st_name as usize);
+            let name = self.read_string(string_table + st_name as usize);
             if name == export_name {
                 return Some(self.read::<usize>(symbol_table + 0x08) + base_address);
             }
@@ -407,7 +391,7 @@ impl Process {
             }
 
             let name_address: usize = self.read(object);
-            let name = self.read_string_uncached(name_address);
+            let name = self.read_string(name_address);
             if name == convar_name {
                 return Some(object);
             }
