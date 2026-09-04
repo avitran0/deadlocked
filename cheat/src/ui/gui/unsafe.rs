@@ -1,8 +1,11 @@
 use egui::{DragValue, Ui};
 
-use crate::ui::{
-    app::AppState,
-    gui::helpers::{collapsing_open, color_picker},
+use crate::{
+    config::r#unsafe::UnsafeConfig,
+    ui::{
+        app::AppState,
+        gui::helpers::{collapsing_open, color_picker, reset_button},
+    },
 };
 
 impl AppState {
@@ -46,6 +49,14 @@ impl AppState {
             if color_picker(ui, "Smoke Color", &mut self.config.misc.smoke_color) {
                 self.send_config_game();
             }
+
+            if reset_button(ui) {
+                let defaults = UnsafeConfig::default();
+                self.config.misc.no_smoke = defaults.no_smoke;
+                self.config.misc.change_smoke_color = defaults.change_smoke_color;
+                self.config.misc.smoke_color = defaults.smoke_color;
+                self.send_config_game();
+            }
         });
     }
 
@@ -72,6 +83,13 @@ impl AppState {
                 }
                 ui.label("Max Flash Alpha");
             });
+
+            if reset_button(ui) {
+                let defaults = UnsafeConfig::default();
+                self.config.misc.no_flash = defaults.no_flash;
+                self.config.misc.max_flash_alpha = defaults.max_flash_alpha;
+                self.send_config_game();
+            }
         });
     }
 
@@ -102,6 +120,13 @@ impl AppState {
                     self.send_config_game();
                 }
             });
+
+            if reset_button(ui) {
+                let defaults = UnsafeConfig::default();
+                self.config.misc.fov_changer = defaults.fov_changer;
+                self.config.misc.desired_fov = defaults.desired_fov;
+                self.send_config_game();
+            }
         });
     }
 }

@@ -2,10 +2,16 @@ use egui::{DragValue, Ui};
 use shared::Bones;
 use strum::IntoEnumIterator as _;
 
-use crate::ui::{
-    app::AppState,
-    drag_range::DragRange,
-    gui::helpers::{checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, scroll},
+use crate::{
+    config::aim::{AimbotConfig, RcsConfig, TriggerbotConfig},
+    ui::{
+        app::AppState,
+        drag_range::DragRange,
+        gui::helpers::{
+            checkbox, checkbox_hover, collapsing_open, combo_box, drag, keybind, reset_button,
+            scroll,
+        },
+    },
 };
 
 #[derive(PartialEq)]
@@ -69,6 +75,16 @@ impl AppState {
                 "Mode",
                 &mut self.weapon_config().aimbot.mode,
             ) {
+                self.send_config_game();
+            }
+
+            if reset_button(ui) {
+                let override_enabled = self.weapon_config().aimbot.enable_override;
+                self.weapon_config().aimbot = AimbotConfig {
+                    enable_override: override_enabled,
+                    ..AimbotConfig::default()
+                };
+                self.config.aim.aimbot_hotkey = crate::config::aim::AimConfig::default().aimbot_hotkey;
                 self.send_config_game();
             }
         });
@@ -155,6 +171,20 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if reset_button(ui) {
+                let defaults = AimbotConfig::default();
+                let aimbot = &mut self.weapon_config().aimbot;
+                aimbot.target_friendlies = defaults.target_friendlies;
+                aimbot.distance_adjusted_fov = defaults.distance_adjusted_fov;
+                aimbot.fov = defaults.fov;
+                aimbot.smooth = defaults.smooth;
+                aimbot.inertia = defaults.inertia;
+                aimbot.prediction_time = defaults.prediction_time;
+                aimbot.start_bullet = defaults.start_bullet;
+                aimbot.targeting_mode = defaults.targeting_mode;
+                self.send_config_game();
+            }
         });
 
         ui.collapsing("Checks", |ui| {
@@ -171,6 +201,14 @@ impl AppState {
                 "Flash Check",
                 &mut self.weapon_config().aimbot.flash_check,
             ) {
+                self.send_config_game();
+            }
+
+            if reset_button(ui) {
+                let defaults = AimbotConfig::default();
+                let aimbot = &mut self.weapon_config().aimbot;
+                aimbot.visibility_check = defaults.visibility_check;
+                aimbot.flash_check = defaults.flash_check;
                 self.send_config_game();
             }
         });
@@ -192,6 +230,11 @@ impl AppState {
                     }
                     self.send_config_game();
                 }
+            }
+
+            if reset_button(ui) {
+                self.weapon_config().aimbot.bones = AimbotConfig::default().bones;
+                self.send_config_game();
             }
         });
     }
@@ -262,6 +305,17 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if reset_button(ui) {
+                let override_enabled = self.weapon_config().triggerbot.enable_override;
+                self.weapon_config().triggerbot = TriggerbotConfig {
+                    enable_override: override_enabled,
+                    ..TriggerbotConfig::default()
+                };
+                self.config.aim.triggerbot_hotkey =
+                    crate::config::aim::AimConfig::default().triggerbot_hotkey;
+                self.send_config_game();
+            }
         });
 
         ui.collapsing("Checks\u{200b}", |ui| {
@@ -284,7 +338,7 @@ impl AppState {
             if checkbox_hover(
                 ui,
                 "Velocity Check",
-                "Only shoot if the player moves slower than the specified threshold",
+                "Only shoot if YOU move slower than the threshold",
                 &mut self.weapon_config().triggerbot.velocity_check,
             ) {
                 self.send_config_game();
@@ -296,6 +350,16 @@ impl AppState {
                 DragValue::new(&mut self.weapon_config().triggerbot.velocity_threshold)
                     .range(0..=5000),
             ) {
+                self.send_config_game();
+            }
+
+            if reset_button(ui) {
+                let defaults = TriggerbotConfig::default();
+                let trigger = &mut self.weapon_config().triggerbot;
+                trigger.flash_check = defaults.flash_check;
+                trigger.scope_check = defaults.scope_check;
+                trigger.velocity_check = defaults.velocity_check;
+                trigger.velocity_threshold = defaults.velocity_threshold;
                 self.send_config_game();
             }
         });
@@ -335,6 +399,15 @@ impl AppState {
                 })
                 .inner
             {
+                self.send_config_game();
+            }
+
+            if reset_button(ui) {
+                let override_enabled = self.weapon_config().rcs.enable_override;
+                self.weapon_config().rcs = RcsConfig {
+                    enable_override: override_enabled,
+                    ..RcsConfig::default()
+                };
                 self.send_config_game();
             }
         });

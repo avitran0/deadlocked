@@ -10,11 +10,15 @@ pub static APP_CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| BASE_PATH.join(
 #[serde(default)]
 pub struct ApplicationConfig {
     pub first_launch: bool,
+    pub check_for_updates: bool,
 }
 
 impl Default for ApplicationConfig {
     fn default() -> Self {
-        Self { first_launch: true }
+        Self {
+            first_launch: true,
+            check_for_updates: true,
+        }
     }
 }
 
@@ -31,7 +35,6 @@ pub fn read_app_config() -> ApplicationConfig {
     config.unwrap_or_default()
 }
 
-#[allow(dead_code)]
 pub fn write_app_config(config: &ApplicationConfig) {
     let out = toml::to_string(&config).unwrap();
     let _ = std::fs::write(APP_CONFIG_PATH.as_path(), out);

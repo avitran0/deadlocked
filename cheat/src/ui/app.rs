@@ -45,7 +45,6 @@ pub struct AppState {
     pub new_grenade: Grenade,
     pub current_grenade: Option<(String, usize)>,
 
-    #[allow(dead_code)]
     pub app_config: ApplicationConfig,
     pub config: Config,
     pub current_config: PathBuf,
@@ -97,8 +96,13 @@ impl AppState {
         let grenades = read_grenades();
         let app_config = read_app_config();
 
-        let update_status = crate::update::check();
-        let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
+        let (update_status, update_popup) = if app_config.check_for_updates {
+            let status = crate::update::check();
+            let popup = matches!(status, crate::update::UpdateStatus::Available { .. });
+            (status, popup)
+        } else {
+            (crate::update::UpdateStatus::UpToDate, false)
+        };
 
         Self {
             channel_game,
