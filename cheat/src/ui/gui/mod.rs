@@ -256,18 +256,29 @@ impl App {
         let overlay = self.overlay.as_mut().unwrap();
         let state = &mut self.state;
 
-        if state.gui_focused {
-            if let Err(err) = gui.make_current() {
-                utils::error!("could not make gui window current: {err}");
-                return;
-            }
-            gui.run(|ui| state.gui(ui));
-            gui.clear();
-            gui.paint();
+        // Present a few frames even if unfocused so XWayland compositors (Hyprland,
+        // niri) actually map the settings window. After that, skip presents while
+        // unfocused so an obscured GUI cannot stall/assert in eglX11SwapBuffers.
+        const GUI_MAP_FRAMES: u8 = 15;
+        let present_gui = state.gui_focused || state.gui_present_frames < GUI_MAP_FRAMES;
 
-            if let Err(err) = gui.swap_buffers() {
-                utils::error!("could not swap gui window buffers: {err}");
-                return;
+        if present_gui {
+            gui.window().set_visible(true);
+            match gui.make_current() {
+                Err(err) => {
+                    utils::error!("could not make gui window current: {err}");
+                }
+                Ok(()) => {
+                    gui.run(|ui| state.gui(ui));
+                    gui.clear();
+                    gui.paint();
+
+                    if let Err(err) = gui.swap_buffers() {
+                        utils::error!("could not swap gui window buffers: {err}");
+                    } else if state.gui_present_frames < GUI_MAP_FRAMES {
+                        state.gui_present_frames = state.gui_present_frames.saturating_add(1);
+                    }
+                }
             }
         }
 

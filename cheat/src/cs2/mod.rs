@@ -80,6 +80,8 @@ impl CS2 {
         };
         utils::info!("offsets found");
 
+        self.reset_world_state();
+        self.current_bvh.clear();
         self.is_valid = true;
     }
 
@@ -93,8 +95,8 @@ impl CS2 {
         self.input.update(&self.process, &self.offsets);
 
         if self.last_cache.elapsed() > Duration::from_millis(200) {
+            self.check_map();
             self.cache_entities();
-            self.check_bvh();
             self.last_cache = Instant::now();
         }
 
@@ -384,15 +386,41 @@ impl CS2 {
         }
     }
 
-    fn check_bvh(&mut self) {
+    fn check_map(&mut self) {
         let current_map = self.current_map();
+        let map_ready = !current_map.is_empty() && current_map != "<empty>";
+
+        if !map_ready {
+            if !self.current_bvh.is_empty() {
+                utils::info!("map unloading, clearing world state");
+                self.reset_world_state();
+                self.current_bvh.clear();
+            }
+            return;
+        }
+
         if current_map != self.current_bvh {
+            utils::info!("map changed to {current_map}, resetting world state");
+            self.reset_world_state();
             self.bvh = read_map(self);
             if self.bvh.is_some() {
                 utils::info!("loaded bvh for {current_map}");
-                self.current_bvh = current_map;
             }
+            self.current_bvh = current_map;
         }
+    }
+
+    fn reset_world_state(&mut self) {
+        self.players.clear();
+        self.dead_players.clear();
+        self.entities.clear();
+        self.planted_c4 = None;
+        self.bvh = None;
+        self.target.reset();
+    }
+
+    pub fn set_esp_active(&mut self, active: bool) {
+        self.esp.active = active;
     }
 
     fn check_hotkey(input: &Input, mode: KeyMode, key: KeyCode, active: &mut bool) -> bool {

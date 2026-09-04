@@ -62,6 +62,9 @@ pub struct AppState {
     pub update_popup: bool,
     pub overlay_egui: Option<egui::Context>,
     pub gui_focused: bool,
+    /// Number of GUI frames presented while mapping the settings window.
+    /// Hyprland/niri will not map an XWayland window that never presents.
+    pub gui_present_frames: u8,
 
     pub radar_status: RadarStatus,
 }
@@ -125,6 +128,7 @@ impl AppState {
             update_popup,
             overlay_egui: None,
             gui_focused: true,
+            gui_present_frames: 0,
             radar_status: RadarStatus::Disabled,
         }
     }
@@ -157,6 +161,9 @@ impl App {
 
         self.state.display_scale = gui.window().scale_factor() as f32;
         self.state.overlay_egui = Some(overlay.egui().clone());
+        self.state.gui_focused = true;
+        self.state.gui_present_frames = 0;
+        gui.window().set_visible(true);
         utils::info!("detected display scale: {}", self.state.display_scale);
 
         self.gui = Some(gui);

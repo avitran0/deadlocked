@@ -495,20 +495,16 @@ impl Player {
         let current_weapon = self.weapon(cs2);
 
         let is_jumping = velocity.z > 100.0 && self.is_in_air(cs2);
-        // knife walking speed is 250 units/s
-        let is_walking = speed > 100.0;
         let is_standing = speed < 10.0;
-
-        // check for scoping (only for snipers)
         let is_scoped = self.is_scoped(cs2);
 
-        if is_walking || is_standing {
+        if is_standing && !is_jumping {
             return None;
         }
 
         if is_scoped && current_weapon.weapon_class() == WeaponClass::Sniper {
             Some(SoundType::Weapon)
-        } else if speed > 150.0 || is_jumping || velocity.z < -200.0 {
+        } else if speed > 130.0 || is_jumping || velocity.z < -200.0 {
             Some(SoundType::Footstep)
         } else {
             None

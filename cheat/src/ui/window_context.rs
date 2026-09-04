@@ -43,6 +43,9 @@ impl WindowContext {
         } else {
             winit::window::WindowAttributes::default()
                 .with_inner_size(winit::dpi::LogicalSize::new(750, 450))
+                .with_min_inner_size(winit::dpi::LogicalSize::new(400, 300))
+                .with_visible(true)
+                .with_resizable(true)
                 .with_title("deadlocked")
         };
 

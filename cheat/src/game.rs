@@ -54,7 +54,11 @@ impl GameManager {
         loop {
             let start = Instant::now();
             while let Ok(message) = self.channel.try_receive() {
-                self.config = *message.0;
+                let new_config = *message.0;
+                if new_config.player.enabled && !self.config.player.enabled {
+                    self.cs2.set_esp_active(true);
+                }
+                self.config = new_config;
             }
 
             let mut is_valid = self.cs2.is_valid();
