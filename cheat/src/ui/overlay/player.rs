@@ -4,13 +4,14 @@ use std::{
 };
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
+use glam::vec3;
 use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
     config::player::{BoxMode, DrawMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen},
-    ui::app::AppState,
+    ui::{app::AppState, color::Colors},
 };
 
 impl AppState {
@@ -110,6 +111,9 @@ impl AppState {
             }
         };
 
+        if player.has_bomb {
+            color = Colors::GOLD;
+        }
         color = Self::alpha(color, alpha);
 
         let stroke = Stroke::new(line_width, color);
@@ -403,27 +407,33 @@ impl AppState {
             painter.line(vec![a, b], stroke);
         }
 
-        // head circle
+        // same 3.5-unit hitbox radius the triggerbot's head_only mode uses
         if !self.config.player.head_circle {
             return;
         }
-        let Some(neck) = player.bones.get(&Bones::Neck) else {
+        let Some(&head) = player.bones.get(&Bones::Head) else {
             return;
         };
-        let Some(spine) = player.bones.get(&Bones::Spine3) else {
-            return;
-        };
-
-        let Some(neck) = world_to_screen(neck, data) else {
-            return;
-        };
-        let Some(spine) = world_to_screen(spine, data) else {
+        let Some(head_screen) = world_to_screen(&head, data) else {
             return;
         };
 
-        let height = spine.y - neck.y;
-        let pos = pos2(neck.x - (spine.x - neck.x) / 2.0, neck.y - height / 2.0);
-        painter.circle_stroke(pos, height / 2.0, stroke);
+        const HEAD_HITBOX_RADIUS: f32 = 3.5;
+        let pitch = data.view_angles.x.to_radians();
+        let yaw = data.view_angles.y.to_radians();
+        let forward = vec3(
+            pitch.cos() * yaw.cos(),
+            pitch.cos() * yaw.sin(),
+            -pitch.sin(),
+        );
+        let right = forward.cross(vec3(0.0, 0.0, 1.0)).normalize();
+
+        let Some(edge_screen) = world_to_screen(&(head + right * HEAD_HITBOX_RADIUS), data) else {
+            return;
+        };
+
+        let radius = (edge_screen - head_screen).length();
+        painter.circle_stroke(head_screen, radius, stroke);
     }
 
     #[allow(clippy::too_many_arguments)]
