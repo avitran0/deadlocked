@@ -291,6 +291,15 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if checkbox_hover(
+                ui,
+                "Always Render Settings Window",
+                "Off (default) only redraws this window while it's focused, which avoids stutter on some setups. Turn this on only if the window ever gets stuck/unresponsive after losing focus.",
+                &mut self.config.hud.gui_always_render,
+            ) {
+                self.send_config_game();
+            }
         });
     }
 }

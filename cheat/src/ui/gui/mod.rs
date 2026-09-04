@@ -256,7 +256,7 @@ impl App {
         let overlay = self.overlay.as_mut().unwrap();
         let state = &mut self.state;
 
-        if state.gui_focused {
+        if state.gui_focused || state.config.hud.gui_always_render {
             if let Err(err) = gui.make_current() {
                 utils::error!("could not make gui window current: {err}");
                 return;

@@ -18,6 +18,7 @@ pub struct HudConfig {
     pub debug: bool,
     pub overlay_text: OverlayTextConfig,
     pub minimap: MinimapConfig,
+    pub gui_always_render: bool,
 }
 
 impl Default for HudConfig {
@@ -35,6 +36,7 @@ impl Default for HudConfig {
             debug: false,
             overlay_text: OverlayTextConfig::default(),
             minimap: MinimapConfig::default(),
+            gui_always_render: false,
         }
     }
 }
