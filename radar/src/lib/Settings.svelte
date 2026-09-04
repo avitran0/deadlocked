@@ -31,6 +31,23 @@
         />
         <output>{settings.markerSize.toFixed(1)}%</output>
     </label>
+
+    <label>
+        Center on self
+        <input type="checkbox" bind:checked={settings.centerOnSelf} />
+    </label>
+
+    <label>
+        Pop-out zoom
+        <input
+            type="range"
+            min="1"
+            max="4"
+            step="0.1"
+            bind:value={settings.pipZoom}
+        />
+        <output>{settings.pipZoom.toFixed(1)}x</output>
+    </label>
 </details>
 
 <style>
