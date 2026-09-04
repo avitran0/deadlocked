@@ -9,7 +9,7 @@ use shared::{Bones, Data, PlayerData, SoundType};
 use crate::{
     config::player::{BoxMode, DrawMode},
     config::text::TextPosition,
-    math::{CYLINDER_SAMPLES, world_to_screen},
+    math::{CYLINDER_SAMPLES, world_to_camera_xy, world_to_screen},
     ui::app::AppState,
 };
 
@@ -502,6 +502,110 @@ impl AppState {
             points[left],
             points[right],
         ))
+    }
+
+    pub fn draw_behind_players(&self, painter: &Painter, data: &Data) {
+        if !self.config.player.behind_players.enabled || !data.in_game {
+            return;
+        }
+
+        let cfg = self.config.player.behind_players.clone();
+        let w = data.window_size.x;
+        let h = data.window_size.y;
+        if w < 32.0 || h < 32.0 {
+            return;
+        }
+
+        let pad = 28.0;
+        let y = h - pad;
+        let marker_size = cfg.size.max(10.0);
+
+        let draw_marker = |player: &PlayerData| {
+            let target = if player.head.length_squared() > 1.0 {
+                player.head
+            } else {
+                player.position
+            };
+            if world_to_screen(&target, data).is_some() {
+                return;
+            }
+
+            let cam = world_to_camera_xy(
+                data.local_player.position,
+                player.position,
+                data.view_angles.y,
+            );
+            let abs_x = cam.x.abs();
+            let abs_y = cam.y.abs().max(1.0);
+
+            // Behind → bottom edge. Left/right (including off-screen sides) → side edges.
+            let pos = if cam.y < 0.0 && abs_y >= abs_x {
+                let x = (w * 0.5
+                    + (cam.x / -cam.y).clamp(-1.0, 1.0) * (w * 0.5 - pad))
+                    .clamp(pad, w - pad);
+                pos2(x, y)
+            } else if cam.x < 0.0 {
+                let sy = (h * 0.5
+                    - (cam.y / abs_x).clamp(-1.0, 1.0) * (h * 0.35))
+                    .clamp(pad, h - pad);
+                pos2(pad, sy)
+            } else {
+                let sy = (h * 0.5
+                    - (cam.y / abs_x.max(1.0)).clamp(-1.0, 1.0) * (h * 0.35))
+                    .clamp(pad, h - pad);
+                pos2(w - pad, sy)
+            };
+
+            let color = if player.visible {
+                cfg.visible_color
+            } else {
+                cfg.color
+            };
+
+            let tip = if pos.x <= pad + 1.0 {
+                pos2(pos.x - 8.0, pos.y)
+            } else if pos.x >= w - pad - 1.0 {
+                pos2(pos.x + 8.0, pos.y)
+            } else {
+                pos2(pos.x, pos.y + 8.0)
+            };
+            let left = if tip.y > pos.y {
+                pos2(pos.x - 7.0, pos.y - 4.0)
+            } else if tip.x < pos.x {
+                pos2(pos.x + 4.0, pos.y - 7.0)
+            } else {
+                pos2(pos.x - 4.0, pos.y - 7.0)
+            };
+            let right = if tip.y > pos.y {
+                pos2(pos.x + 7.0, pos.y - 4.0)
+            } else if tip.x < pos.x {
+                pos2(pos.x + 4.0, pos.y + 7.0)
+            } else {
+                pos2(pos.x - 4.0, pos.y + 7.0)
+            };
+            painter.add(egui::Shape::convex_polygon(
+                vec![tip, left, right],
+                color,
+                Stroke::NONE,
+            ));
+            self.text_sized(
+                painter,
+                "!",
+                pos2(pos.x, pos.y - marker_size * 0.35),
+                egui::Align2::CENTER_BOTTOM,
+                color,
+                marker_size,
+            );
+        };
+
+        for player in &data.players {
+            draw_marker(player);
+        }
+        if self.config.player.show_friendlies {
+            for player in &data.friendlies {
+                draw_marker(player);
+            }
+        }
     }
 
     pub fn update_player_sounds(&mut self) {

@@ -74,6 +74,33 @@ pub fn world_to_screen(position: &Vec3, data: &Data) -> Option<egui::Pos2> {
     Some(egui::pos2(screen_position.x, screen_position.y))
 }
 
+/// Shortest yaw delta in degrees, in (-180, 180].
+#[allow(dead_code)]
+pub fn yaw_delta(view_yaw: f32, target_yaw: f32) -> f32 {
+    (target_yaw - view_yaw + 180.0).rem_euclid(360.0) - 180.0
+}
+
+#[allow(dead_code)]
+pub fn yaw_to_target(from: Vec3, to: Vec3) -> f32 {
+    let delta = to - from;
+    delta.y.atan2(delta.x).to_degrees()
+}
+
+/// CS2 yaw 0 looks along +X. Camera right in XY is `(sin(yaw), -cos(yaw))`.
+pub fn camera_basis_xy(yaw_degrees: f32) -> (Vec2, Vec2) {
+    let yaw = yaw_degrees.to_radians();
+    let forward = Vec2::new(yaw.cos(), yaw.sin());
+    let right = Vec2::new(yaw.sin(), -yaw.cos());
+    (right, forward)
+}
+
+/// `x` = camera right, `y` = camera forward.
+pub fn world_to_camera_xy(local: Vec3, world: Vec3, yaw_degrees: f32) -> Vec2 {
+    let (right, forward) = camera_basis_xy(yaw_degrees);
+    let delta = Vec2::new(world.x - local.x, world.y - local.y);
+    Vec2::new(delta.dot(right), delta.dot(forward))
+}
+
 fn weighted_average_component(
     history: &std::collections::VecDeque<Vec2>,
     component: impl Fn(&Vec2) -> f32,

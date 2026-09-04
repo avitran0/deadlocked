@@ -1,4 +1,5 @@
 use std::{
+    panic::AssertUnwindSafe,
     sync::Arc,
     thread::sleep,
     time::{Duration, Instant},
@@ -72,9 +73,17 @@ impl GameManager {
                     self.send_message(UiMessage::Status(GameStatus::Working));
                     previous_status = GameStatus::Working;
                 }
-                self.cs2.run(&self.config, &mut self.mouse);
-                let mut data = self.data.lock();
-                self.cs2.data(&self.config, &mut data);
+                let tick = std::panic::catch_unwind(AssertUnwindSafe(|| {
+                    self.cs2.run(&self.config, &mut self.mouse);
+                    let mut data = self.data.lock();
+                    self.cs2.data(&self.config, &mut data);
+                }));
+                if let Err(err) = tick {
+                    utils::error!("game tick panicked: {err:?}");
+                    self.cs2 = CS2::new();
+                    previous_status = GameStatus::NotStarted;
+                    self.send_message(UiMessage::Status(GameStatus::NotStarted));
+                }
             } else {
                 *self.data.lock() = Data::default();
             }

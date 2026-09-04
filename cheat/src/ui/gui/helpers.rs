@@ -28,6 +28,13 @@ pub fn checkbox_hover(ui: &mut Ui, label: &str, hover_text: &str, value: &mut bo
         .changed()
 }
 
+pub fn reset_button(ui: &mut Ui) -> bool {
+    ui.add_space(4.0);
+    ui.button("Reset section")
+        .on_hover_text("Restore this section to defaults")
+        .clicked()
+}
+
 pub fn drag(ui: &mut Ui, label: &str, drag: DragValue) -> bool {
     ui.horizontal(|ui| {
         let res = ui.add(drag);

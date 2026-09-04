@@ -57,6 +57,10 @@ impl AppState {
         self.draw_sniper_crosshair(&painter, data);
         self.draw_keybind_list(&painter, data);
         self.draw_spectator_list(&painter, data);
+        self.draw_minimap(&painter, data);
+        if data.esp_active {
+            self.draw_behind_players(&painter, data);
+        }
 
         if data.aimbot_active {
             let cat = &self.config.hud.overlay_text.status_text;

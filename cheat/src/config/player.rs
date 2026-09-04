@@ -58,6 +58,7 @@ pub struct PlayerConfig {
     pub weapon_icon: bool,
     pub tags: bool,
     pub visible_only: bool,
+    pub behind_players: BehindPlayersConfig,
     pub sound: SoundConfig,
 }
 
@@ -81,7 +82,28 @@ impl Default for PlayerConfig {
             weapon_icon: true,
             tags: true,
             visible_only: false,
+            behind_players: BehindPlayersConfig::default(),
             sound: SoundConfig::default(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BehindPlayersConfig {
+    pub enabled: bool,
+    pub color: Color32,
+    pub visible_color: Color32,
+    pub size: f32,
+}
+
+impl Default for BehindPlayersConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            color: Color32::from_rgb(255, 196, 0),
+            visible_color: Color32::from_rgb(80, 220, 120),
+            size: 22.0,
         }
     }
 }

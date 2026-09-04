@@ -24,6 +24,10 @@ impl Inferno {
         }
     }
 
+    pub fn controller_valid(&self, cs2: &CS2) -> bool {
+        self.controller.has_valid_position(cs2)
+    }
+
     pub fn is_burning(&self, cs2: &CS2) -> bool {
         cs2.process
             .read::<u8>(*self.controller + cs2.offsets.inferno.is_burning)

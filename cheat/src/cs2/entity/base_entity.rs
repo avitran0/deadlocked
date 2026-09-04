@@ -18,6 +18,10 @@ impl BaseEntity {
         Self { handle }
     }
 
+    fn valid_ptr(ptr: usize) -> bool {
+        ptr != 0 && ptr >> 48 == 0
+    }
+
     pub fn health(&self, cs2: &CS2) -> i32 {
         cs2.process.read(self.handle + cs2.offsets.entity.health)
     }
@@ -38,13 +42,25 @@ impl BaseEntity {
     }
 
     pub fn game_scene_node(&self, cs2: &CS2) -> usize {
-        cs2.process
-            .read(self.handle + cs2.offsets.entity.game_scene_node)
+        let node = cs2
+            .process
+            .read::<usize>(self.handle + cs2.offsets.entity.game_scene_node);
+        if Self::valid_ptr(node) { node } else { 0 }
     }
 
     pub fn position(&self, cs2: &CS2) -> Vec3 {
-        cs2.process
-            .read(self.game_scene_node(cs2) + cs2.offsets.game_scene_node.origin)
+        let node = self.game_scene_node(cs2);
+        if node == 0 {
+            return Vec3::ZERO;
+        }
+        let Some(addr) = node.checked_add(cs2.offsets.game_scene_node.origin) else {
+            return Vec3::ZERO;
+        };
+        cs2.process.read(addr)
+    }
+
+    pub fn has_valid_position(&self, cs2: &CS2) -> bool {
+        self.game_scene_node(cs2) != 0
     }
 
     pub fn collision_bounds(&self, cs2: &CS2) -> (Vec3, Vec3) {

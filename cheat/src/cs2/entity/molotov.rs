@@ -22,6 +22,10 @@ impl Molotov {
         }
     }
 
+    pub fn controller_valid(&self, cs2: &CS2) -> bool {
+        self.controller.has_valid_position(cs2)
+    }
+
     pub fn is_incendiary(&self, cs2: &CS2) -> bool {
         cs2.process
             .read::<u8>(*self.controller + cs2.offsets.molotov.is_incendiary)

@@ -1,7 +1,7 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use super::text::OverlayTextConfig;
+use super::text::{OverlayTextConfig, TextPosition};
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -17,6 +17,7 @@ pub struct HudConfig {
     pub line_width: f32,
     pub debug: bool,
     pub overlay_text: OverlayTextConfig,
+    pub minimap: MinimapConfig,
 }
 
 impl Default for HudConfig {
@@ -33,6 +34,61 @@ impl Default for HudConfig {
             line_width: 2.0,
             debug: false,
             overlay_text: OverlayTextConfig::default(),
+            minimap: MinimapConfig::default(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct MinimapConfig {
+    pub enabled: bool,
+    pub size: f32,
+    pub range: f32,
+    pub position: TextPosition,
+    pub opacity: f32,
+    pub icon_size: f32,
+    pub rotate_with_view: bool,
+    pub show_names: bool,
+    pub show_bomb: bool,
+    pub show_teammates: bool,
+    pub show_smoke: bool,
+    pub show_molotov: bool,
+    pub show_rings: bool,
+    pub clamp_to_edge: bool,
+    pub background: Color32,
+    pub enemy_color: Color32,
+    pub teammate_color: Color32,
+    pub bomb_color: Color32,
+    pub local_color: Color32,
+    pub smoke_color: Color32,
+    pub molotov_color: Color32,
+}
+
+impl Default for MinimapConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            size: 220.0,
+            range: 2500.0,
+            position: TextPosition::TopRight,
+            opacity: 0.82,
+            icon_size: 7.0,
+            rotate_with_view: true,
+            show_names: false,
+            show_bomb: true,
+            show_teammates: true,
+            show_smoke: true,
+            show_molotov: true,
+            show_rings: true,
+            clamp_to_edge: true,
+            background: Color32::from_rgba_unmultiplied(6, 10, 16, 210),
+            enemy_color: Color32::from_rgb(255, 72, 72),
+            teammate_color: Color32::from_rgb(80, 196, 255),
+            bomb_color: Color32::from_rgb(255, 196, 48),
+            local_color: Color32::from_rgb(255, 255, 255),
+            smoke_color: Color32::from_rgb(170, 180, 190),
+            molotov_color: Color32::from_rgb(255, 110, 40),
         }
     }
 }

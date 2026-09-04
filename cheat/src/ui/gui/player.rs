@@ -1,10 +1,13 @@
 use egui::{DragValue, Ui};
 
-use crate::ui::{
-    app::AppState,
-    gui::helpers::{
-        checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
-        text_settings_button,
+use crate::{
+    config::player::{BehindPlayersConfig, PlayerConfig, SoundConfig},
+    ui::{
+        app::AppState,
+        gui::helpers::{
+            checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind,
+            reset_button, scroll, text_settings_button,
+        },
     },
 };
 
@@ -36,6 +39,14 @@ impl AppState {
                 }
 
                 if color_picker(ui, "Skeleton", &mut self.config.player.skeleton_color) {
+                    self.send_config_game();
+                }
+
+                if reset_button(ui) {
+                    let defaults = PlayerConfig::default();
+                    self.config.player.box_visible_color = defaults.box_visible_color;
+                    self.config.player.box_invisible_color = defaults.box_invisible_color;
+                    self.config.player.skeleton_color = defaults.skeleton_color;
                     self.send_config_game();
                 }
             });
@@ -98,6 +109,64 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if reset_button(ui) {
+                let defaults = PlayerConfig::default();
+                let player = &mut self.config.player;
+                player.enabled = defaults.enabled;
+                player.chicken = defaults.chicken;
+                player.esp_hotkey = defaults.esp_hotkey;
+                player.show_friendlies = defaults.show_friendlies;
+                player.draw_box = defaults.draw_box;
+                player.box_mode = defaults.box_mode;
+                player.draw_skeleton = defaults.draw_skeleton;
+                player.head_circle = defaults.head_circle;
+                player.visible_only = defaults.visible_only;
+                self.send_config_game();
+            }
+        });
+
+        ui.collapsing("Behind Players", |ui| {
+            if checkbox_hover(
+                ui,
+                "Enabled",
+                "Show markers for enemies outside your view (behind, left, right)",
+                &mut self.config.player.behind_players.enabled,
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Size",
+                DragValue::new(&mut self.config.player.behind_players.size)
+                    .range(10.0..=48.0)
+                    .max_decimals(0)
+                    .speed(0.5),
+            ) {
+                self.send_config_game();
+            }
+
+            if color_picker(
+                ui,
+                "Hidden Color",
+                &mut self.config.player.behind_players.color,
+            ) {
+                self.send_config_game();
+            }
+
+            if color_picker(
+                ui,
+                "Visible Color",
+                &mut self.config.player.behind_players.visible_color,
+            ) {
+                self.send_config_game();
+            }
+
+            if reset_button(ui) {
+                self.config.player.behind_players = BehindPlayersConfig::default();
+                self.send_config_game();
+            }
         });
     }
 
@@ -151,6 +220,17 @@ impl AppState {
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_tags");
             });
+
+            if reset_button(ui) {
+                let defaults = PlayerConfig::default();
+                let player = &mut self.config.player;
+                player.health_bar = defaults.health_bar;
+                player.armor_bar = defaults.armor_bar;
+                player.player_name = defaults.player_name;
+                player.weapon_icon = defaults.weapon_icon;
+                player.tags = defaults.tags;
+                self.send_config_game();
+            }
         });
 
         ui.collapsing("Sound ESP", |ui| {
@@ -239,6 +319,11 @@ impl AppState {
                     }
                 });
             });
+
+            if reset_button(ui) {
+                self.config.player.sound = SoundConfig::default();
+                self.send_config_game();
+            }
         });
     }
 }

@@ -238,27 +238,59 @@ impl CS2 {
 
         data.entities.clear();
         for entity in &self.entities {
-            data.entities.push(match entity {
-                Entity::Weapon { weapon, entity } => EntityInfo::Weapon(WeaponInfo {
-                    weapon: weapon.clone(),
-                    position: Player::entity(**entity).position(self),
-                    ammo: (
-                        weapon_clip_ammo(**entity, self),
-                        weapon_reserve_ammo(**entity, self),
-                    ),
-                }),
-                Entity::Inferno(inferno) => EntityInfo::Inferno(inferno.info(self)),
-                Entity::Smoke(smoke) => EntityInfo::Smoke(smoke.info(self)),
-                Entity::Molotov(molotov) => EntityInfo::Molotov(molotov.info(self)),
+            let info = match entity {
+                Entity::Weapon { weapon, entity } => {
+                    if !entity.has_valid_position(self) {
+                        continue;
+                    }
+                    EntityInfo::Weapon(WeaponInfo {
+                        weapon: weapon.clone(),
+                        position: Player::entity(**entity).position(self),
+                        ammo: (
+                            weapon_clip_ammo(**entity, self),
+                            weapon_reserve_ammo(**entity, self),
+                        ),
+                    })
+                }
+                Entity::Inferno(inferno) => {
+                    if !inferno.controller_valid(self) {
+                        continue;
+                    }
+                    EntityInfo::Inferno(inferno.info(self))
+                }
+                Entity::Smoke(smoke) => {
+                    if !smoke.controller_valid(self) {
+                        continue;
+                    }
+                    EntityInfo::Smoke(smoke.info(self))
+                }
+                Entity::Molotov(molotov) => {
+                    if !molotov.controller_valid(self) {
+                        continue;
+                    }
+                    EntityInfo::Molotov(molotov.info(self))
+                }
                 Entity::Flashbang(entity) => {
+                    if !entity.has_valid_position(self) {
+                        continue;
+                    }
                     EntityInfo::Flashbang(grenade_info(*entity, "Flashbang", self))
                 }
                 Entity::HeGrenade(entity) => {
+                    if !entity.has_valid_position(self) {
+                        continue;
+                    }
                     EntityInfo::HeGrenade(grenade_info(*entity, "HE Grenade", self))
                 }
-                Entity::Decoy(entity) => EntityInfo::Decoy(grenade_info(*entity, "Decoy", self)),
+                Entity::Decoy(entity) => {
+                    if !entity.has_valid_position(self) {
+                        continue;
+                    }
+                    EntityInfo::Decoy(grenade_info(*entity, "Decoy", self))
+                }
                 Entity::Chicken(chicken) => EntityInfo::Chicken(chicken.info(self)),
-            });
+            };
+            data.entities.push(info);
         }
 
         data.weapon = local_player.weapon(self);

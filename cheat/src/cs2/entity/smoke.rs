@@ -20,6 +20,10 @@ impl Smoke {
         grenade_info(self.controller, "Smoke", cs2)
     }
 
+    pub fn controller_valid(&self, cs2: &CS2) -> bool {
+        self.controller.has_valid_position(cs2)
+    }
+
     pub fn disable(&self, cs2: &CS2) {
         let disabled = cs2
             .process
