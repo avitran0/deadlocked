@@ -64,6 +64,7 @@ pub struct AppState {
     pub gui_focused: bool,
 
     pub radar_status: RadarStatus,
+    pub minimap: crate::ui::overlay::minimap::MinimapState,
 }
 
 pub struct App {
@@ -126,6 +127,7 @@ impl AppState {
             overlay_egui: None,
             gui_focused: true,
             radar_status: RadarStatus::Disabled,
+            minimap: Default::default(),
         }
     }
 }
