@@ -6,8 +6,8 @@ use axum::{
         State, WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
-    response::Response,
-    routing::any,
+    response::{Json, Response},
+    routing::{any, get},
 };
 use tokio::{net::TcpListener, time::interval};
 use uuid::Uuid;
@@ -19,6 +19,7 @@ pub async fn websocket_server(state: ServerState) {
 
     let app = Router::new()
         .route("/client", any(client_handler))
+        .route("/stats", get(stats_handler))
         .with_state(state.clone());
 
     let listener = match TcpListener::bind("0.0.0.0:6347").await {
@@ -39,6 +40,8 @@ async fn client_handler(State(state): State<ServerState>, ws: WebSocketUpgrade) 
 }
 
 async fn client(state: ServerState, mut ws: WebSocket) {
+    let connections = state.read().connections.clone();
+    let _connection = connections.websocket_guard();
     let mut interval = interval(Duration::from_millis(50));
 
     let Some(uuid) = get_uuid(&mut ws).await else {
@@ -71,6 +74,15 @@ async fn client(state: ServerState, mut ws: WebSocket) {
     }
 
     utils::info!("client disconnected from session {uuid}");
+}
+
+async fn stats_handler(State(state): State<ServerState>) -> Json<serde_json::Value> {
+    let connections = state.read().connections.clone();
+
+    Json(serde_json::json!({
+        "tcp_connections": connections.tcp(),
+        "websocket_connections": connections.websocket(),
+    }))
 }
 
 async fn get_uuid(ws: &mut WebSocket) -> Option<Uuid> {

@@ -35,6 +35,9 @@ pub async fn tcp_server(state: ServerState) {
 }
 
 async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
+    let connections = state.read().connections.clone();
+    let _connection = connections.tcp_guard();
+
     let Ok(proto_version) = stream.read_u32().await else {
         utils::error!("failed to receive protocol version");
         return;
