@@ -20,7 +20,15 @@ pub async fn tcp_server(state: ServerState) {
         }
     };
 
-    while let Ok((stream, _addr)) = listener.accept().await {
+    loop {
+        let (stream, _addr) = match listener.accept().await {
+            Ok(tcp) => tcp,
+            Err(err) => {
+                utils::warn!("failed to accept connection: {err}");
+                continue;
+            }
+        };
+
         let connection_state = state.clone();
         tokio::spawn(async move { tcp_handler(stream, connection_state).await });
     }

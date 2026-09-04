@@ -44,7 +44,7 @@ pub struct ModuleScope {
 
 impl ModuleScope {
     fn new(process: &Process, address: usize) -> Self {
-        let name = process.read_string_uncached(address + 0x08);
+        let name = process.read_string(address + 0x08);
 
         let mut classes = HashMap::new();
         // has 1024 buckets
@@ -102,7 +102,7 @@ pub struct Class {
 
 impl Class {
     fn new(process: &Process, address: usize) -> Self {
-        let name = process.read_string_uncached(process.read(address + 0x08));
+        let name = process.read_string(process.read(address + 0x08));
 
         let mut fields = HashMap::new();
         let field_count: i16 = process.read(address + 0x24);
@@ -134,7 +134,7 @@ struct Field {
 
 impl Field {
     fn new(process: &Process, address: usize) -> Self {
-        let name = process.read_string_uncached(process.read(address));
+        let name = process.read_string(process.read(address));
         let offset = process.read::<i32>(address + 0x10) as usize;
 
         Self { name, offset }

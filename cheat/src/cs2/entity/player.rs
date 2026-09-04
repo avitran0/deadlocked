@@ -122,7 +122,7 @@ impl Player {
 
     pub fn name(&self, cs2: &CS2) -> String {
         cs2.process
-            .read_string_uncached(self.controller + cs2.offsets.controller.name)
+            .read_string(self.controller + cs2.offsets.controller.name)
     }
 
     /// returns a pawn-only player
