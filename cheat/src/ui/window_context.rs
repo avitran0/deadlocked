@@ -43,6 +43,7 @@ impl WindowContext {
         } else {
             winit::window::WindowAttributes::default()
                 .with_inner_size(winit::dpi::LogicalSize::new(750, 450))
+                .with_visible(true)
                 .with_title("deadlocked")
         };
 
