@@ -536,7 +536,7 @@ impl Player {
             .read(camera_service + cs2.offsets.camera_services.fov);
         if current != 0 && current != value {
             cs2.process
-                .write(self.controller + cs2.offsets.controller.desired_fov, value);
+                .write(camera_service + cs2.offsets.camera_services.fov, value);
         }
     }
 }
