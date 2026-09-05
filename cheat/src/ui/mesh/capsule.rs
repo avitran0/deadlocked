@@ -2,14 +2,11 @@ use glam::{Mat4, Vec3};
 
 use super::asset::{MeshAsset, Submesh};
 
-// circumference/latitude tessellation; a debug-visualization shape doesn't
-// need to be dense, just clearly read as a rounded capsule
+// tessellation; doesn't need to be dense for a debug-visualization shape
 const SEGMENTS: usize = 10;
 const CAP_RINGS: usize = 3;
 
-/// appends one ring of `SEGMENTS` vertices (and records its start index in
-/// `rings`) at height `y` along `dir` from `mid`, radius `r` in the
-/// tangent/bitangent plane, with matching surface normal components
+/// appends one ring of `SEGMENTS` vertices at height `y`, radius `r`
 #[allow(clippy::too_many_arguments)]
 fn push_ring(
     positions: &mut Vec<Vec3>,
@@ -34,15 +31,8 @@ fn push_ring(
     }
 }
 
-/// procedurally builds a solid capsule mesh (a cylinder capped with two
-/// hemispheres) directly from one real hitbox capsule's own point0/point1/
-/// radius, in the owning bone's local space, so it can be rendered through
-/// the same skinned-mesh pipeline as the player model (see
-/// `renderer::MeshRenderer`) with a single joint bound 100% to every vertex:
-/// the capsule's shape is fully baked into the mesh, only a rigid per-frame
-/// bone transform moves it into place. unlike the DLMS player mesh, no
-/// meters-to-inches correction applies here - point0/point1/radius are
-/// already in the same inches scale as live bone positions.
+/// builds a solid capsule mesh (cylinder + two hemispheres) from one real
+/// hitbox's point0/point1/radius, already in inches like live bone positions
 pub fn build_capsule_mesh(point0: Vec3, point1: Vec3, radius: f32) -> MeshAsset {
     let axis = point1 - point0;
     let length = axis.length();
@@ -170,6 +160,7 @@ pub fn build_capsule_mesh(point0: Vec3, point1: Vec3, radius: f32) -> MeshAsset 
     MeshAsset {
         joint_names: vec!["capsule".to_string()],
         inverse_bind: vec![Mat4::IDENTITY],
+        parent_indices: vec![-1],
         submeshes: vec![submesh],
     }
 }

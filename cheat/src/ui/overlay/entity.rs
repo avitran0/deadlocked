@@ -1,14 +1,12 @@
 use std::{collections::HashMap, time::Instant};
 
 use egui::{Color32, Painter, Pos2, Stroke, vec2};
-use shared::{
-    ChickenBones, ChickenInfo, Data, EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo, Weapon,
-};
+use shared::{ChickenBones, ChickenInfo, Data, EntityInfo, GrenadeInfo, InfernoInfo, MolotovInfo};
 
 use crate::{
     config::player::DrawMode,
     math::world_to_screen,
-    ui::{app::AppState, color::Colors, overlay::convex_hull, trail::Trail},
+    ui::{app::AppState, overlay::convex_hull, trail::Trail},
 };
 
 impl AppState {
@@ -21,13 +19,6 @@ impl AppState {
                 let Some(screen) = world_to_screen(&info.position, data) else {
                     return;
                 };
-
-                if info.weapon == Weapon::C4 {
-                    painter.circle_filled(screen, 6.0, Colors::GOLD);
-                    painter.circle_stroke(screen, 6.0, Stroke::new(2.0, Color32::BLACK));
-                    painter.circle_stroke(screen, 11.0, Stroke::new(1.5, Colors::GOLD));
-                }
-
                 let cat = &self.config.hud.overlay_text.weapon_name;
                 let anchor = super::hud::point_anchor(screen, cat.position, cat.font_size * 0.3);
                 self.text_sized(

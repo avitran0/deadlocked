@@ -60,15 +60,12 @@ pub struct AppState {
 
     pub text_popup: Option<String>,
     pub update_popup: bool,
+    /// asks once when Model ESP is turned on with nothing extracted yet
+    pub extract_prompt: bool,
     pub overlay_egui: Option<egui::Context>,
-    /// gates settings-window redraws by default (see
-    /// `config.hud.gui_always_render` for the opt-in override) - avoids
-    /// stutter on some setups from redrawing a window that isn't visible
-    pub gui_focused: bool,
 
     pub radar_status: RadarStatus,
     pub mesh_extract_status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>,
-    pub update_apply_status: Arc<Mutex<crate::update::ApplyStatus>>,
 }
 
 pub struct App {
@@ -109,7 +106,9 @@ impl AppState {
 
         let mesh_extract_status =
             Arc::new(Mutex::new(crate::mesh_extract::ExtractStatus::default()));
-        auto_extract_player_model(mesh_extract_status.clone());
+        if config.hud.auto_extract_models {
+            auto_extract_player_model(mesh_extract_status.clone());
+        }
 
         Self {
             channel_game,
@@ -134,20 +133,15 @@ impl AppState {
             update_status,
             text_popup: None,
             update_popup,
+            extract_prompt: false,
             overlay_egui: None,
-            gui_focused: true,
             radar_status: RadarStatus::Disabled,
             mesh_extract_status,
-            update_apply_status: Arc::new(Mutex::new(Default::default())),
         }
     }
 }
 
-/// runs the player model mesh extraction once, automatically, the first
-/// time deadlocked starts with no agent_models.json yet (part of getting
-/// set up, not a separate manual step the user needs to know to run);
-/// harmless to skip if it fails, the feature stays off until the user runs
-/// it manually from the Hud tab
+/// runs mesh extraction once on first launch, if enabled and not done yet
 fn auto_extract_player_model(status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>) {
     if crate::config::BASE_PATH.join("agent_models.json").exists() {
         return;
@@ -249,15 +243,6 @@ impl ApplicationHandler for App {
 
         while let Ok(message) = self.state.channel_radar.try_receive() {
             self.state.radar_status = message;
-        }
-
-        if self
-            .gui
-            .as_ref()
-            .is_some_and(|gui| gui.window().id() == window_id)
-            && let WindowEvent::Focused(focused) = &window_event
-        {
-            self.state.gui_focused = *focused;
         }
 
         let Some(gui) = &self.gui else {

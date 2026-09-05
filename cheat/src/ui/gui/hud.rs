@@ -3,8 +3,7 @@ use egui::{DragValue, Ui};
 use crate::ui::{
     app::AppState,
     gui::helpers::{
-        checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, scroll,
-        text_settings_button,
+        checkbox, collapsing_open, color_picker, combo_box, drag, scroll, text_settings_button,
     },
 };
 
@@ -225,59 +224,6 @@ impl AppState {
                 DragValue::new(&mut self.config.fps).range(30..=500),
             ) {
                 self.send_config_game();
-            }
-
-            if checkbox_hover(
-                ui,
-                "Always Render Settings Window",
-                "Off (default) only redraws this window while it's focused, which avoids stutter on some setups. Turn this on only if the window ever gets stuck/unresponsive after losing focus.",
-                &mut self.config.hud.gui_always_render,
-            ) {
-                self.send_config_game();
-            }
-
-            ui.label("Model ESP (Player tab) needs these extracted first:");
-            self.mesh_extract_button(ui);
-        });
-    }
-
-    fn mesh_extract_button(&mut self, ui: &mut Ui) {
-        use crate::mesh_extract::ExtractStatus;
-
-        let running = matches!(
-            *self.mesh_extract_status.lock(),
-            ExtractStatus::Running | ExtractStatus::Progress { .. }
-        );
-
-        ui.horizontal(|ui| {
-            ui.add_enabled_ui(!running, |ui| {
-                if ui.button("Extract Player Models").clicked() {
-                    let status = self.mesh_extract_status.clone();
-                    *status.lock() = ExtractStatus::Running;
-                    std::thread::spawn(move || {
-                        let result = crate::mesh_extract::extract_all_agent_models(&status);
-                        *status.lock() = match result {
-                            Ok(path) => ExtractStatus::Done(path),
-                            Err(err) => ExtractStatus::Error(err),
-                        };
-                    });
-                }
-            });
-
-            match &*self.mesh_extract_status.lock() {
-                ExtractStatus::Idle => {}
-                ExtractStatus::Running => {
-                    ui.label("finding your CS2 install and reading agent list...");
-                }
-                ExtractStatus::Progress { done, total } => {
-                    ui.label(format!("extracting agent models... {done}/{total}"));
-                }
-                ExtractStatus::Done(path) => {
-                    ui.label(format!("wrote {}", path.display()));
-                }
-                ExtractStatus::Error(err) => {
-                    ui.colored_label(egui::Color32::RED, err);
-                }
             }
         });
     }

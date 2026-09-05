@@ -1,8 +1,5 @@
-/// a minimal KeyValues (VDF) tokenizer/parser, just enough to read
-/// items_game.txt's def_index -> agent model_player table. KeyValues
-/// allows duplicate keys at the same level (e.g. multiple "items" blocks
-/// that are meant to be merged, not overwritten), so this returns a flat
-/// list of (key, value) pairs rather than a map.
+/// minimal KeyValues (VDF) parser; returns a flat (key, value) list since
+/// KeyValues allows duplicate keys at the same level
 pub enum Value {
     Str(String),
     Block(Vec<(String, Value)>),

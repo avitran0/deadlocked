@@ -15,13 +15,7 @@ mod keyvalues;
 
 const VRF_REPO: &str = "ValveResourceFormat/ValveResourceFormat";
 const CLI_ASSET_NAME: &str = "cli-linux-x64.zip";
-// both ship as base CS2 content regardless of which agents the user owns.
-// used as the fallback mesh for a player whose equipped agent isn't in
-// agent_models.json: players using their team's plain default skin (no
-// agent purchased/selected) don't have a real entry in items_game.txt's
-// per-def_index item list, so they need a team-correct fallback here
-// rather than one fixed mesh for everyone (a Terrorist falling back to a
-// Counter-Terrorist model looks obviously wrong)
+// team-correct fallback mesh for a player with no real agent equipped
 pub const FALLBACK_AGENT_T: &str = "tm_phoenix";
 pub const FALLBACK_AGENT_CT: &str = "ctm_fbi";
 const AGENT_INDEX_FILE: &str = "agent_models.json";
@@ -34,6 +28,7 @@ pub enum ExtractStatus {
     Progress {
         done: usize,
         total: usize,
+        started_at: std::time::Instant,
     },
     Done(PathBuf),
     Error(String),
@@ -50,11 +45,8 @@ struct Asset {
     browser_download_url: String,
 }
 
-/// finds the user's own CS2 install, downloads (and caches) VRF's CLI if
-/// needed, reads the user's own items_game.txt to find every agent
-/// currently in the game, extracts+converts each distinct one, and writes
-/// an index mapping each agent's item def_index to its mesh file. reads
-/// only; never redistributes CS2 assets.
+/// extracts every agent's mesh from the user's own CS2 install and writes
+/// a def_index -> mesh file index. reads only, never redistributes assets.
 pub fn extract_all_agent_models(
     status: &std::sync::Arc<utils::Mutex<ExtractStatus>>,
 ) -> Result<PathBuf, String> {
@@ -72,8 +64,7 @@ pub fn extract_all_agent_models(
         return Err("no agent entries found in items_game.txt".to_string());
     }
 
-    // many def_indices share the same underlying model (cosmetic-only
-    // variants), so extract each distinct model path once
+    // many def_indices share the same model, extract each distinct path once
     let mut model_to_stem: HashMap<&str, &str> = HashMap::new();
     for model_path in agent_table.values() {
         let stem = model_stem(model_path);
@@ -82,13 +73,22 @@ pub fn extract_all_agent_models(
     let unique_models: Vec<&str> = model_to_stem.keys().copied().collect();
 
     let total = unique_models.len();
-    *status.lock() = ExtractStatus::Progress { done: 0, total };
+    let started_at = std::time::Instant::now();
+    *status.lock() = ExtractStatus::Progress {
+        done: 0,
+        total,
+        started_at,
+    };
 
     for (i, model_path) in unique_models.iter().enumerate() {
         let stem = model_to_stem[model_path];
         let out_path = BASE_PATH.join(format!("player_model_{stem}.dlms"));
         if out_path.exists() {
-            *status.lock() = ExtractStatus::Progress { done: i + 1, total };
+            *status.lock() = ExtractStatus::Progress {
+                done: i + 1,
+                total,
+                started_at,
+            };
             continue;
         }
 
@@ -103,7 +103,11 @@ pub fn extract_all_agent_models(
                 utils::warn!("skipping agent model {model_path}: {err}");
             }
         }
-        *status.lock() = ExtractStatus::Progress { done: i + 1, total };
+        *status.lock() = ExtractStatus::Progress {
+            done: i + 1,
+            total,
+            started_at,
+        };
     }
 
     let index: HashMap<u16, String> = agent_table
@@ -117,8 +121,7 @@ pub fn extract_all_agent_models(
     Ok(index_path)
 }
 
-/// loads the def_index -> model stem table written by
-/// extract_all_agent_models(), if it exists yet
+/// loads the def_index -> model stem table, if it exists yet
 pub fn load_agent_index() -> HashMap<u16, String> {
     let Ok(text) = std::fs::read_to_string(BASE_PATH.join(AGENT_INDEX_FILE)) else {
         return HashMap::new();
@@ -133,10 +136,7 @@ fn model_stem(model_path: &str) -> &str {
         .unwrap_or(FALLBACK_AGENT_CT)
 }
 
-/// items_game.txt's "items" block appears multiple times and must be
-/// merged (KeyValues allows duplicate keys at the same level); this pulls
-/// out def_index -> model_player for every entry that's an actual agent
-/// character model, not a glove/weapon skin or other cosmetic
+/// merges items_game.txt's duplicate "items" blocks into def_index -> model_player
 fn parse_agent_table(items_game_text: &str) -> HashMap<u16, String> {
     let root = keyvalues::parse(items_game_text);
     let Some(items_game) = root
@@ -201,9 +201,7 @@ fn find_cs2_install() -> Option<PathBuf> {
         .find(|path| path.join("game/csgo/pak01_dir.vpk").exists())
 }
 
-/// steam's libraryfolders.vdf is a simple nested "key" "value" text format;
-/// this only pulls out the "path" entries it actually needs, not a general
-/// vdf parser
+/// pulls "path" entries out of steam's libraryfolders.vdf, not a general vdf parser
 fn parse_library_folders(vdf_path: &Path) -> Vec<PathBuf> {
     let Ok(text) = std::fs::read_to_string(vdf_path) else {
         return Vec::new();
@@ -418,10 +416,6 @@ mod tests {
         );
     }
 
-    // find_cs2_install() and extract_all_agent_models() both depend on real
-    // machine/network state (a real CS2 install, GitHub reachability) and
-    // are not suitable as unit tests; verified manually this session
-    // against a real install (141 agent entries, 79 unique models,
-    // def_index 5300 -> agents/models/ctm_fbi/ctm_fbi.vmdl), see the
-    // session notes.
+    // find_cs2_install()/extract_all_agent_models() need a real CS2 install
+    // and network access, not suitable as unit tests; verified manually
 }

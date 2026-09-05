@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { COLORS } from "./color";
+    import { playerColor } from "./color";
     import type { PlayerData } from "./data";
     import { worldToRadar, type MapData } from "./map_data";
     import Marker from "./Marker.svelte";
@@ -23,7 +23,7 @@
     style:height={`${size}%`}
     style:transform={`rotate(${-player.rotation + 90}deg)`}
 >
-    <Marker color={friendly ? COLORS.blue : COLORS.red} />
+    <Marker color={friendly ? playerColor(player) : "#f06464"} />
     <p>{player.name}</p>
 </div>
 

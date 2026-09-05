@@ -17,8 +17,6 @@ impl Colors {
     pub const TEAL: Color32 = Color32::from_rgb(80, 200, 200);
     pub const BLUE: Color32 = Color32::from_rgb(100, 150, 240);
     pub const PURPLE: Color32 = Color32::from_rgb(180, 120, 240);
-    /// richer/more distinct than YELLOW, reserved for marking the bomb carrier
-    pub const GOLD: Color32 = Color32::from_rgb(255, 195, 40);
 
     pub const ACCENT_COLORS: [(&str, Color32); 7] = [
         ("Red", Self::RED),

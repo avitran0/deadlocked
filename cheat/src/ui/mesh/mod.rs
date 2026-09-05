@@ -14,25 +14,20 @@ use shared::{Bones, Data, PlayerData, Team};
 use strum::IntoEnumIterator as _;
 
 use crate::{
-    config::BASE_PATH,
-    config::player::{ColorValues, DrawMode, MeshPartVisibilityMode, ModelEspMode},
+    config::{
+        BASE_PATH,
+        player::{ColorValues, DrawMode, MeshPartVisibilityMode, ModelEspMode},
+    },
     math::world_to_screen,
     mesh_extract,
     ui::color::health_color,
 };
 
-// how often to recheck for the agent index while it's missing, so running
-// the in-app extractor (see mesh_extract) gets picked up without restarting
+// how often to recheck for the agent index while it's missing
 const RETRY_INTERVAL: Duration = Duration::from_secs(3);
 
-/// highlights each enemy with their own equipped agent's mesh, falling back
-/// to a team-correct default (mesh_extract::FALLBACK_AGENT_T/_CT) for any
-/// agent whose mesh isn't available (not yet extracted, extraction failed
-/// for it, or the player is using their team's plain default skin with no
-/// specific agent purchased). producing the meshes happens via the
-/// "Extract Player Models" button (see mesh_extract), which reads the
-/// user's own CS2 install; this feature does nothing until that has run at
-/// least once.
+/// renders each enemy's own equipped agent mesh, falling back to a
+/// team-correct default when a specific agent's mesh isn't available
 #[derive(Default)]
 pub struct PlayerMeshState {
     last_index_attempt: Option<Instant>,
@@ -55,6 +50,8 @@ impl PlayerMeshState {
         colors: &ColorValues,
         outline_color: Color32,
         part_visibility: MeshPartVisibilityMode,
+        show_friendlies: bool,
+        visible_only: bool,
     ) {
         unsafe {
             if mode == ModelEspMode::Off {
@@ -75,14 +72,17 @@ impl PlayerMeshState {
                 }
             }
 
-            // data.view_matrix is read raw from CS2's memory, which stores
-            // it row-major; glam::Mat4 assumes column-major, so a plain GLSL
-            // `matrix * vector` multiply needs the transpose first (this is
-            // the same reason math::world_to_screen() does its own manual
-            // per-axis dot product instead of a normal matrix multiply)
+            // view_matrix is row-major, glam expects column-major
             let view_projection = data.view_matrix.transpose();
 
-            for player in &data.players {
+            let friendlies = show_friendlies
+                .then(|| data.friendlies.iter())
+                .into_iter()
+                .flatten();
+            for player in data.players.iter().chain(friendlies) {
+                if visible_only && !player.visible {
+                    continue;
+                }
                 if player.skeleton.is_empty() || !on_screen(player, data) {
                     continue;
                 }
@@ -105,14 +105,14 @@ impl PlayerMeshState {
                 let health = health_color(player.health, player.max_health, 255);
                 let color = colors.resolve(color_mode, player, data, health);
                 let [r, g, b, _] = color.to_normalized_gamma_f32();
-                // shade the mesh darker while the player isn't actually
-                // visible (behind a wall, etc.), same visual cue box ESP
-                // already uses for hidden targets
-                let shade = if player.visible { 1.0 } else { 0.4 };
-                // the resolved color's own alpha isn't used here: alpha
-                // comes from the render mode instead, so Highlight stays a
-                // translucent see-through tint while Wireframe/Solid are
-                // fully opaque regardless of which color mode is active
+                // only the c4 highlight dims for not being visible
+                let is_c4_highlight = colors.c4_carrier_highlight && player.has_bomb;
+                let shade = if !is_c4_highlight || player.visible {
+                    1.0
+                } else {
+                    0.4
+                };
+                // alpha comes from the render mode, not the color's own alpha
                 let alpha = match mode {
                     ModelEspMode::Highlight => 0.5,
                     _ => 1.0,
@@ -133,13 +133,10 @@ impl PlayerMeshState {
         }
     }
 
-    /// draws every real hitbox capsule as an actual solid capsule mesh (the
-    /// exact geometry CS2's own server checks bullets against, extracted
-    /// from the compiled model), not just its centerline - for
-    /// verifying/trusting what the aimbot and triggerbot are actually aiming
-    /// at
+    /// draws every real hitbox capsule as a solid mesh, not just its centerline
     /// # Safety
     /// `gl` must be current on the calling thread.
+    #[allow(clippy::too_many_arguments)]
     pub unsafe fn draw_hitboxes(
         &mut self,
         gl: &glow::Context,
@@ -147,6 +144,8 @@ impl PlayerMeshState {
         mode: ModelEspMode,
         color_mode: DrawMode,
         colors: &ColorValues,
+        show_friendlies: bool,
+        visible_only: bool,
     ) {
         unsafe {
             if mode == ModelEspMode::Off {
@@ -155,7 +154,14 @@ impl PlayerMeshState {
 
             let view_projection = data.view_matrix.transpose();
 
-            for player in &data.players {
+            let friendlies = show_friendlies
+                .then(|| data.friendlies.iter())
+                .into_iter()
+                .flatten();
+            for player in data.players.iter().chain(friendlies) {
+                if visible_only && !player.visible {
+                    continue;
+                }
                 if player.bone_transforms.is_empty() || !on_screen(player, data) {
                     continue;
                 }
@@ -163,7 +169,13 @@ impl PlayerMeshState {
                 let health = health_color(player.health, player.max_health, 255);
                 let color = colors.resolve(color_mode, player, data, health);
                 let [r, g, b, _] = color.to_normalized_gamma_f32();
-                let shade = if player.visible { 1.0 } else { 0.4 };
+                // only the c4 highlight dims for not being visible
+                let is_c4_highlight = colors.c4_carrier_highlight && player.has_bomb;
+                let shade = if !is_c4_highlight || player.visible {
+                    1.0
+                } else {
+                    0.4
+                };
                 let alpha = match mode {
                     ModelEspMode::Highlight => 0.35,
                     _ => 0.45,
@@ -192,8 +204,7 @@ impl PlayerMeshState {
         }
     }
 
-    /// lazily builds and caches the capsule mesh renderer for one `Bones`
-    /// variant (only 19 unique shapes total, shared across every player)
+    /// lazily builds and caches the capsule renderer for one `Bones` variant
     unsafe fn hitbox_renderer_for(
         &mut self,
         gl: &glow::Context,
@@ -210,10 +221,7 @@ impl PlayerMeshState {
         }
     }
 
-    /// lazily loads and caches the mesh for one agent stem; falls back to
-    /// the given team-correct fallback stem if this specific stem failed to
-    /// load, and gives up entirely (returns None) if even the fallback
-    /// isn't available
+    /// lazily loads and caches one agent's mesh, falling back to `fallback`
     unsafe fn renderer_for(
         &mut self,
         gl: &glow::Context,
@@ -275,10 +283,7 @@ impl PlayerMeshState {
     }
 }
 
-/// cheap culling: skips uploading skin matrices and issuing a draw call for
-/// a player whose position and head are both off the visible window,
-/// checking both since a standing player's feet vs head can straddle the
-/// screen edge
+/// culls a player whose position and head are both off-screen
 fn on_screen(player: &PlayerData, data: &Data) -> bool {
     world_to_screen(&player.position, data).is_some()
         || world_to_screen(&player.head, data).is_some()

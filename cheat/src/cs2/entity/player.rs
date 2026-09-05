@@ -277,10 +277,8 @@ impl Player {
         self.bone_transform(cs2, bone_index).position
     }
 
-    /// raw per-slot bone transforms, by numeric index rather than the named
-    /// `Bones` enum. the compiled agent skeleton has up to ~94 joints
-    /// (fingers, twists, jiggle bones included), matching this same index
-    /// order, which the named `Bones` enum only covers a subset of
+    /// raw bone transforms by numeric index (the ~94-joint compiled
+    /// skeleton), not just the named `Bones` subset
     pub fn skeleton_transforms(&self, cs2: &CS2, count: usize) -> Vec<BoneTransform> {
         let bone_data = self.skeleton_instance(cs2);
         if bone_data == 0 {
@@ -311,10 +309,7 @@ impl Player {
 
         for bone in Bones::iter() {
             let start = bone.u64() as usize * 32;
-            // pod_read_unaligned copies rather than reinterpreting in
-            // place, so it doesn't require `start` to already be aligned
-            // to Vec3/Quat's alignment (bytemuck::from_bytes does, and
-            // panics when a slice offset like this isn't)
+            // pod_read_unaligned copies, so `start` needn't be pre-aligned
             let position = bytemuck::pod_read_unaligned(&bones_data[start..start + 3 * 4]);
             let rotation =
                 bytemuck::pod_read_unaligned(&bones_data[start + 16..start + 16 + 4 * 4]);
@@ -375,8 +370,7 @@ impl Player {
             .read(self.controller + cs2.offsets.controller.color)
     }
 
-    /// item definition index of the equipped agent skin, for picking which
-    /// extracted mesh to render for the player model overlay
+    /// item def index of the equipped agent skin, for picking the mesh
     pub fn agent_def_index(&self, cs2: &CS2) -> u16 {
         cs2.process
             .read(self.controller + cs2.offsets.controller.agent_def_index)
@@ -503,14 +497,9 @@ impl Player {
         true
     }
 
-    /// per-joint visibility for the mesh ESP's "which body part is exposed"
-    /// option: real BVH line-of-sight to each of the 19 named `Bones`
-    /// joints (the same subset the hitbox table covers). everything else
-    /// (fingers, twist bones, etc) defaults to visible - raycasting all
-    /// ~94 raw skeleton joints every frame for every player for parts this
-    /// minor isn't worth the extra cost. indexed the same way as
-    /// `skeleton_transforms()`'s output, so callers can look a joint index
-    /// up directly in both.
+    /// per-joint BVH line-of-sight for the mesh part-visibility option,
+    /// checked against each named bone's real hitbox capsule (not the raw
+    /// joint, which sits inside the body rather than on its surface)
     pub fn bone_visibility(
         &self,
         cs2: &CS2,
@@ -527,12 +516,14 @@ impl Player {
             let Some(slot) = visibility.get_mut(index) else {
                 continue;
             };
-            let bone_position = self.bone_position(cs2, bone.u64());
-            *slot = if bvh.has_line_of_sight(eye_position, bone_position) {
-                1.0
-            } else {
-                0.0
-            };
+            let transform = self.bone_transform(cs2, bone.u64());
+            let hitbox = bone.hitbox();
+            let (p0, p1) = hitbox.world_points(transform);
+            let center = hitbox.world_center(transform);
+            let visible = [p0, p1, center]
+                .into_iter()
+                .any(|point| bvh.has_line_of_sight(eye_position, point));
+            *slot = if visible { 1.0 } else { 0.0 };
         }
         visibility
     }

@@ -106,6 +106,8 @@ impl AppState {
                         frame_sum / self.frame_times.len() as f32
                     };
                     ui.label(format!("{frame_avg:.1} ms"));
+
+                    self.mesh_extract_status_line(ui);
                 });
             });
 
@@ -130,35 +132,55 @@ impl AppState {
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(ui.ctx(), |ui| {
-                    if let UpdateStatus::Available {
-                        version,
-                        html_url,
-                        asset_url,
-                    } = self.update_status.clone()
-                    {
+                    if let UpdateStatus::Available { version, url } = &self.update_status {
                         ui.label(
                             egui::RichText::new(format!("Update {version} available!"))
                                 .color(Colors::YELLOW)
                                 .size(18.0),
                         );
                         ui.separator();
-                        ui.label("A new version of deadlocked is ready.");
+                        ui.label("A new version of deadlocked is ready to download.");
                         ui.add_space(8.0);
                         ui.horizontal(|ui| {
-                            if ui.link("Release Notes").clicked() {
-                                open_url(&html_url);
+                            if ui.button("Download").clicked() {
+                                open_url(url);
                             }
                             if ui.button("Dismiss").clicked() {
                                 close = true;
                             }
                         });
-                        if let Some(asset_url) = &asset_url {
-                            self.update_button(ui, asset_url);
-                        }
                     }
                 });
             if close {
                 self.update_popup = false;
+            }
+        }
+
+        if self.extract_prompt {
+            let mut close = false;
+            egui::Window::new("Extract Player Models")
+                .id(egui::Id::new("extract_prompt"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    ui.label("Extract models from CS2?");
+                    ui.label(
+                        "Model ESP needs your agents' models read from your own CS2 install first. This only reads local files, once.",
+                    );
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Yes").clicked() {
+                            self.start_mesh_extraction();
+                            close = true;
+                        }
+                        if ui.button("No").clicked() {
+                            close = true;
+                        }
+                    });
+                });
+            if close {
+                self.extract_prompt = false;
             }
         }
     }
@@ -267,19 +289,17 @@ impl App {
         let overlay = self.overlay.as_mut().unwrap();
         let state = &mut self.state;
 
-        if state.gui_focused || state.config.hud.gui_always_render {
-            if let Err(err) = gui.make_current() {
-                utils::error!("could not make gui window current: {err}");
-                return;
-            }
-            gui.run(|ui| state.gui(ui));
-            gui.clear();
-            gui.paint();
+        if let Err(err) = gui.make_current() {
+            utils::error!("could not make gui window current: {err}");
+            return;
+        }
+        gui.run(|ui| state.gui(ui));
+        gui.clear();
+        gui.paint();
 
-            if let Err(err) = gui.swap_buffers() {
-                utils::error!("could not swap gui window buffers: {err}");
-                return;
-            }
+        if let Err(err) = gui.swap_buffers() {
+            utils::error!("could not swap gui window buffers: {err}");
+            return;
         }
 
         overlay.window().set_cursor_hittest(false).unwrap();
@@ -300,36 +320,47 @@ impl App {
         let draw_model = model_mode != crate::config::player::ModelEspMode::Off;
         let draw_hitboxes = hitbox_mode != crate::config::player::ModelEspMode::Off;
         if draw_model || draw_hitboxes {
-            overlay.clear_depth();
             let data_guard = self.state.data.lock();
-            let model_color_mode = self.state.config.player.model_color_mode;
-            let model_colors = self.state.config.player.model_colors().clone();
-            let model_outline_color = self.state.config.player.model_outline_color;
-            let model_part_visibility = self.state.config.player.model_part_visibility;
-            let hitbox_color_mode = self.state.config.player.hitbox_color_mode;
-            let hitbox_colors = self.state.config.player.hitbox_colors().clone();
-            // SAFETY: overlay.make_current() was just called above, so its
-            // gl context is current on this thread
-            unsafe {
-                if draw_model {
-                    self.player_mesh.draw(
-                        overlay.gl(),
-                        &data_guard,
-                        model_mode,
-                        model_color_mode,
-                        &model_colors,
-                        model_outline_color,
-                        model_part_visibility,
-                    );
-                }
-                if draw_hitboxes {
-                    self.player_mesh.draw_hitboxes(
-                        overlay.gl(),
-                        &data_guard,
-                        hitbox_mode,
-                        hitbox_color_mode,
-                        &hitbox_colors,
-                    );
+            // same master gate box/skeleton ESP already respects
+            if data_guard.esp_active {
+                overlay.clear_depth();
+                let show_friendlies = self.state.config.player.show_friendlies;
+                let visible_only = self.state.config.player.visible_only;
+                let model_color_mode: crate::config::player::DrawMode =
+                    self.state.config.player.model_color_mode.into();
+                let model_colors = self.state.config.player.model_colors().clone();
+                let model_outline_color = self.state.config.player.model_outline_color;
+                let model_part_visibility = self.state.config.player.model_part_visibility;
+                let hitbox_color_mode: crate::config::player::DrawMode =
+                    self.state.config.player.hitbox_color_mode.into();
+                let hitbox_colors = self.state.config.player.hitbox_colors().clone();
+                // SAFETY: overlay.make_current() was just called above, so
+                // its gl context is current on this thread
+                unsafe {
+                    if draw_model {
+                        self.player_mesh.draw(
+                            overlay.gl(),
+                            &data_guard,
+                            model_mode,
+                            model_color_mode,
+                            &model_colors,
+                            model_outline_color,
+                            model_part_visibility,
+                            show_friendlies,
+                            visible_only,
+                        );
+                    }
+                    if draw_hitboxes {
+                        self.player_mesh.draw_hitboxes(
+                            overlay.gl(),
+                            &data_guard,
+                            hitbox_mode,
+                            hitbox_color_mode,
+                            &hitbox_colors,
+                            show_friendlies,
+                            visible_only,
+                        );
+                    }
                 }
             }
         }
@@ -345,21 +376,10 @@ impl App {
         use winit::dpi::PhysicalPosition;
         let position =
             PhysicalPosition::new(data.window_position.x as i32, data.window_position.y as i32);
-        let current_outer = overlay.window().outer_position();
-        if !matches!(current_outer, Ok(pos) if pos == position) {
-            // logged (not silent) so a persistent, unresolved mismatch here
-            // - e.g. the window manager quietly padding an "undecorated"
-            // window with a title bar, or refusing the position request -
-            // shows up directly in the log as the likely cause of the
-            // whole overlay drawing shifted relative to the real game
-            // window, instead of having to guess blind
-            utils::info!(
-                "overlay window position mismatch: cs2 reports {:?}, overlay outer_position() was {:?} (inner_position() {:?}), setting to {:?}",
-                data.window_position,
-                current_outer,
-                overlay.window().inner_position(),
-                position
-            );
+        if !match overlay.window().outer_position() {
+            Ok(pos) => pos == position,
+            Err(_) => false,
+        } {
             overlay.window().set_outer_position(position);
         }
 
@@ -367,14 +387,7 @@ impl App {
             data.window_size.x.max(1.0) as u32,
             data.window_size.y.max(1.0) as u32,
         );
-        let current_inner = overlay.window().inner_size();
-        if current_inner != size {
-            utils::info!(
-                "overlay window size mismatch: cs2 reports {:?}, overlay inner_size() was {:?}, requesting {:?}",
-                data.window_size,
-                current_inner,
-                size
-            );
+        if overlay.window().inner_size() != size {
             let _ = overlay.window().request_inner_size(size);
         }
     }

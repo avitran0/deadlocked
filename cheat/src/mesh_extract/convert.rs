@@ -133,18 +133,37 @@ fn node_mesh_skin_map(glb: &Glb) -> std::collections::HashMap<usize, usize> {
     map
 }
 
+/// maps each glTF node index to its parent node index, from every node's
+/// "children" array
+fn node_parent_map(glb: &Glb) -> std::collections::HashMap<usize, usize> {
+    let mut map = std::collections::HashMap::new();
+    let Some(nodes) = glb.json["nodes"].as_array() else {
+        return map;
+    };
+    for (parent_idx, node) in nodes.iter().enumerate() {
+        let Some(children) = node["children"].as_array() else {
+            continue;
+        };
+        for child in children {
+            if let Some(child_idx) = child.as_u64() {
+                map.insert(child_idx as usize, parent_idx);
+            }
+        }
+    }
+    map
+}
+
 fn write_string(out: &mut Vec<u8>, s: &str) {
     let bytes = s.as_bytes();
     out.extend_from_slice(&(bytes.len() as u32).to_le_bytes());
     out.extend_from_slice(bytes);
 }
 
-/// converts a glb produced by `run_vrf_extraction` (see its exact VRF CLI
-/// invocation in the parent module) into the DLMS v3 binary format
-/// `ui::mesh::asset::MeshAsset` loads at runtime
+/// converts a VRF-extracted glb into the DLMS v4 format `MeshAsset` loads
 pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
     let glb = parse_glb(data).map_err(|e| e.to_string())?;
     let mesh_to_skin = node_mesh_skin_map(&glb);
+    let node_parents = node_parent_map(&glb);
 
     let meshes = glb.json["meshes"].as_array().ok_or("glb has no meshes")?;
     let nodes = glb.json["nodes"].as_array().ok_or("glb has no nodes")?;
@@ -152,6 +171,7 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
 
     let mut joint_names: Option<Vec<String>> = None;
     let mut inverse_bind: Vec<[f32; 16]> = Vec::new();
+    let mut parent_indices: Vec<i32> = Vec::new();
     let mut submeshes: Vec<RawSubmesh> = Vec::new();
 
     for (mesh_idx, mesh) in meshes.iter().enumerate() {
@@ -176,6 +196,17 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
                     .as_str()
                     .map(str::to_string)
                     .unwrap_or_else(|| format!("joint_{n}"))
+            })
+            .collect();
+        // -1 if this joint's parent node isn't itself one of this skin's joints
+        let this_parent_indices: Vec<i32> = joint_nodes
+            .iter()
+            .map(|n| {
+                node_parents
+                    .get(n)
+                    .and_then(|parent_node| joint_nodes.iter().position(|j| j == parent_node))
+                    .map(|idx| idx as i32)
+                    .unwrap_or(-1)
             })
             .collect();
 
@@ -205,6 +236,7 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
             None => {
                 joint_names = Some(this_names);
                 inverse_bind = this_inverse_bind;
+                parent_indices = this_parent_indices;
             }
             Some(names) if *names != this_names => {
                 return Err(format!(
@@ -273,13 +305,18 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
 
     let mut out = Vec::new();
     out.extend_from_slice(b"DLMS");
-    out.extend_from_slice(&3u32.to_le_bytes());
+    out.extend_from_slice(&4u32.to_le_bytes());
     out.extend_from_slice(&(joint_names.len() as u32).to_le_bytes());
     for (name, mat) in joint_names.iter().zip(&inverse_bind) {
         write_string(&mut out, name);
         for value in mat {
             out.extend_from_slice(&value.to_le_bytes());
         }
+    }
+    // -1 = no parent within this skeleton, used to walk up to the nearest
+    // named ancestor for joints (fingers, twists) the ESP doesn't track
+    for &parent in &parent_indices {
+        out.extend_from_slice(&parent.to_le_bytes());
     }
 
     out.extend_from_slice(&(submeshes.len() as u32).to_le_bytes());
@@ -336,11 +373,7 @@ mod tests {
     use super::*;
     use crate::ui::mesh::asset::MeshAsset;
 
-    /// builds a minimal, synthetic (not real game data) .glb: a 1-triangle
-    /// "thirdperson_body_test" mesh skinned to a 2-joint skeleton, laid out
-    /// the same way VRF's real exports are (mesh node with mesh+skin,
-    /// separate joint nodes), so glb_to_dlms can be tested without needing
-    /// any real CS2 asset file
+    /// hand-built .glb: 1-triangle mesh skinned to a 2-joint skeleton
     fn synthetic_glb() -> Vec<u8> {
         let mut bin = Vec::new();
         let push_f32 = |bin: &mut Vec<u8>, values: &[f32]| -> (usize, usize) {
@@ -413,7 +446,7 @@ mod tests {
             "skins": [{ "joints": [1, 2], "inverseBindMatrices": 6 }],
             "nodes": [
                 { "mesh": 0, "skin": 0 },
-                { "name": "root" },
+                { "name": "root", "children": [2] },
                 { "name": "child" },
             ],
         });
@@ -444,6 +477,7 @@ mod tests {
         let asset = MeshAsset::load(&dlms).expect("failed to parse own dlms output");
         assert_eq!(asset.joint_names, vec!["root", "child"]);
         assert_eq!(asset.inverse_bind.len(), 2);
+        assert_eq!(asset.parent_indices, vec![-1, 0]);
         assert_eq!(asset.submeshes.len(), 1);
 
         let body = &asset.submeshes[0];
@@ -455,9 +489,7 @@ mod tests {
 
     #[test]
     fn rejects_mismatched_joint_order_between_submeshes() {
-        // two meshes, each with its own skin, where the second skin lists
-        // its joints in reversed order; glb_to_dlms assumes (and checks)
-        // that every submesh in one file shares a single skeleton
+        // second skin lists joints in reversed order, should be rejected
         let mut bin: Vec<u8> = Vec::new();
         let identity: [f32; 16] = [
             1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,

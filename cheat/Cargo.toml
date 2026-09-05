@@ -23,7 +23,6 @@ egui-winit = { version = "0.36", default-features = false, features = [
     "x11",
 ] }
 epaint = { version = "0.36", features = ["serde"] }
-image = { version = "0.25", default-features = false, features = ["png"] }
 glutin = { version = "0.32", default-features = false, features = [
     "x11",
     "egl",

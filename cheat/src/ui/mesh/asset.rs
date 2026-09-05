@@ -2,12 +2,8 @@ use std::io;
 
 use glam::Mat4;
 
-// binary format produced by crate::mesh_extract (reads the user's own CS2
-// install; no game assets are shipped or redistributed). one shared joint
-// table per file since every submesh in a CS2 agent model binds to the same
-// skeleton.
-// name and uvs aren't read yet: the renderer only draws a flat highlight
-// color for now, no textures
+// binary format produced by crate::mesh_extract, one shared joint table per
+// file since every submesh binds to the same skeleton
 #[allow(dead_code)]
 pub struct Submesh {
     pub name: String,
@@ -20,12 +16,12 @@ pub struct Submesh {
 }
 
 pub struct MeshAsset {
-    // not read outside tests yet: the renderer maps live bone data to
-    // joints by index, not by name (see the ordering match documented on
-    // Player::skeleton_transforms)
+    // joints are matched by index, not name, see Player::skeleton_transforms
     #[allow(dead_code)]
     pub joint_names: Vec<String>,
     pub inverse_bind: Vec<Mat4>,
+    // -1 = no parent within this skeleton
+    pub parent_indices: Vec<i32>,
     pub submeshes: Vec<Submesh>,
 }
 
@@ -52,6 +48,10 @@ impl<'a> Cursor<'a> {
 
     fn u32(&mut self) -> io::Result<u32> {
         Ok(u32::from_le_bytes(self.bytes(4)?.try_into().unwrap()))
+    }
+
+    fn i32(&mut self) -> io::Result<i32> {
+        Ok(i32::from_le_bytes(self.bytes(4)?.try_into().unwrap()))
     }
 
     fn u16(&mut self) -> io::Result<u16> {
@@ -102,7 +102,7 @@ impl MeshAsset {
             return Err(io::Error::new(io::ErrorKind::InvalidData, "bad dlms magic"));
         }
         let version = cursor.u32()?;
-        if version != 3 {
+        if version != 4 {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
                 format!("unsupported dlms version {version}"),
@@ -115,6 +115,10 @@ impl MeshAsset {
         for _ in 0..joint_count {
             joint_names.push(cursor.string()?);
             inverse_bind.push(cursor.mat4()?);
+        }
+        let mut parent_indices = Vec::with_capacity(joint_count);
+        for _ in 0..joint_count {
+            parent_indices.push(cursor.i32()?);
         }
 
         let submesh_count = cursor.u32()? as usize;
@@ -163,6 +167,7 @@ impl MeshAsset {
         Ok(Self {
             joint_names,
             inverse_bind,
+            parent_indices,
             submeshes,
         })
     }
@@ -172,13 +177,11 @@ impl MeshAsset {
 mod tests {
     use super::*;
 
-    /// builds a minimal, synthetic (not real game data) DLMS v3 buffer by
-    /// hand: 2 joints, 1 triangle, so the loader can be tested without any
-    /// external fixture file
+    /// hand-built DLMS v4 buffer: 2 joints, 1 triangle
     fn synthetic_dlms() -> Vec<u8> {
         let mut out = Vec::new();
         out.extend_from_slice(b"DLMS");
-        out.extend_from_slice(&3u32.to_le_bytes());
+        out.extend_from_slice(&4u32.to_le_bytes());
 
         let joints = ["root", "child"];
         out.extend_from_slice(&(joints.len() as u32).to_le_bytes());
@@ -190,6 +193,10 @@ mod tests {
                 let v: f32 = if i % 5 == 0 { 1.0 } else { 0.0 };
                 out.extend_from_slice(&v.to_le_bytes());
             }
+        }
+        // root has no parent, child's parent is root
+        for parent in [-1i32, 0] {
+            out.extend_from_slice(&parent.to_le_bytes());
         }
 
         out.extend_from_slice(&1u32.to_le_bytes()); // submesh_count
@@ -237,6 +244,7 @@ mod tests {
         let asset = MeshAsset::load(&data).expect("failed to parse dlms");
         assert_eq!(asset.joint_names, vec!["root", "child"]);
         assert_eq!(asset.inverse_bind.len(), 2);
+        assert_eq!(asset.parent_indices, vec![-1, 0]);
         assert_eq!(asset.submeshes.len(), 1);
 
         let body = &asset.submeshes[0];

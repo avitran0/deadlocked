@@ -25,33 +25,6 @@ impl AppState {
         }
 
         if let Some(pos) = world_to_screen(&data.bomb.position, data) {
-            let distance = data
-                .local_player
-                .position
-                .distance(data.bomb.position)
-                .max(1.0);
-            let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
-
-            let (r, g, b) = if data.bomb.being_defused {
-                (160, 240, 130)
-            } else {
-                (240, 100, 100)
-            };
-            let esp_color = Color32::from_rgba_unmultiplied(r, g, b, (esp_scale * 255.0) as u8);
-            painter.circle_stroke(
-                pos,
-                8.0 * esp_scale,
-                Stroke::new(
-                    4.0 * esp_scale,
-                    Color32::from_black_alpha((esp_scale * 255.0) as u8),
-                ),
-            );
-            painter.circle_stroke(
-                pos,
-                8.0 * esp_scale,
-                Stroke::new(2.0 * esp_scale, esp_color),
-            );
-
             let cat = &self.config.hud.overlay_text.bomb_timer;
             let anchor = point_anchor(pos, cat.position, cat.font_size * 0.3);
             self.text_sized(
