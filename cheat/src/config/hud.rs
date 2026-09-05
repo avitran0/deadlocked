@@ -51,6 +51,7 @@ pub struct MinimapConfig {
     pub center_on_self: bool,
     pub marker_size: f32,
     pub hide_native_minimap: bool,
+    pub bomb_carrier_gold: bool,
 }
 
 impl Default for MinimapConfig {
@@ -63,6 +64,7 @@ impl Default for MinimapConfig {
             center_on_self: false,
             marker_size: 8.0,
             hide_native_minimap: false,
+            bomb_carrier_gold: true,
         }
     }
 }

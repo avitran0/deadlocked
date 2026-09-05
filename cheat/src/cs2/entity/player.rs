@@ -1,7 +1,7 @@
 use std::{collections::HashMap, ops::Deref};
 
 use glam::{Vec2, Vec3, vec2};
-use shared::{Bones, SoundType, Weapon, WeaponClass};
+use shared::{BoneTransform, Bones, SoundType, Weapon, WeaponClass};
 use strum::IntoEnumIterator;
 
 use crate::cs2::{
@@ -249,30 +249,60 @@ impl Player {
         position + eye_offset
     }
 
-    pub fn bone_position(&self, cs2: &CS2, bone_index: u64) -> Vec3 {
+    // each bone slot is a 32 byte CTransform: position (12 bytes), then
+    // padding, then a rotation quaternion (x, y, z, w) at offset 16
+    fn skeleton_instance(&self, cs2: &CS2) -> usize {
         let gs_node = self.game_scene_node(cs2);
-        let bone_data: usize = cs2.process.read(
+        cs2.process.read(
             gs_node
                 + cs2.offsets.game_scene_node.model_state
                 + cs2.offsets.model_state.skeleton_instance,
-        );
-
-        if bone_data == 0 {
-            return Vec3::ZERO;
-        }
-
-        cs2.process.read(bone_data + (bone_index as usize * 32))
+        )
     }
 
-    pub fn all_bones(&self, cs2: &CS2) -> HashMap<Bones, Vec3> {
-        let mut bones = HashMap::with_capacity(20);
-        let gs_node = self.game_scene_node(cs2);
-        let bone_data: usize = cs2.process.read(
-            gs_node
-                + cs2.offsets.game_scene_node.model_state
-                + cs2.offsets.model_state.skeleton_instance,
-        );
+    pub fn bone_transform(&self, cs2: &CS2, bone_index: u64) -> BoneTransform {
+        let bone_data = self.skeleton_instance(cs2);
+        if bone_data == 0 {
+            return BoneTransform::default();
+        }
 
+        let slot = bone_data + (bone_index as usize * 32);
+        BoneTransform {
+            position: cs2.process.read(slot),
+            rotation: cs2.process.read(slot + 16),
+        }
+    }
+
+    pub fn bone_position(&self, cs2: &CS2, bone_index: u64) -> Vec3 {
+        self.bone_transform(cs2, bone_index).position
+    }
+
+    /// raw per-slot bone transforms, by numeric index rather than the named
+    /// `Bones` enum. the compiled agent skeleton has up to ~94 joints
+    /// (fingers, twists, jiggle bones included), matching this same index
+    /// order, which the named `Bones` enum only covers a subset of
+    pub fn skeleton_transforms(&self, cs2: &CS2, count: usize) -> Vec<BoneTransform> {
+        let bone_data = self.skeleton_instance(cs2);
+        if bone_data == 0 {
+            return vec![BoneTransform::default(); count];
+        }
+
+        let transforms: Vec<BoneTransform> = (0..count)
+            .map(|index| {
+                let slot = bone_data + index * 32;
+                BoneTransform {
+                    position: cs2.process.read(slot),
+                    rotation: cs2.process.read(slot + 16),
+                }
+            })
+            .collect();
+
+        transforms
+    }
+
+    pub fn all_bone_transforms(&self, cs2: &CS2) -> HashMap<Bones, BoneTransform> {
+        let mut bones = HashMap::with_capacity(20);
+        let bone_data = self.skeleton_instance(cs2);
         if bone_data == 0 {
             return bones;
         }
@@ -281,8 +311,14 @@ impl Player {
 
         for bone in Bones::iter() {
             let start = bone.u64() as usize * 32;
-            let pos = bytemuck::from_bytes(&bones_data[start..start + 3 * 4]);
-            bones.insert(bone, *pos);
+            // pod_read_unaligned copies rather than reinterpreting in
+            // place, so it doesn't require `start` to already be aligned
+            // to Vec3/Quat's alignment (bytemuck::from_bytes does, and
+            // panics when a slice offset like this isn't)
+            let position = bytemuck::pod_read_unaligned(&bones_data[start..start + 3 * 4]);
+            let rotation =
+                bytemuck::pod_read_unaligned(&bones_data[start + 16..start + 16 + 4 * 4]);
+            bones.insert(bone, BoneTransform { position, rotation });
         }
 
         bones
@@ -337,6 +373,13 @@ impl Player {
     pub fn color(&self, cs2: &CS2) -> i32 {
         cs2.process
             .read(self.controller + cs2.offsets.controller.color)
+    }
+
+    /// item definition index of the equipped agent skin, for picking which
+    /// extracted mesh to render for the player model overlay
+    pub fn agent_def_index(&self, cs2: &CS2) -> u16 {
+        cs2.process
+            .read(self.controller + cs2.offsets.controller.agent_def_index)
     }
 
     pub fn rotation(&self, cs2: &CS2) -> f32 {
@@ -458,6 +501,40 @@ impl Player {
             }
         }
         true
+    }
+
+    /// per-joint visibility for the mesh ESP's "which body part is exposed"
+    /// option: real BVH line-of-sight to each of the 19 named `Bones`
+    /// joints (the same subset the hitbox table covers). everything else
+    /// (fingers, twist bones, etc) defaults to visible - raycasting all
+    /// ~94 raw skeleton joints every frame for every player for parts this
+    /// minor isn't worth the extra cost. indexed the same way as
+    /// `skeleton_transforms()`'s output, so callers can look a joint index
+    /// up directly in both.
+    pub fn bone_visibility(
+        &self,
+        cs2: &CS2,
+        local_player: &Player,
+        joint_count: usize,
+    ) -> Vec<f32> {
+        let mut visibility = vec![1.0; joint_count];
+        let Some(bvh) = &cs2.bvh else {
+            return visibility;
+        };
+        let eye_position = local_player.eye_position(cs2);
+        for bone in Bones::iter() {
+            let index = bone.u64() as usize;
+            let Some(slot) = visibility.get_mut(index) else {
+                continue;
+            };
+            let bone_position = self.bone_position(cs2, bone.u64());
+            *slot = if bvh.has_line_of_sight(eye_position, bone_position) {
+                1.0
+            } else {
+                0.0
+            };
+        }
+        visibility
     }
 
     pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {

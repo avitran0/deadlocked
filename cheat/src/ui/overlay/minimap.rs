@@ -149,13 +149,18 @@ impl AppState {
         let config = &self.config.hud.minimap;
 
         if data.in_game && config.hide_native_minimap {
-            // measured against a 2560x1440 screenshot, only accurate at that res
-            painter.circle_filled(pos2(200.0, 195.0), 190.0, Colors::BACKDROP);
+            // measured against a 2560x1440 screenshot, sized with margin to
+            // fully cover it rather than risk edges peeking out
+            painter.circle_filled(pos2(200.0, 195.0), 225.0, Colors::BACKDROP);
         }
 
-        if !config.enabled {
+        if !config.enabled || !data.in_game {
             return;
         }
+
+        let Some(calibration) = map_calibration(&data.map_name) else {
+            return;
+        };
 
         let box_size = config.size;
         let anchor = screen_anchor(
@@ -165,44 +170,14 @@ impl AppState {
             box_size / 2.0 + 4.0,
         );
         let rect = Rect::from_center_size(anchor, vec2(box_size, box_size));
+        let painter = painter.with_clip_rect(rect);
+        let painter = &painter;
 
-        if !data.in_game {
-            painter.rect_filled(rect, 4.0, Color32::from_black_alpha(160));
-            painter.rect_stroke(
-                rect,
-                4.0,
-                Stroke::new(1.5, Colors::SUBTEXT),
-                egui::StrokeKind::Outside,
-            );
-            painter.text(
-                rect.center(),
-                egui::Align2::CENTER_CENTER,
-                "not in a match",
-                egui::FontId::proportional(13.0),
-                Colors::SUBTEXT,
-            );
-            return;
-        }
-
-        let Some(calibration) = map_calibration(&data.map_name) else {
-            painter.rect_filled(rect, 4.0, Color32::from_black_alpha(160));
-            painter.rect_stroke(
-                rect,
-                4.0,
-                Stroke::new(1.5, Colors::RED),
-                egui::StrokeKind::Outside,
-            );
-            painter.text(
-                rect.center(),
-                egui::Align2::CENTER_CENTER,
-                format!("no minimap data for\n\"{}\"", data.map_name),
-                egui::FontId::proportional(13.0),
-                Colors::TEXT,
-            );
-            return;
-        };
-
-        painter.rect_filled(rect, 4.0, Color32::from_black_alpha(160));
+        // square, not rounded: the map texture and markers underneath are
+        // drawn as a plain rect (egui has no rounded-clip for a textured
+        // mesh), so a rounded outline here would just show the texture's
+        // sharp square corners poking out past the curve
+        painter.rect_filled(rect, 0.0, Color32::from_black_alpha(160));
 
         let centering = config.center_on_self && data.local_player.steam_id != 0;
         let ref_percent = if centering {
@@ -230,9 +205,9 @@ impl AppState {
 
         painter.rect_stroke(
             rect,
-            4.0,
+            0.0,
             Stroke::new(1.5, Colors::HIGHLIGHT),
-            egui::StrokeKind::Outside,
+            egui::StrokeKind::Inside,
         );
 
         let projector = Projector {
@@ -243,9 +218,6 @@ impl AppState {
             box_size,
             center: rect.center(),
         };
-
-        let painter = painter.with_clip_rect(rect);
-        let painter = &painter;
 
         let trails = &self.config.hud.grenade_trails;
         for entity in &data.entities {
@@ -297,29 +269,15 @@ impl AppState {
         self.draw_ghosts(painter, &projector, rect, data, ctx);
 
         for player in &data.players {
-            draw_marker(
-                painter,
-                &projector,
-                rect,
-                player,
-                Colors::RED,
-                config,
-                ctx,
-                false,
-            );
+            draw_marker(painter, &projector, rect, player, Colors::RED, config);
         }
         for player in &data.friendlies {
-            let is_local = player.steam_id == data.local_player.steam_id;
-            draw_marker(
-                painter,
-                &projector,
-                rect,
-                player,
-                Colors::BLUE,
-                config,
-                ctx,
-                is_local,
-            );
+            let color = if player.steam_id == data.local_player.steam_id {
+                Colors::TEAL
+            } else {
+                Colors::BLUE
+            };
+            draw_marker(painter, &projector, rect, player, color, config);
         }
         if !data
             .friendlies
@@ -332,10 +290,8 @@ impl AppState {
                 &projector,
                 rect,
                 &data.local_player,
-                Colors::BLUE,
+                Colors::TEAL,
                 config,
-                ctx,
-                true,
             );
         }
 
@@ -442,11 +398,10 @@ fn draw_diamond(painter: &Painter, point: Pos2, radius: f32, color: Color32) {
     painter.add(egui::Shape::convex_polygon(
         points,
         color,
-        Stroke::new(1.0, Colors::BACKDROP),
+        Stroke::new(1.5, Colors::BACKDROP),
     ));
 }
 
-#[allow(clippy::too_many_arguments)]
 fn draw_marker(
     painter: &Painter,
     projector: &Projector,
@@ -454,8 +409,6 @@ fn draw_marker(
     player: &PlayerData,
     color: Color32,
     config: &crate::config::hud::MinimapConfig,
-    ctx: &Context,
-    is_local: bool,
 ) {
     let point = projector.project(player.position);
     let marker_size = config.marker_size;
@@ -465,28 +418,14 @@ fn draw_marker(
         return;
     }
 
-    if is_local {
-        let time = ctx.input(|i| i.time);
-        let period = 1.1_f64;
-        let pulse = (time % period) / period;
-        painter.circle_stroke(
-            point,
-            marker_size + 6.0 + (pulse as f32) * 12.0,
-            Stroke::new(
-                2.0,
-                Color32::from_rgba_unmultiplied(
-                    Colors::YELLOW.r(),
-                    Colors::YELLOW.g(),
-                    Colors::YELLOW.b(),
-                    ((1.0 - pulse) * 255.0) as u8,
-                ),
-            ),
-        );
-    }
-
-    if player.has_bomb {
-        painter.circle_stroke(point, marker_size + 3.0, Stroke::new(2.5, Colors::GOLD));
-    }
+    // the bomb carrier only gets called out specially while actually
+    // visible; otherwise they're just another dimmed marker like anyone
+    // else, same as the rest of this minimap already treats visibility
+    let color = if config.bomb_carrier_gold && player.has_bomb && player.visible {
+        Colors::GOLD
+    } else {
+        color
+    };
 
     // composed with the view rotation so markers turn together with the map
     let heading_rad = (-player.rotation + 90.0).to_radians() + projector.rotation_rad;
@@ -501,7 +440,7 @@ fn draw_marker(
         painter.add(egui::Shape::convex_polygon(
             vec![tip, right, left],
             color,
-            Stroke::new(1.0, Colors::BACKDROP),
+            Stroke::new(1.5, Colors::BACKDROP),
         ));
     } else {
         let dim = Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 100);
@@ -534,7 +473,7 @@ fn draw_edge_indicator(painter: &Painter, bounds: Rect, target: Pos2, color: Col
     painter.add(egui::Shape::convex_polygon(
         vec![rotate(0.0, -7.0), rotate(6.0, 6.0), rotate(-6.0, 6.0)],
         color,
-        Stroke::new(1.0, Colors::BACKDROP),
+        Stroke::new(1.5, Colors::BACKDROP),
     ));
 }
 
@@ -544,7 +483,7 @@ fn draw_c4_marker(
     ctx: &Context,
     color: Color32,
     period: f64,
-    label: &str,
+    label: Option<&str>,
 ) {
     let time = ctx.input(|i| i.time);
     let pulse = ((time % period) / period) as f32;
@@ -562,17 +501,19 @@ fn draw_c4_marker(
     painter.circle_filled(point, 8.0, color);
     painter.circle_stroke(point, 8.0, Stroke::new(2.0, Colors::BACKDROP));
 
-    painter.text(
-        point + vec2(0.0, -18.0),
-        egui::Align2::CENTER_CENTER,
-        label,
-        egui::FontId::proportional(13.0),
-        color,
-    );
+    if let Some(label) = label {
+        painter.text(
+            point + vec2(0.0, -18.0),
+            egui::Align2::CENTER_CENTER,
+            label,
+            egui::FontId::proportional(13.0),
+            color,
+        );
+    }
 }
 
 fn draw_dropped_c4(painter: &Painter, point: Pos2, ctx: &Context) {
-    draw_c4_marker(painter, point, ctx, Colors::GOLD, 1.4, "C4");
+    draw_c4_marker(painter, point, ctx, Colors::GOLD, 1.4, Some("C4"));
 }
 
 fn draw_bomb_marker(
@@ -585,13 +526,8 @@ fn draw_bomb_marker(
     let defusing = bomb.being_defused;
     let color = if defusing { Colors::GREEN } else { Colors::RED };
     let period = if defusing { 0.6 } else { 1.1 };
-    let label = if defusing {
-        format!("defusing {:.1}s", bomb.defuse_remain_time)
-    } else {
-        format!("{:.1}", bomb.timer)
-    };
 
-    draw_c4_marker(painter, point, ctx, color, period, &label);
+    draw_c4_marker(painter, point, ctx, color, period, None);
 }
 
 fn draw_rotated_map(

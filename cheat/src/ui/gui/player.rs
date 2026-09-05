@@ -1,12 +1,43 @@
 use egui::{DragValue, Ui};
 
-use crate::ui::{
-    app::AppState,
-    gui::helpers::{
-        checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
-        text_settings_button,
+use crate::{
+    config::player::ColorValues,
+    ui::{
+        app::AppState,
+        gui::helpers::{
+            checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind,
+            scroll, text_settings_button,
+        },
     },
 };
+
+/// every widget for one `ColorValues` block, reused for the shared/global
+/// colors and each of Box/Skeleton/Model/Hitbox ESP's own override - so
+/// none of these fields get defined or drawn more than once
+fn color_values_editor(ui: &mut Ui, colors: &mut ColorValues) -> bool {
+    let mut changed = false;
+    changed |= color_picker(ui, "Enemy", &mut colors.enemy_color);
+    changed |= color_picker(ui, "Ally", &mut colors.ally_color);
+    changed |= color_picker(ui, "Visible", &mut colors.visible_color);
+    changed |= color_picker(ui, "Hidden", &mut colors.hidden_color);
+    changed |= color_picker(ui, "Distance Near", &mut colors.distance_near_color);
+    changed |= color_picker(ui, "Distance Far", &mut colors.distance_far_color);
+    changed |= drag(
+        ui,
+        "Distance Max",
+        DragValue::new(&mut colors.distance_max)
+            .range(100.0..=8000.0)
+            .speed(10.0),
+    );
+    changed |= checkbox_hover(
+        ui,
+        "Gold C4 Carrier",
+        "Overrides whatever color the mode above would use for the bomb carrier, while they're visible.",
+        &mut colors.c4_carrier_highlight,
+    );
+    changed |= color_picker(ui, "C4 Carrier", &mut colors.c4_carrier_color);
+    changed
+}
 
 impl AppState {
     pub fn player_settings(&mut self, ui: &mut Ui) {
@@ -19,25 +50,88 @@ impl AppState {
             });
 
             collapsing_open(ui, "Colors", |ui| {
-                if color_picker(
-                    ui,
-                    "Box (visible)",
-                    &mut self.config.player.box_visible_color,
-                ) {
+                ui.label(
+                    "Shared/global - used by any ESP below that hasn't enabled its own override:",
+                );
+                if color_values_editor(ui, &mut self.config.player.colors) {
                     self.send_config_game();
                 }
 
-                if color_picker(
-                    ui,
-                    "Box (invisible)",
-                    &mut self.config.player.box_invisible_color,
-                ) {
-                    self.send_config_game();
-                }
+                ui.collapsing("Advanced: Box Colors", |ui| {
+                    if checkbox_hover(
+                        ui,
+                        "Override",
+                        "Use Box ESP's own colors below instead of the shared ones above.",
+                        &mut self.config.player.box_colors_override,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if color_values_editor(ui, &mut self.config.player.box_colors) {
+                        self.send_config_game();
+                    }
+                });
 
-                if color_picker(ui, "Skeleton", &mut self.config.player.skeleton_color) {
-                    self.send_config_game();
-                }
+                ui.collapsing("Advanced: Skeleton Colors", |ui| {
+                    if checkbox_hover(
+                        ui,
+                        "Override",
+                        "Use Skeleton ESP's own colors below instead of the shared ones above.",
+                        &mut self.config.player.skeleton_colors_override,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if color_values_editor(ui, &mut self.config.player.skeleton_colors) {
+                        self.send_config_game();
+                    }
+                });
+
+                ui.collapsing("Advanced: Model ESP Colors", |ui| {
+                    if combo_box(
+                        ui,
+                        "model_color_mode",
+                        "Color Mode",
+                        &mut self.config.player.model_color_mode,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if checkbox_hover(
+                        ui,
+                        "Override",
+                        "Use Model ESP's own colors below instead of the shared ones above.",
+                        &mut self.config.player.model_colors_override,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if color_values_editor(ui, &mut self.config.player.model_colors) {
+                        self.send_config_game();
+                    }
+                    if color_picker(ui, "Outline", &mut self.config.player.model_outline_color) {
+                        self.send_config_game();
+                    }
+                    ui.label("Outline alpha 0 = off; raise it to tint the mesh's silhouette edge toward this color.");
+                });
+
+                ui.collapsing("Advanced: Hitbox ESP Colors", |ui| {
+                    if combo_box(
+                        ui,
+                        "hitbox_color_mode",
+                        "Color Mode",
+                        &mut self.config.player.hitbox_color_mode,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if checkbox_hover(
+                        ui,
+                        "Override",
+                        "Use Hitbox ESP's own colors below instead of the shared ones above.",
+                        &mut self.config.player.hitbox_colors_override,
+                    ) {
+                        self.send_config_game();
+                    }
+                    if color_values_editor(ui, &mut self.config.player.hitbox_colors) {
+                        self.send_config_game();
+                    }
+                });
             });
         });
     }
@@ -82,6 +176,33 @@ impl AppState {
                 "draw_skeleton",
                 "Skeleton",
                 &mut self.config.player.draw_skeleton,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "draw_model",
+                "Model",
+                &mut self.config.player.draw_model,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "model_part_visibility",
+                "Model Part Visibility",
+                &mut self.config.player.model_part_visibility,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "hitbox_esp",
+                "Hitbox ESP",
+                &mut self.config.player.hitbox_esp,
             ) {
                 self.send_config_game();
             }

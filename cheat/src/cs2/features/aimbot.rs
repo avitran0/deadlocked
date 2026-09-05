@@ -1,12 +1,67 @@
-use glam::{Vec2, vec2};
-use shared::WeaponClass;
+use glam::{Vec2, Vec3, vec2};
+use shared::{BoneTransform, HitboxCapsule, WeaponClass};
 
 use crate::{
     config::Config,
     cs2::{CS2, entity::player::Player},
     math::{angles_to_fov, vec2_clamp},
     os::mouse::Mouse,
+    parser::bvh::Bvh,
 };
+
+// how many steps to probe inward from a visible edge of a partially
+// covered hitbox toward its (occluded) center; higher = finds a deeper,
+// safer aim point at the cost of a few extra line-of-sight checks
+const EXPOSED_POINT_STEPS: usize = 4;
+
+/// picks the best point to aim at on one hitbox capsule given real,
+/// possibly-partial cover: the capsule's own center when it has line of
+/// sight, otherwise the deepest point reachable by stepping in from
+/// whichever end of the capsule *is* visible toward that (occluded)
+/// center - "aim a little past the exposed edge" instead of either the
+/// covered center or the bare tip of the capsule. returns the point and
+/// whether anything on the capsule was visible at all.
+fn exposed_aim_point(
+    bvh: Option<&Bvh>,
+    eye_position: Vec3,
+    hitbox: HitboxCapsule,
+    transform: BoneTransform,
+) -> (Vec3, bool) {
+    let center = hitbox.world_center(transform);
+    let Some(bvh) = bvh else {
+        return (center, true);
+    };
+    if bvh.has_line_of_sight(eye_position, center) {
+        return (center, true);
+    }
+
+    let (point0, point1) = hitbox.world_points(transform);
+    let visible_edge = if bvh.has_line_of_sight(eye_position, point0) {
+        Some(point0)
+    } else if bvh.has_line_of_sight(eye_position, point1) {
+        Some(point1)
+    } else {
+        None
+    };
+
+    let Some(edge) = visible_edge else {
+        // nothing on this capsule has line of sight; fall back to the
+        // center so callers still get a sane point, flagged as not visible
+        return (center, false);
+    };
+
+    let mut best = edge;
+    for step in 1..=EXPOSED_POINT_STEPS {
+        let t = step as f32 / EXPOSED_POINT_STEPS as f32;
+        let probe = edge.lerp(center, t);
+        if bvh.has_line_of_sight(eye_position, probe) {
+            best = probe;
+        } else {
+            break;
+        }
+    }
+    (best, true)
+}
 
 #[derive(Default)]
 pub struct Aimbot {
@@ -64,11 +119,33 @@ impl CS2 {
         let target_angle = {
             let mut smallest_fov = 360.0;
             let mut smallest_angle = glam::Vec2::ZERO;
+            let mut found_visible_bone = false;
             let target_velocity = target.velocity(self);
             let prediction_time = config.prediction_time.clamp(0.0, 0.25);
+            let eye_position = local_player.eye_position(self);
+
             for bone in &config.bones {
-                let bone_pos =
-                    target.bone_position(self, bone.u64()) + target_velocity * prediction_time;
+                let mut transform = target.bone_transform(self, bone.u64());
+                transform.position += target_velocity * prediction_time;
+
+                // some of the configured aim bones can be behind cover
+                // while others on the same target are fully exposed (an
+                // arm or head peeking out); rather than snapping straight
+                // to the (possibly covered) hitbox center or the bare tip
+                // of it, find the deepest point on the exposed side that
+                // still has line of sight. once a visible bone is found,
+                // stop considering fully-occluded ones even if they'd
+                // otherwise be angularly closer to the crosshair
+                let (bone_pos, visible) =
+                    exposed_aim_point(self.bvh.as_ref(), eye_position, bone.hitbox(), transform);
+                if !visible && found_visible_bone {
+                    continue;
+                }
+                if visible && !found_visible_bone {
+                    found_visible_bone = true;
+                    smallest_fov = 360.0;
+                }
+
                 let angle =
                     self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
                 let fov = angles_to_fov(&local_player.view_angles(self), &angle);

@@ -79,7 +79,12 @@ impl CS2 {
                 continue;
             }
 
-            let head_position = player.bone_position(self, Bones::Head.u64());
+            let head_transform = player.bone_transform(self, Bones::Head.u64());
+            // aim at the hitbox's own center, not a point that hugs
+            // wherever the crosshair ray currently grazes the capsule -
+            // otherwise the aim settles on the capsule's edge/tip instead
+            // of solidly into the body as the crosshair converges
+            let head_position = Bones::Head.hitbox().world_center(head_transform);
             let distance = eye_position.distance(head_position);
             let angle = self.angle_to_target(&local_player, &head_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);
@@ -112,7 +117,8 @@ impl CS2 {
         // update target angle
         let mut smallest_fov = 360.0;
         for bone in Bones::iter() {
-            let bone_position = target.bone_position(self, bone.u64());
+            let transform = target.bone_transform(self, bone.u64());
+            let bone_position = bone.hitbox().world_center(transform);
             let distance = eye_position.distance(bone_position);
             let angle = self.angle_to_target(&local_player, &bone_position, &aim_punch);
             let fov = angles_to_fov(&view_angles, &angle);

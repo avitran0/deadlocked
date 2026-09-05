@@ -91,6 +91,15 @@ impl AppState {
                 ) {
                     self.send_config_game();
                 }
+
+                if checkbox_hover(
+                    ui,
+                    "Gold C4 Carrier",
+                    "Turns the bomb carrier's marker gold while they're visible. Turn off to keep them the same team color as everyone else.",
+                    &mut self.config.hud.minimap.bomb_carrier_gold,
+                ) {
+                    self.send_config_game();
+                }
             });
 
             ui.collapsing("Grenade Trails", |ui| {
@@ -299,6 +308,50 @@ impl AppState {
                 &mut self.config.hud.gui_always_render,
             ) {
                 self.send_config_game();
+            }
+
+            ui.label("Model ESP (Player tab) needs these extracted first:");
+            self.mesh_extract_button(ui);
+        });
+    }
+
+    fn mesh_extract_button(&mut self, ui: &mut Ui) {
+        use crate::mesh_extract::ExtractStatus;
+
+        let running = matches!(
+            *self.mesh_extract_status.lock(),
+            ExtractStatus::Running | ExtractStatus::Progress { .. }
+        );
+
+        ui.horizontal(|ui| {
+            ui.add_enabled_ui(!running, |ui| {
+                if ui.button("Extract Player Models").clicked() {
+                    let status = self.mesh_extract_status.clone();
+                    *status.lock() = ExtractStatus::Running;
+                    std::thread::spawn(move || {
+                        let result = crate::mesh_extract::extract_all_agent_models(&status);
+                        *status.lock() = match result {
+                            Ok(path) => ExtractStatus::Done(path),
+                            Err(err) => ExtractStatus::Error(err),
+                        };
+                    });
+                }
+            });
+
+            match &*self.mesh_extract_status.lock() {
+                ExtractStatus::Idle => {}
+                ExtractStatus::Running => {
+                    ui.label("finding your CS2 install and reading agent list...");
+                }
+                ExtractStatus::Progress { done, total } => {
+                    ui.label(format!("extracting agent models... {done}/{total}"));
+                }
+                ExtractStatus::Done(path) => {
+                    ui.label(format!("wrote {}", path.display()));
+                }
+                ExtractStatus::Error(err) => {
+                    ui.colored_label(egui::Color32::RED, err);
+                }
             }
         });
     }

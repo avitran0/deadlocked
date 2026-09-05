@@ -65,6 +65,8 @@ pub struct AppState {
 
     pub radar_status: RadarStatus,
     pub minimap: crate::ui::overlay::minimap::MinimapState,
+    pub mesh_extract_status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>,
+    pub update_apply_status: Arc<Mutex<crate::update::ApplyStatus>>,
 }
 
 pub struct App {
@@ -72,6 +74,7 @@ pub struct App {
     pub overlay: Option<WindowContext>,
     next_frame_time: Instant,
     pub state: AppState,
+    pub player_mesh: crate::ui::mesh::PlayerMeshState,
 }
 
 impl Deref for App {
@@ -101,6 +104,10 @@ impl AppState {
         let update_status = crate::update::check();
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
 
+        let mesh_extract_status =
+            Arc::new(Mutex::new(crate::mesh_extract::ExtractStatus::default()));
+        auto_extract_player_model(mesh_extract_status.clone());
+
         Self {
             channel_game,
             channel_radar,
@@ -128,8 +135,30 @@ impl AppState {
             gui_focused: true,
             radar_status: RadarStatus::Disabled,
             minimap: Default::default(),
+            mesh_extract_status,
+            update_apply_status: Arc::new(Mutex::new(Default::default())),
         }
     }
+}
+
+/// runs the player model mesh extraction once, automatically, the first
+/// time deadlocked starts with no agent_models.json yet (part of getting
+/// set up, not a separate manual step the user needs to know to run);
+/// harmless to skip if it fails, the feature stays off until the user runs
+/// it manually from the Hud tab
+fn auto_extract_player_model(status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>) {
+    if crate::config::BASE_PATH.join("agent_models.json").exists() {
+        return;
+    }
+
+    std::thread::spawn(move || {
+        *status.lock() = crate::mesh_extract::ExtractStatus::Running;
+        let result = crate::mesh_extract::extract_all_agent_models(&status);
+        *status.lock() = match result {
+            Ok(path) => crate::mesh_extract::ExtractStatus::Done(path),
+            Err(err) => crate::mesh_extract::ExtractStatus::Error(err),
+        };
+    });
 }
 
 impl App {
@@ -144,6 +173,7 @@ impl App {
             overlay: None,
             next_frame_time: Instant::now() + Duration::from_millis(16),
             state,
+            player_mesh: crate::ui::mesh::PlayerMeshState::default(),
         };
         ret.send_config_game();
         ret.send_config_radar();

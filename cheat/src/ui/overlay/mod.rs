@@ -4,7 +4,7 @@ use shared::{Data, Weapon};
 
 use crate::{
     config::aim::AimbotConfig,
-    math::world_to_screen,
+    math::{forward_vector, world_to_screen},
     ui::{app::AppState, grenades::Grenade},
 };
 
@@ -168,17 +168,7 @@ impl AppState {
 
     fn grenade_indicator(&self, data: &Data, grenade: &Grenade, painter: &Painter) {
         let position = grenade.position + (data.local_player.head - data.local_player.position);
-        let view_angles = grenade.view_angles;
-
-        let pitch = view_angles.x.to_radians();
-        let yaw = view_angles.y.to_radians();
-
-        let forward = vec3(
-            pitch.cos() * yaw.cos(),
-            pitch.cos() * yaw.sin(),
-            -pitch.sin(),
-        )
-        .normalize();
+        let forward = forward_vector(&grenade.view_angles);
 
         const CROSS_DISTANCE: f32 = 1000.0;
         let center = position + forward * CROSS_DISTANCE;
@@ -281,19 +271,7 @@ impl AppState {
     }
 
     fn health_color(&self, health: i32, max_health: i32, alpha: u8) -> Color32 {
-        let max_health = max_health.max(1);
-        let health = health.clamp(0, max_health);
-        let percent = health as f32 / max_health as f32;
-
-        let (r, g) = if percent <= 0.5 {
-            let factor = percent * 2.0;
-            (255, (255.0 * factor) as u8)
-        } else {
-            let factor = 1.0 - (percent - 0.5) * 2.0;
-            ((255.0 * factor) as u8, 255)
-        };
-
-        Color32::from_rgba_unmultiplied(r, g, 0, alpha)
+        crate::ui::color::health_color(health, max_health, alpha)
     }
 
     fn text_sized(

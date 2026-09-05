@@ -203,6 +203,7 @@ schema! {
             rank: schema("CCSPlayerController", "m_iCompetitiveRanking"),
             rank_type: schema("CCSPlayerController", "m_iCompetitiveRankType"),
             action_tracking_services: schema("CCSPlayerController", "m_pActionTrackingServices"),
+            agent_def_index: schema("CCSPlayerController", "m_nPawnCharacterDefIndex"),
         }
         entity: EntityOffsets {
             health: schema("C_BaseEntity", "m_iHealth"),

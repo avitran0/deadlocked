@@ -16,6 +16,10 @@ pub mod cs2 {
 
     pub const DEFAULT_FOV: u32 = 90;
 
+    // agent skeletons have up to 94 joints (fingers, twists, jiggle bones
+    // included); rounded up for headroom
+    pub const MESH_SKELETON_BONE_COUNT: usize = 96;
+
     pub const SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT: f32 = 2000.0;
     pub const SOUND_ESP_GUNSHOT_DIAMETER_DEFAULT: f32 = 3000.0;
     pub const SOUND_ESP_WEAPON_DIAMETER_DEFAULT: f32 = 1000.0;

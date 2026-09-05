@@ -127,23 +127,31 @@ impl AppState {
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(ui.ctx(), |ui| {
-                    if let UpdateStatus::Available { version, url } = &self.update_status {
+                    if let UpdateStatus::Available {
+                        version,
+                        html_url,
+                        asset_url,
+                    } = self.update_status.clone()
+                    {
                         ui.label(
                             egui::RichText::new(format!("Update {version} available!"))
                                 .color(Colors::YELLOW)
                                 .size(18.0),
                         );
                         ui.separator();
-                        ui.label("A new version of deadlocked is ready to download.");
+                        ui.label("A new version of deadlocked is ready.");
                         ui.add_space(8.0);
                         ui.horizontal(|ui| {
-                            if ui.button("Download").clicked() {
-                                open_url(url);
+                            if ui.link("Release Notes").clicked() {
+                                open_url(&html_url);
                             }
                             if ui.button("Dismiss").clicked() {
                                 close = true;
                             }
                         });
+                        if let Some(asset_url) = &asset_url {
+                            self.update_button(ui, asset_url);
+                        }
                     }
                 });
             if close {
@@ -283,6 +291,46 @@ impl App {
 
         overlay.run(move |ui| state.overlay(ui));
         overlay.clear();
+
+        let model_mode = self.state.config.player.draw_model;
+        let hitbox_mode = self.state.config.player.hitbox_esp;
+        let draw_model = model_mode != crate::config::player::ModelEspMode::Off;
+        let draw_hitboxes = hitbox_mode != crate::config::player::ModelEspMode::Off;
+        if draw_model || draw_hitboxes {
+            overlay.clear_depth();
+            let data_guard = self.state.data.lock();
+            let model_color_mode = self.state.config.player.model_color_mode;
+            let model_colors = self.state.config.player.model_colors().clone();
+            let model_outline_color = self.state.config.player.model_outline_color;
+            let model_part_visibility = self.state.config.player.model_part_visibility;
+            let hitbox_color_mode = self.state.config.player.hitbox_color_mode;
+            let hitbox_colors = self.state.config.player.hitbox_colors().clone();
+            // SAFETY: overlay.make_current() was just called above, so its
+            // gl context is current on this thread
+            unsafe {
+                if draw_model {
+                    self.player_mesh.draw(
+                        overlay.gl(),
+                        &data_guard,
+                        model_mode,
+                        model_color_mode,
+                        &model_colors,
+                        model_outline_color,
+                        model_part_visibility,
+                    );
+                }
+                if draw_hitboxes {
+                    self.player_mesh.draw_hitboxes(
+                        overlay.gl(),
+                        &data_guard,
+                        hitbox_mode,
+                        hitbox_color_mode,
+                        &hitbox_colors,
+                    );
+                }
+            }
+        }
+
         overlay.paint();
 
         if let Err(err) = overlay.swap_buffers() {
@@ -294,10 +342,21 @@ impl App {
         use winit::dpi::PhysicalPosition;
         let position =
             PhysicalPosition::new(data.window_position.x as i32, data.window_position.y as i32);
-        if !match overlay.window().outer_position() {
-            Ok(pos) => pos == position,
-            Err(_) => false,
-        } {
+        let current_outer = overlay.window().outer_position();
+        if !matches!(current_outer, Ok(pos) if pos == position) {
+            // logged (not silent) so a persistent, unresolved mismatch here
+            // - e.g. the window manager quietly padding an "undecorated"
+            // window with a title bar, or refusing the position request -
+            // shows up directly in the log as the likely cause of the
+            // whole overlay drawing shifted relative to the real game
+            // window, instead of having to guess blind
+            utils::info!(
+                "overlay window position mismatch: cs2 reports {:?}, overlay outer_position() was {:?} (inner_position() {:?}), setting to {:?}",
+                data.window_position,
+                current_outer,
+                overlay.window().inner_position(),
+                position
+            );
             overlay.window().set_outer_position(position);
         }
 
@@ -305,7 +364,14 @@ impl App {
             data.window_size.x.max(1.0) as u32,
             data.window_size.y.max(1.0) as u32,
         );
-        if overlay.window().inner_size() != size {
+        let current_inner = overlay.window().inner_size();
+        if current_inner != size {
+            utils::info!(
+                "overlay window size mismatch: cs2 reports {:?}, overlay inner_size() was {:?}, requesting {:?}",
+                data.window_size,
+                current_inner,
+                size
+            );
             let _ = overlay.window().request_inner_size(size);
         }
     }

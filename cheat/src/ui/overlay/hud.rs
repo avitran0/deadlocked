@@ -25,14 +25,32 @@ impl AppState {
         }
 
         if let Some(pos) = world_to_screen(&data.bomb.position, data) {
-            let esp_color = if data.bomb.being_defused {
-                Color32::from_rgb(160, 240, 130)
+            let distance = data
+                .local_player
+                .position
+                .distance(data.bomb.position)
+                .max(1.0);
+            let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
+
+            let (r, g, b) = if data.bomb.being_defused {
+                (160, 240, 130)
             } else {
-                Color32::from_rgb(240, 100, 100)
+                (240, 100, 100)
             };
-            painter.circle_filled(pos, 6.0, esp_color);
-            painter.circle_stroke(pos, 6.0, Stroke::new(2.0, Color32::BLACK));
-            painter.circle_stroke(pos, 10.0, Stroke::new(1.5, esp_color));
+            let esp_color = Color32::from_rgba_unmultiplied(r, g, b, (esp_scale * 255.0) as u8);
+            painter.circle_stroke(
+                pos,
+                8.0 * esp_scale,
+                Stroke::new(
+                    4.0 * esp_scale,
+                    Color32::from_black_alpha((esp_scale * 255.0) as u8),
+                ),
+            );
+            painter.circle_stroke(
+                pos,
+                8.0 * esp_scale,
+                Stroke::new(2.0 * esp_scale, esp_color),
+            );
 
             let cat = &self.config.hud.overlay_text.bomb_timer;
             let anchor = point_anchor(pos, cat.position, cat.font_size * 0.3);

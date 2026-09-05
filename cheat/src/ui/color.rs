@@ -30,3 +30,24 @@ impl Colors {
         ("Purple", Self::PURPLE),
     ];
 }
+
+/// red at 0 health, green at full, yellow in between; shared by every
+/// ESP feature's `Health` `DrawMode` (box/skeleton via `AppState`, model/
+/// hitbox mesh via `ui::mesh` directly, neither of which can reach the
+/// other's health data the same way, so this lives as a free function
+/// rather than being duplicated per caller)
+pub fn health_color(health: i32, max_health: i32, alpha: u8) -> Color32 {
+    let max_health = max_health.max(1);
+    let health = health.clamp(0, max_health);
+    let percent = health as f32 / max_health as f32;
+
+    let (r, g) = if percent <= 0.5 {
+        let factor = percent * 2.0;
+        (255, (255.0 * factor) as u8)
+    } else {
+        let factor = 1.0 - (percent - 0.5) * 2.0;
+        ((255.0 * factor) as u8, 255)
+    };
+
+    Color32::from_rgba_unmultiplied(r, g, 0, alpha)
+}

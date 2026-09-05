@@ -10,8 +10,8 @@ use shared::{Bones, Data, PlayerData, SoundType};
 use crate::{
     config::player::{BoxMode, DrawMode},
     config::text::TextPosition,
-    math::{CYLINDER_SAMPLES, world_to_screen},
-    ui::{app::AppState, color::Colors},
+    math::{CYLINDER_SAMPLES, forward_vector, world_to_screen},
+    ui::app::AppState,
 };
 
 impl AppState {
@@ -80,41 +80,42 @@ impl AppState {
         )
     }
 
-    fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
-        let alpha = match alpha {
-            Some(alpha) => alpha.clamp(0.0, 1.0),
-            None => 1.0,
-        };
+    /// scales stroke width and text off the player's own projected box
+    /// height in screen pixels, not raw distance: a fixed distance formula
+    /// bottoms out well before targets actually stop shrinking on screen
+    /// (it has no idea about the local player's FOV or the window
+    /// resolution), so at long range the stroke/text used to stay pinned
+    /// at a fixed floor size while the box itself kept shrinking
+    /// underneath it, ending up looking oversized relative to the box.
+    /// falls back to a distance-based estimate only if the box can't be
+    /// projected at all (e.g. invalid collision bounds).
+    fn esp_scale(&self, player: &PlayerData, data: &Data, min_scale: f32) -> f32 {
+        const REFERENCE_HEIGHT: f32 = 120.0;
+        if let Some((tl, _, bl, _)) = self.projected_world_bounds(player, data) {
+            let box_height = (bl.y - tl.y).abs().max(1.0);
+            return (box_height / REFERENCE_HEIGHT).clamp(min_scale, 1.0);
+        }
         let distance = data
             .local_player
             .position
             .distance(player.position)
             .max(1.0);
+        (500.0 / distance).clamp(min_scale, 1.0)
+    }
 
-        let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
-        let line_width = self.config.hud.line_width * esp_scale;
-
-        let health_color = self.health_color(
-            player.health,
-            player.max_health,
-            self.config.player.box_visible_color.a(),
-        );
-        let mut color = match &self.config.player.draw_box {
-            DrawMode::None => health_color,
-            DrawMode::Health => health_color,
-            DrawMode::Color => {
-                if player.visible {
-                    self.config.player.box_visible_color
-                } else {
-                    self.config.player.box_invisible_color
-                }
-            }
+    fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
+        let alpha = match alpha {
+            Some(alpha) => alpha.clamp(0.0, 1.0),
+            None => 1.0,
         };
 
-        if player.has_bomb {
-            color = Colors::GOLD;
-        }
-        color = Self::alpha(color, alpha);
+        let esp_scale = self.esp_scale(player, data, 0.4);
+        let line_width = self.config.hud.line_width * esp_scale;
+
+        let health_color = self.health_color(player.health, player.max_health, 255);
+        let colors = self.config.player.box_colors();
+        let color = colors.resolve(self.config.player.draw_box, player, data, health_color);
+        let color = Self::alpha(color, alpha);
 
         let stroke = Stroke::new(line_width, color);
 
@@ -368,21 +369,13 @@ impl AppState {
     }
 
     fn skeleton(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
-        let distance = data
-            .local_player
-            .position
-            .distance(player.position)
-            .max(1.0);
-        let esp_scale = (500.0 / distance).clamp(0.25, 1.0);
+        let esp_scale = self.esp_scale(player, data, 0.25);
 
-        let mut color = match &self.config.player.draw_skeleton {
+        let colors = self.config.player.skeleton_colors();
+        let health_color = self.health_color(player.health, player.max_health, 255);
+        let mut color = match self.config.player.draw_skeleton {
             DrawMode::None => return,
-            DrawMode::Health => self.health_color(
-                player.health,
-                player.max_health,
-                self.config.player.skeleton_color.a(),
-            ),
-            DrawMode::Color => self.config.player.skeleton_color,
+            mode => colors.resolve(mode, player, data, health_color),
         };
         if let Some(alpha) = alpha {
             color = Self::alpha(color, alpha);
@@ -407,28 +400,24 @@ impl AppState {
             painter.line(vec![a, b], stroke);
         }
 
-        // same 3.5-unit hitbox radius the triggerbot's head_only mode uses
+        // real hitbox capsule extracted from the game's own compiled model,
+        // not an approximation
         if !self.config.player.head_circle {
             return;
         }
-        let Some(&head) = player.bones.get(&Bones::Head) else {
+        let Some(&head_transform) = player.bone_transforms.get(&Bones::Head) else {
             return;
         };
+        let hitbox = Bones::Head.hitbox();
+        let head = hitbox.world_center(head_transform);
         let Some(head_screen) = world_to_screen(&head, data) else {
             return;
         };
 
-        const HEAD_HITBOX_RADIUS: f32 = 3.5;
-        let pitch = data.view_angles.x.to_radians();
-        let yaw = data.view_angles.y.to_radians();
-        let forward = vec3(
-            pitch.cos() * yaw.cos(),
-            pitch.cos() * yaw.sin(),
-            -pitch.sin(),
-        );
+        let forward = forward_vector(&data.view_angles);
         let right = forward.cross(vec3(0.0, 0.0, 1.0)).normalize();
 
-        let Some(edge_screen) = world_to_screen(&(head + right * HEAD_HITBOX_RADIUS), data) else {
+        let Some(edge_screen) = world_to_screen(&(head + right * hitbox.radius), data) else {
             return;
         };
 
