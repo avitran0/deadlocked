@@ -90,7 +90,12 @@ impl AppState {
             .distance(player.position)
             .max(1.0);
 
-        let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
+        let raw_scale = 500.0 / distance;
+        let esp_scale = if raw_scale.is_nan() {
+            1.0
+        } else {
+            raw_scale.clamp(0.4, 1.0)
+        };
         let line_width = self.config.hud.line_width * esp_scale;
 
         let health_color = self.health_color(
@@ -369,8 +374,12 @@ impl AppState {
             .position
             .distance(player.position)
             .max(1.0);
-        let esp_scale = (500.0 / distance).clamp(0.25, 1.0);
-
+        let raw_scale = 500.0 / distance;
+        let esp_scale  = if raw_scale.is_nan() {
+            1.0
+        } else {
+            raw_scale.clamp(0.25, 1.0)
+        };
         let mut color = match &self.config.player.draw_skeleton {
             DrawMode::None => return,
             DrawMode::Health => self.health_color(
