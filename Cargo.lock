@@ -530,6 +530,7 @@ dependencies = [
  "postcard",
  "rand 0.10.2",
  "rand_distr",
+ "semver",
  "serde",
  "serde_json",
  "shared",

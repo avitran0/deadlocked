@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use semver::Version;
 use serde::Deserialize;
 use ureq::Agent;
 
@@ -49,9 +50,23 @@ pub fn check() -> UpdateStatus {
         Err(e) => return UpdateStatus::Error(e.to_string()),
     };
 
-    let latest = release.tag_name.trim_start_matches('v');
+    let latest_version = release
+        .tag_name
+        .strip_prefix('v')
+        .unwrap_or(&release.tag_name);
+    let latest_version = match Version::parse(latest_version) {
+        Ok(version) => version,
+        Err(err) => {
+            return UpdateStatus::Error(format!(
+                "invalid release version '{}': {err}",
+                release.tag_name
+            ));
+        }
+    };
 
-    if latest != VERSION {
+    let current_version = Version::parse(VERSION).expect("CARGO_PKG_VERSION must be valid semver");
+
+    if latest_version > current_version {
         UpdateStatus::Available {
             version: release.tag_name,
             url: release.html_url,

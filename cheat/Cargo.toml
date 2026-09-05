@@ -17,7 +17,11 @@ uuid.workspace = true
 bytemuck = "1.24"
 egui = "0.36"
 egui_glow = { version = "0.36", features = ["winit"] }
-egui-winit = { version = "0.36", default-features = false, features = ["clipboard", "links", "x11"] }
+egui-winit = { version = "0.36", default-features = false, features = [
+    "clipboard",
+    "links",
+    "x11",
+] }
 epaint = { version = "0.36", features = ["serde"] }
 glutin = { version = "0.32", default-features = false, features = [
     "x11",
@@ -30,6 +34,7 @@ glutin-winit = { version = "0.5", default-features = false, features = [
 nix = { version = "0.31", features = ["ioctl"] }
 rand = "0.10"
 rand_distr = "0.6"
+semver = "1.0"
 toml = "1.0"
 ureq = { version = "3", features = ["json"] }
 urlencoding = "2.1"
