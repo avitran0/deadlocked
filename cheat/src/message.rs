@@ -30,11 +30,13 @@ pub enum UiMessage {
 }
 
 #[derive(Clone)]
-pub struct RadarMessage(pub RadarConfig);
+pub enum RadarMessage {
+    Config { config: RadarConfig, uuid: Uuid },
+}
 
 #[derive(Clone)]
 pub enum RadarStatus {
-    Connected(Uuid),
+    Connected,
     FailedToConnect,
     Disconnected,
     Disabled,
