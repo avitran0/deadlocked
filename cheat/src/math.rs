@@ -74,6 +74,35 @@ pub fn world_to_screen(position: &Vec3, data: &Data) -> Option<egui::Pos2> {
     Some(egui::pos2(screen_position.x, screen_position.y))
 }
 
+pub fn world_to_screen_normalized(position: &Vec3, data: &Data) -> egui::Pos2 {
+    let vm = &data.view_matrix;
+    let mut screen_position = Vec2::new(
+        vm.x_axis.x * position.x
+            + vm.x_axis.y * position.y
+            + vm.x_axis.z * position.z
+            + vm.x_axis.w,
+        vm.y_axis.x * position.x
+            + vm.y_axis.y * position.y
+            + vm.y_axis.z * position.z
+            + vm.y_axis.w,
+    );
+
+    let w = vm.w_axis.x * position.x
+        + vm.w_axis.y * position.y
+        + vm.w_axis.z * position.z
+        + vm.w_axis.w;
+
+    if w > 0.0 {
+        screen_position /= w;
+    }
+
+    let half_size = Vec2::new(data.window_size.x * 0.5, data.window_size.y * 0.5);
+
+    screen_position.x = half_size.x + 0.5 * screen_position.x * data.window_size.x + 0.5;
+    screen_position.y = half_size.y - 0.5 * screen_position.y * data.window_size.y + 0.5;
+
+    egui::pos2(screen_position.x, screen_position.y)
+}
 fn weighted_average_component(
     history: &std::collections::VecDeque<Vec2>,
     component: impl Fn(&Vec2) -> f32,

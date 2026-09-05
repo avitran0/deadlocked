@@ -38,6 +38,10 @@ impl AppState {
                 if color_picker(ui, "Skeleton", &mut self.config.player.skeleton_color) {
                     self.send_config_game();
                 }
+
+                if color_picker(ui, "Tracers", &mut self.config.player.tracers_color) {
+                    self.send_config_game();
+                }
             });
         });
     }
@@ -69,11 +73,23 @@ impl AppState {
                 self.send_config_game();
             }
 
+            if checkbox(
+                ui,
+                "Tracers",
+                &mut self.config.player.tracers
+            ) {
+                self.send_config_game();
+            }
+
             if combo_box(ui, "draw_box", "Box", &mut self.config.player.draw_box) {
                 self.send_config_game();
             }
 
             if combo_box(ui, "box_mode", "Box Mode", &mut self.config.player.box_mode) {
+                self.send_config_game();
+            }
+
+            if combo_box(ui, "tracers_mode", "Tracers Mode", &mut self.config.player.tracers_mode) {
                 self.send_config_game();
             }
 
@@ -95,6 +111,28 @@ impl AppState {
                 "Visible Only",
                 "Only show visible players",
                 &mut self.config.player.visible_only,
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Max Tracer Distance Mode Detection Distance",
+                DragValue::new(&mut self.config.player.max_tracers_dd_distance)
+                    .range(1..=10000)
+                    .max_decimals(0)
+                    .speed(1)
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Tracers Y Offset (%)",
+                DragValue::new(&mut self.config.player.tracers_y_value)
+                    .range(1..=100)
+                    .max_decimals(2)
+                    .speed(1)
             ) {
                 self.send_config_game();
             }

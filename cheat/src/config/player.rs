@@ -23,6 +23,24 @@ impl std::fmt::Display for DrawMode {
 }
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum TracersMode {
+    Health,
+    Distance,
+    Color
+}
+
+impl std::fmt::Display for TracersMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Health => "Health",
+            Self::Distance => "Distance",
+            Self::Color => "Color",
+        }
+        .fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum BoxMode {
     Gap,
     Full,
@@ -44,11 +62,14 @@ pub struct PlayerConfig {
     pub enabled: bool,
     pub chicken: bool,
     pub esp_hotkey: KeyCode,
+    pub tracers: bool,
     pub show_friendlies: bool,
     pub draw_box: DrawMode,
     pub box_mode: BoxMode,
+    pub tracers_mode: TracersMode,
     pub box_visible_color: Color32,
     pub box_invisible_color: Color32,
+    pub tracers_color: Color32,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
     pub head_circle: bool,
@@ -59,6 +80,9 @@ pub struct PlayerConfig {
     pub tags: bool,
     pub visible_only: bool,
     pub sound: SoundConfig,
+
+    pub max_tracers_dd_distance: i32,
+    pub tracers_y_value: f32
 }
 
 impl Default for PlayerConfig {
@@ -67,11 +91,14 @@ impl Default for PlayerConfig {
             enabled: true,
             chicken: true,
             esp_hotkey: KeyCode::X,
+            tracers: false,
             show_friendlies: false,
             draw_box: DrawMode::Color,
             box_mode: BoxMode::Gap,
+            tracers_mode: TracersMode::Color,
             box_visible_color: Color32::WHITE,
             box_invisible_color: Color32::RED,
+            tracers_color: Color32::PURPLE,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
             head_circle: true,
@@ -82,6 +109,9 @@ impl Default for PlayerConfig {
             tags: true,
             visible_only: false,
             sound: SoundConfig::default(),
+
+            max_tracers_dd_distance: 3000,
+            tracers_y_value: 75.0
         }
     }
 }
