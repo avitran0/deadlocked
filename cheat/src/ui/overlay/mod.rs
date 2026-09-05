@@ -10,7 +10,6 @@ use crate::{
 
 mod entity;
 mod hud;
-pub(crate) mod minimap;
 mod player;
 
 impl AppState {
@@ -58,7 +57,6 @@ impl AppState {
         self.draw_sniper_crosshair(&painter, data);
         self.draw_keybind_list(&painter, data);
         self.draw_spectator_list(&painter, data);
-        self.draw_minimap(ui.ctx(), &painter, data);
 
         if data.aimbot_active {
             let cat = &self.config.hud.overlay_text.status_text;

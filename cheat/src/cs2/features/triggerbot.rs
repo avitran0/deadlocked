@@ -1,12 +1,13 @@
 use std::time::{Duration, Instant};
 
+use glam::Vec2;
 use rand::rng;
-use shared::{Bones, Weapon, WeaponClass};
+use shared::{Bones, WeaponClass};
 
 use crate::{
     config::Config,
     cs2::{CS2, entity::player::Player},
-    math::forward_vector,
+    math::angles_to_fov,
     os::mouse::Mouse,
 };
 
@@ -42,24 +43,16 @@ impl CS2 {
             return;
         }
 
-        let weapon_class = local_player.weapon_class(self);
-
         if config.scope_check
-            && weapon_class == WeaponClass::Sniper
+            && local_player.weapon_class(self) == WeaponClass::Sniper
             && !local_player.is_scoped(self)
         {
             return;
         }
 
-        if config.velocity_check {
-            let scale = if config.auto_velocity_gate {
-                movement_accuracy_scale(weapon_class)
-            } else {
-                1.0
-            };
-            if local_player.velocity(self).length() > config.velocity_threshold * scale {
-                return;
-            }
+        if config.velocity_check && local_player.velocity(self).length() > config.velocity_threshold
+        {
+            return;
         }
 
         let Some(player) = local_player.crosshair_entity(self) else {
@@ -71,20 +64,16 @@ impl CS2 {
         }
 
         if config.head_only {
-            let head_transform = player.bone_transform(self, Bones::Head.u64());
-            let hitbox = Bones::Head.hitbox();
+            let head = player.bone_position(self, Bones::Head.u64());
 
-            let eye_position = local_player.eye_position(self);
+            let target_angle = self.angle_to_target(&local_player, &head, &Vec2::ZERO);
             let view_angles = local_player.view_angles(self);
-            let forward = forward_vector(&view_angles);
+            let fov = angles_to_fov(&view_angles, &target_angle);
 
-            // real ray-vs-capsule test against the head hitbox's actual
-            // shape, instead of converting its radius into an angular FOV
-            // threshold around a single center point (an approximation
-            // that degrades for capsules viewed at sharp angles or at very
-            // close range)
-            let (_, distance) = hitbox.closest_approach(head_transform, eye_position, forward);
-            if distance > hitbox.radius {
+            let head_radius_fov =
+                3.5 / (local_player.position(self) - player.position(self)).length() * 100.0;
+
+            if fov > head_radius_fov {
                 return;
             }
         }
@@ -96,16 +85,10 @@ impl CS2 {
         use rand_distr::Distribution as _;
         let delay = normal.sample(&mut rng()).max(0.0) as u64;
 
-        let hold_duration = if config.auto_hold_time {
-            auto_hold_duration(&local_player.weapon(self))
-        } else {
-            config.shot_duration
-        };
-
         let now = Instant::now();
         let delay = Duration::from_millis(delay);
         self.trigger.shot_start = Some(now + delay);
-        self.trigger.shot_end = Some(now + delay + Duration::from_millis(hold_duration));
+        self.trigger.shot_end = Some(now + delay + Duration::from_millis(config.shot_duration));
     }
 
     pub fn triggerbot_shoot(&mut self, mouse: &mut Mouse) {
@@ -124,40 +107,5 @@ impl CS2 {
             mouse.left_release();
             self.trigger.shot_end = None;
         }
-    }
-}
-
-/// how much the configured velocity gate should stretch (or shrink) for
-/// this weapon class, based on how CS2 actually handles moving accuracy:
-/// smgs and pistols stay reasonably accurate on the move, rifles and
-/// heavies fall off hard, and a scoped sniper needs to be almost stationary
-fn movement_accuracy_scale(class: WeaponClass) -> f32 {
-    match class {
-        WeaponClass::Smg | WeaponClass::Pistol => 1.6,
-        WeaponClass::Shotgun => 1.2,
-        WeaponClass::Rifle | WeaponClass::Heavy => 0.6,
-        WeaponClass::Sniper => 0.15,
-        WeaponClass::Knife | WeaponClass::Grenade | WeaponClass::Utility | WeaponClass::Unknown => {
-            1.0
-        }
-    }
-}
-
-/// the hold time that actually fires a single clean shot for this specific
-/// weapon: short for anything fully automatic (a longer hold sprays more
-/// than one round), longer for single-action weapons whose slower cycle
-/// needs a longer press to register reliably - the revolver's cocking
-/// action most of all
-fn auto_hold_duration(weapon: &Weapon) -> u64 {
-    use Weapon::*;
-    match weapon {
-        MAC10 | MP5 | MP7 | MP9 | P90 | Bizon | UMP45 => 40,
-        AK47 | Aug | Famas | Galil | M4A1S | M4A4 | SG553 => 40,
-        M249 | Negev => 40,
-        CZ75 => 40,
-        G3SG1 | SCAR20 => 40,
-        Awp | SSG08 => 160,
-        Revolver => 220,
-        _ => 100,
     }
 }

@@ -67,7 +67,6 @@ pub struct AppState {
     pub gui_focused: bool,
 
     pub radar_status: RadarStatus,
-    pub minimap: crate::ui::overlay::minimap::MinimapState,
     pub mesh_extract_status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>,
     pub update_apply_status: Arc<Mutex<crate::update::ApplyStatus>>,
 }
@@ -138,7 +137,6 @@ impl AppState {
             overlay_egui: None,
             gui_focused: true,
             radar_status: RadarStatus::Disabled,
-            minimap: Default::default(),
             mesh_extract_status,
             update_apply_status: Arc::new(Mutex::new(Default::default())),
         }

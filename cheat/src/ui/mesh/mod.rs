@@ -106,8 +106,8 @@ impl PlayerMeshState {
                 let color = colors.resolve(color_mode, player, data, health);
                 let [r, g, b, _] = color.to_normalized_gamma_f32();
                 // shade the mesh darker while the player isn't actually
-                // visible (behind a wall, etc.), same visual cue the
-                // minimap and box ESP already use for hidden targets
+                // visible (behind a wall, etc.), same visual cue box ESP
+                // already uses for hidden targets
                 let shade = if player.visible { 1.0 } else { 0.4 };
                 // the resolved color's own alpha isn't used here: alpha
                 // comes from the render mode instead, so Highlight stays a

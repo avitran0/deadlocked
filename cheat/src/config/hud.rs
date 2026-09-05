@@ -1,7 +1,7 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
 
-use super::text::{OverlayTextConfig, TextPosition};
+use super::text::OverlayTextConfig;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
@@ -17,7 +17,6 @@ pub struct HudConfig {
     pub line_width: f32,
     pub debug: bool,
     pub overlay_text: OverlayTextConfig,
-    pub minimap: MinimapConfig,
     pub gui_always_render: bool,
 }
 
@@ -35,36 +34,7 @@ impl Default for HudConfig {
             line_width: 2.0,
             debug: false,
             overlay_text: OverlayTextConfig::default(),
-            minimap: MinimapConfig::default(),
             gui_always_render: false,
-        }
-    }
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(default)]
-pub struct MinimapConfig {
-    pub enabled: bool,
-    pub position: TextPosition,
-    pub size: f32,
-    pub zoom: f32,
-    pub center_on_self: bool,
-    pub marker_size: f32,
-    pub hide_native_minimap: bool,
-    pub bomb_carrier_gold: bool,
-}
-
-impl Default for MinimapConfig {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            position: TextPosition::TopLeft,
-            size: 320.0,
-            zoom: 1.0,
-            center_on_self: false,
-            marker_size: 8.0,
-            hide_native_minimap: false,
-            bomb_carrier_gold: true,
         }
     }
 }

@@ -262,15 +262,6 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
-
-            if checkbox_hover(
-                ui,
-                "Auto Hold Time",
-                "Ignore Hold Duration above and use the equipped weapon's own best hold time instead: short for automatic weapons so it can't spray more than one round, longer for single-action weapons like the revolver so the click reliably registers.",
-                &mut self.weapon_config().triggerbot.auto_hold_time,
-            ) {
-                self.send_config_game();
-            }
         });
 
         ui.collapsing("Checks\u{200b}", |ui| {
@@ -304,15 +295,6 @@ impl AppState {
                 "Velocity Threshold",
                 DragValue::new(&mut self.weapon_config().triggerbot.velocity_threshold)
                     .range(0..=5000),
-            ) {
-                self.send_config_game();
-            }
-
-            if checkbox_hover(
-                ui,
-                "Auto Velocity Gate",
-                "Scale Velocity Threshold by the equipped weapon's real moving accuracy: looser for smgs/pistols that stay accurate on the move, tighter for rifles and near-zero for a scoped sniper.",
-                &mut self.weapon_config().triggerbot.auto_velocity_gate,
             ) {
                 self.send_config_game();
             }

@@ -140,17 +140,7 @@ pub struct TriggerbotConfig {
     pub scope_check: bool,
     pub velocity_check: bool,
     pub velocity_threshold: f32,
-    /// scale `velocity_threshold` by the equipped weapon's real moving
-    /// accuracy instead of using it as a flat number for every weapon: an
-    /// smg that shoots fine on the move gets a looser gate, a rifle or
-    /// sniper that's only accurate standing still gets a tighter one
-    pub auto_velocity_gate: bool,
     pub head_only: bool,
-    /// override `shot_duration` with a per-weapon hold time: short for
-    /// automatic weapons (a long hold would spray more than one shot) and
-    /// longer for single-action weapons like the revolver (its slow cocking
-    /// action needs a longer press to register reliably)
-    pub auto_hold_time: bool,
 }
 
 impl Default for TriggerbotConfig {
@@ -165,9 +155,7 @@ impl Default for TriggerbotConfig {
             scope_check: true,
             velocity_check: true,
             velocity_threshold: 100.0,
-            auto_velocity_gate: false,
             head_only: false,
-            auto_hold_time: false,
         }
     }
 }
