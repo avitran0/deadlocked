@@ -3,10 +3,10 @@ use std::{
     net::{TcpStream, ToSocketAddrs},
     ops::Deref,
     sync::Arc,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
-use shared::{Data, MAX_FRAME_SIZE, PROTO_VERSION};
+use shared::{Data, HEARTBEAT, MAX_FRAME_SIZE, PROTO_VERSION};
 use utils::{
     Channel, Mutex,
     io::{Endian, EndianReaderWriter},
@@ -21,13 +21,14 @@ use crate::{
 pub struct Radar {
     channel: Channel<RadarStatus, RadarMessage>,
     data: Arc<Mutex<Data>>,
-    uuid: Uuid,
+    uuid: Option<Uuid>,
     state: Option<RadarState>,
     config: RadarConfig,
 }
 
 struct RadarState {
     stream: EndianReaderWriter<TcpStream>,
+    last_heartbeat: Instant,
 }
 
 impl Radar {
@@ -35,7 +36,7 @@ impl Radar {
         Self {
             channel,
             data,
-            uuid: Uuid::new_v4(),
+            uuid: None,
             state: None,
             config: RadarConfig::default(),
         }
@@ -61,6 +62,11 @@ impl Radar {
         self.process_messages();
 
         if !self.config.enabled {
+            self.state = None;
+            return false;
+        }
+
+        if self.uuid.is_none() {
             self.state = None;
             return false;
         }
@@ -97,10 +103,20 @@ impl Radar {
         {
             self.state = None;
             self.send_message(RadarStatus::FailedToConnect);
-            false
-        } else {
-            true
+            return false;
         }
+
+        const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+        if state.last_heartbeat.elapsed() >= HEARTBEAT_INTERVAL {
+            if state.stream.write_u32(HEARTBEAT).is_err() {
+                self.state = None;
+                self.send_message(RadarStatus::FailedToConnect);
+                return false;
+            }
+            state.last_heartbeat = Instant::now();
+        }
+
+        true
     }
 
     fn establish_connection(&self) -> Option<RadarState> {
@@ -138,32 +154,41 @@ impl Radar {
     fn connect_server(&self, stream: TcpStream) -> Option<RadarState> {
         let mut stream = EndianReaderWriter::new(stream, Endian::Big);
 
+        let uuid = self.uuid?;
         stream.write_u32(PROTO_VERSION).ok()?;
-        stream.write_u128(self.uuid.as_u128()).ok()?;
-        let uuid = Uuid::from_u128(stream.read_u128().ok()?);
+        stream.write_u128(uuid.as_u128()).ok()?;
+        let received_uuid = Uuid::from_u128(stream.read_u128().ok()?);
 
-        if uuid != self.uuid {
+        if received_uuid != uuid {
             return None;
         }
 
-        self.send_message(RadarStatus::Connected(uuid));
-        Some(RadarState { stream })
+        self.send_message(RadarStatus::Connected);
+        Some(RadarState {
+            stream,
+            last_heartbeat: Instant::now(),
+        })
     }
 
     fn process_messages(&mut self) {
         while let Ok(message) = self.channel.try_receive() {
-            let url = Self::normalize_url(&message.0.url);
-            // reset if url changed
-            if url != self.config.url {
-                self.send_message(RadarStatus::Disconnected);
-                self.state = None;
-            }
+            match message {
+                RadarMessage::Config { config, uuid } => {
+                    let url = Self::normalize_url(&config.url);
+                    // reset if the URL or session UUID changed
+                    if url != self.config.url || self.uuid != Some(uuid) {
+                        self.send_message(RadarStatus::Disconnected);
+                        self.state = None;
+                    }
 
-            self.config = RadarConfig { url, ..message.0 };
+                    self.uuid = Some(uuid);
+                    self.config = RadarConfig { url, ..config };
 
-            if !self.config.enabled {
-                self.send_message(RadarStatus::Disabled);
-                self.state = None;
+                    if !self.config.enabled {
+                        self.send_message(RadarStatus::Disabled);
+                        self.state = None;
+                    }
+                }
             }
         }
     }

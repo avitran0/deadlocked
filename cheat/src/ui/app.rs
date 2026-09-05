@@ -17,7 +17,7 @@ use winit::{
 use crate::{
     config::{
         CONFIG_PATH, Config, DEFAULT_CONFIG_NAME,
-        application::{ApplicationConfig, read_app_config},
+        application::{ApplicationConfig, read_app_config, write_app_config},
         available_configs, parse_config, write_config,
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
@@ -95,6 +95,7 @@ impl AppState {
         write_config(&config, &CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
         let grenades = read_grenades();
         let app_config = read_app_config();
+        write_app_config(&app_config);
 
         let update_status = crate::update::check();
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
@@ -212,7 +213,7 @@ impl ApplicationHandler for App {
         }
 
         while let Ok(message) = self.state.channel_radar.try_receive() {
-            self.radar_status = message;
+            self.state.radar_status = message;
         }
 
         let Some(gui) = &self.gui else {

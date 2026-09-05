@@ -53,7 +53,10 @@ impl AppState {
     }
 
     pub fn send_config_radar(&self) {
-        self.send_message_radar(RadarMessage(self.config.radar.clone()));
+        self.send_message_radar(RadarMessage::Config {
+            config: self.config.radar.clone(),
+            uuid: self.app_config.radar_uuid,
+        });
         self.save();
     }
 
