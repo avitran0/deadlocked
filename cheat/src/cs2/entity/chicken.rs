@@ -1,10 +1,10 @@
-use std::collections::HashMap;
-
-use glam::Vec3;
-use shared::{ChickenBones, ChickenInfo};
+use shared::{BoneTransform, ChickenBones, ChickenInfo};
 use strum::IntoEnumIterator;
 
-use crate::cs2::{CS2, entity::player::Player};
+use crate::{
+    constants::cs2::CHICKEN_SKELETON_BONE_COUNT,
+    cs2::{CS2, entity::player::Player},
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Chicken {
@@ -25,16 +25,21 @@ impl Chicken {
             false
         };
 
+        let skeleton = self.skeleton_transforms(cs2, CHICKEN_SKELETON_BONE_COUNT);
+        let bones = ChickenBones::iter()
+            .filter_map(|bone| Some((bone, skeleton.get(bone.usize())?.position)))
+            .collect();
+
         ChickenInfo {
             position: entity.position(cs2),
             visible,
-            bones: self.bones(cs2),
+            bones,
+            skeleton,
         }
     }
 
-    fn bones(&self, cs2: &CS2) -> HashMap<ChickenBones, Vec3> {
-        let mut bones = HashMap::with_capacity(ChickenBones::iter().len());
-
+    // same 32-byte-per-joint layout as Player::skeleton_transforms()
+    fn skeleton_transforms(&self, cs2: &CS2, count: usize) -> Vec<BoneTransform> {
         let entity = Player::entity(self.controller);
         let gs_node = entity.game_scene_node(cs2);
         let bone_data: usize = cs2
@@ -42,14 +47,17 @@ impl Chicken {
             .read(gs_node + cs2.offsets.game_scene_node.model_state + 0x80);
 
         if bone_data == 0 {
-            return bones;
+            return vec![BoneTransform::default(); count];
         }
 
-        let bone_data: Vec<Vec3> = cs2.process.read_typed_vec(bone_data, 32, 48);
-
-        for bone in ChickenBones::iter() {
-            bones.insert(bone, bone_data[bone.usize()]);
-        }
-        bones
+        (0..count)
+            .map(|index| {
+                let slot = bone_data + index * 32;
+                BoneTransform {
+                    position: cs2.process.read(slot),
+                    rotation: cs2.process.read(slot + 16),
+                }
+            })
+            .collect()
     }
 }

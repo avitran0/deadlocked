@@ -168,6 +168,7 @@ impl CS2 {
                 continue;
             }
 
+            let bone_transforms = player.all_bone_transforms(self);
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 money: player.money(self),
@@ -180,7 +181,18 @@ impl CS2 {
                 name: player.name(self),
                 weapon: player.weapon(self),
                 ammo: (player.clip_ammo(self), player.reserve_ammo(self)),
-                bones: player.all_bones(self),
+                bones: bone_transforms
+                    .iter()
+                    .map(|(bone, transform)| (*bone, transform.position))
+                    .collect(),
+                bone_transforms,
+                skeleton: player.skeleton_transforms(self, cs2::MESH_SKELETON_BONE_COUNT),
+                bone_visibility: player.bone_visibility(
+                    self,
+                    &local_player,
+                    cs2::MESH_SKELETON_BONE_COUNT,
+                ),
+                agent_def_index: player.agent_def_index(self),
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
@@ -208,6 +220,7 @@ impl CS2 {
             }
         }
 
+        let local_bone_transforms = local_player.all_bone_transforms(self);
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             money: local_player.money(self),
@@ -223,7 +236,15 @@ impl CS2 {
                 local_player.clip_ammo(self),
                 local_player.reserve_ammo(self),
             ),
-            bones: local_player.all_bones(self),
+            bones: local_bone_transforms
+                .iter()
+                .map(|(bone, transform)| (*bone, transform.position))
+                .collect(),
+            bone_transforms: local_bone_transforms,
+            // never drawn with the mesh overlay, so skip the extra reads
+            skeleton: Vec::new(),
+            bone_visibility: Vec::new(),
+            agent_def_index: 0,
             has_defuser: local_player.has_defuser(self),
             has_helmet: local_player.has_helmet(self),
             has_bomb: local_player.has_bomb(self),

@@ -106,6 +106,8 @@ impl AppState {
                         frame_sum / self.frame_times.len() as f32
                     };
                     ui.label(format!("{frame_avg:.1} ms"));
+
+                    self.mesh_extract_status_line(ui);
                 });
             });
 
@@ -151,6 +153,34 @@ impl AppState {
                 });
             if close {
                 self.update_popup = false;
+            }
+        }
+
+        if self.extract_prompt {
+            let mut close = false;
+            egui::Window::new("Extract Player Models")
+                .id(egui::Id::new("extract_prompt"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    ui.label("Extract models from CS2?");
+                    ui.label(
+                        "Model ESP needs your agents' models read from your own CS2 install first. This only reads local files, once.",
+                    );
+                    ui.add_space(8.0);
+                    ui.horizontal(|ui| {
+                        if ui.button("Yes").clicked() {
+                            self.start_mesh_extraction();
+                            close = true;
+                        }
+                        if ui.button("No").clicked() {
+                            close = true;
+                        }
+                    });
+                });
+            if close {
+                self.extract_prompt = false;
             }
         }
     }
@@ -273,17 +303,94 @@ impl App {
         }
 
         overlay.window().set_cursor_hittest(false).unwrap();
-        {
-            let data_guard = state.data.lock();
-            Self::update_overlay_window(overlay, &data_guard);
-        }
+        // locked once, reused for the whole frame so box/skeleton and model/hitbox match
+        let data = state.data.clone();
+        let data_guard = data.lock();
+        Self::update_overlay_window(overlay, &data_guard);
         if let Err(err) = overlay.make_current() {
             utils::error!("could not make overlay window current: {err}");
             return;
         }
 
-        overlay.run(move |ui| state.overlay(ui));
+        overlay.run(|ui| state.overlay(ui, &data_guard));
         overlay.clear();
+
+        let model_mode = state.config.player.draw_model;
+        let hitbox_mode = state.config.player.hitbox_esp;
+        let draw_model = model_mode != crate::config::player::ModelEspMode::Off;
+        let draw_hitboxes = hitbox_mode != crate::config::player::ModelEspMode::Off;
+        // same master gate box/skeleton ESP already respects
+        if (draw_model || draw_hitboxes) && data_guard.esp_active {
+            overlay.clear_depth();
+            let show_friendlies = state.config.player.show_friendlies;
+            let visible_only = state.config.player.visible_only;
+            let model_color_mode: crate::config::player::DrawMode =
+                state.config.player.model_color_mode.into();
+            let model_colors = state.config.player.model_colors().clone();
+            let model_outline_color = state.config.player.model_outline_color;
+            let hitbox_color_mode: crate::config::player::DrawMode =
+                state.config.player.hitbox_color_mode.into();
+            let hitbox_colors = state.config.player.hitbox_colors().clone();
+            // keyed by (steam_id, name): bots all share steam_id 0
+            let sound_alphas: std::collections::HashMap<(u64, String), f32> =
+                if state.config.player.sound.enabled {
+                    data_guard
+                        .players
+                        .iter()
+                        .chain(data_guard.friendlies.iter())
+                        .map(|player| {
+                            let sound = state.player_sounds.get(&player.steam_id);
+                            let alpha = state
+                                .player_sound_alpha(player, sound, &data_guard)
+                                .unwrap_or(1.0)
+                                .clamp(0.0, 1.0);
+                            ((player.steam_id, player.name.clone()), alpha)
+                        })
+                        .collect()
+                } else {
+                    std::collections::HashMap::new()
+                };
+            // SAFETY: overlay.make_current() was just called above, so
+            // its gl context is current on this thread
+            unsafe {
+                if draw_model {
+                    self.player_mesh.draw(
+                        overlay.gl(),
+                        &data_guard,
+                        model_mode,
+                        model_color_mode,
+                        &model_colors,
+                        model_outline_color,
+                        show_friendlies,
+                        visible_only,
+                        &sound_alphas,
+                    );
+                    if state.config.player.chicken {
+                        self.player_mesh.draw_chickens(
+                            overlay.gl(),
+                            &data_guard,
+                            model_mode,
+                            model_color_mode,
+                            &model_colors,
+                        );
+                    }
+                }
+                if draw_hitboxes {
+                    self.player_mesh.draw_hitboxes(
+                        overlay.gl(),
+                        &data_guard,
+                        hitbox_mode,
+                        hitbox_color_mode,
+                        &hitbox_colors,
+                        show_friendlies,
+                        visible_only,
+                        &sound_alphas,
+                    );
+                }
+            }
+        }
+        drop(data_guard);
+
         overlay.paint();
 
         if let Err(err) = overlay.swap_buffers() {

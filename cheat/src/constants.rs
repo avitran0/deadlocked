@@ -16,6 +16,11 @@ pub mod cs2 {
 
     pub const DEFAULT_FOV: u32 = 90;
 
+    // agent skeletons have up to 94 joints, rounded up for headroom
+    pub const MESH_SKELETON_BONE_COUNT: usize = 96;
+    // the chicken skeleton has 52 joints, rounded up for headroom
+    pub const CHICKEN_SKELETON_BONE_COUNT: usize = 64;
+
     pub const SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT: f32 = 2000.0;
     pub const SOUND_ESP_GUNSHOT_DIAMETER_DEFAULT: f32 = 3000.0;
     pub const SOUND_ESP_WEAPON_DIAMETER_DEFAULT: f32 = 1000.0;

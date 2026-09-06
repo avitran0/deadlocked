@@ -5,7 +5,7 @@ use shared::{Data, Weapon};
 use crate::{
     config::aim::AimbotConfig,
     math::world_to_screen,
-    ui::{app::AppState, grenades::Grenade},
+    ui::{app::AppState, color, grenades::Grenade},
 };
 
 mod entity;
@@ -22,13 +22,12 @@ impl AppState {
         &self.config.aim.global.aimbot
     }
 
-    pub fn overlay(&mut self, ui: &mut Ui) {
+    pub fn overlay(&mut self, ui: &mut Ui, data: &Data) {
         ui.ctx().set_pixels_per_point(1.0);
         let painter = ui.layer_painter(egui::LayerId::background());
 
-        self.update_trails();
-        self.update_player_sounds();
-        let data = &self.data.lock();
+        self.update_trails(data);
+        self.update_player_sounds(data);
 
         self.overlay_debug(&painter, data);
 
@@ -279,19 +278,7 @@ impl AppState {
     }
 
     fn health_color(&self, health: i32, max_health: i32, alpha: u8) -> Color32 {
-        let max_health = max_health.max(1);
-        let health = health.clamp(0, max_health);
-        let percent = health as f32 / max_health as f32;
-
-        let (r, g) = if percent <= 0.5 {
-            let factor = percent * 2.0;
-            (255, (255.0 * factor) as u8)
-        } else {
-            let factor = 1.0 - (percent - 0.5) * 2.0;
-            ((255.0 * factor) as u8, 255)
-        };
-
-        Color32::from_rgba_unmultiplied(r, g, 0, alpha)
+        color::health_color(health, max_health, alpha)
     }
 
     fn text_sized(

@@ -50,6 +50,8 @@ impl WindowContext {
             glutin::config::ConfigTemplateBuilder::new()
                 .prefer_hardware_accelerated(Some(true))
                 .with_transparency(true)
+                // needed for correct self-occlusion when drawing the skinned mesh
+                .with_depth_size(24)
         } else {
             glutin::config::ConfigTemplateBuilder::new()
                 .prefer_hardware_accelerated(Some(true))
@@ -205,12 +207,23 @@ impl WindowContext {
         }
     }
 
+    /// only the mesh overlay uses the depth buffer, egui never does
+    pub fn clear_depth(&self) {
+        unsafe {
+            self.glow.clear(glow::DEPTH_BUFFER_BIT);
+        }
+    }
+
     pub fn paint(&mut self) {
         self.egui_glow.paint(&self.window);
     }
 
     pub fn egui(&self) -> &egui::Context {
         &self.egui_glow.egui_ctx
+    }
+
+    pub fn gl(&self) -> &Arc<glow::Context> {
+        &self.glow
     }
 }
 

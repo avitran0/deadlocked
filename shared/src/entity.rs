@@ -3,7 +3,10 @@ use std::collections::HashMap;
 use glam::Vec3;
 use serde::{Deserialize, Serialize};
 
-use crate::{bones::ChickenBones, weapon::Weapon};
+use crate::{
+    bones::{BoneTransform, ChickenBones},
+    weapon::Weapon,
+};
 
 #[derive(Serialize, Deserialize)]
 pub enum EntityInfo {
@@ -76,4 +79,7 @@ pub struct ChickenInfo {
     pub position: Vec3,
     pub visible: bool,
     pub bones: HashMap<ChickenBones, Vec3>,
+    /// raw skeleton by joint index, for skinning the mesh model overlay
+    #[serde(skip)]
+    pub skeleton: Vec<BoneTransform>,
 }

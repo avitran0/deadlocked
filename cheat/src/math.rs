@@ -10,6 +10,18 @@ pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     Vec2::new(pitch, yaw)
 }
 
+/// unit forward direction for a (pitch, yaw) view angle pair, in degrees;
+/// the inverse of angles_from_vector
+pub fn forward_vector(view_angles: &Vec2) -> Vec3 {
+    let pitch = view_angles.x.to_radians();
+    let yaw = view_angles.y.to_radians();
+    Vec3::new(
+        pitch.cos() * yaw.cos(),
+        pitch.cos() * yaw.sin(),
+        -pitch.sin(),
+    )
+}
+
 pub fn angles_to_fov(view_angles: &Vec2, aim_angles: &Vec2) -> f32 {
     let delta = view_angles - aim_angles;
 

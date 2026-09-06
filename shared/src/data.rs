@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use glam::{Mat4, Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 
-use crate::{bones::Bones, entity::EntityInfo, team::Team, weapon::Weapon};
+use crate::{
+    bones::{BoneTransform, Bones},
+    entity::EntityInfo,
+    team::Team,
+    weapon::Weapon,
+};
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SoundType {
@@ -57,6 +62,17 @@ pub struct PlayerData {
     pub ammo: (i32, i32),
     #[serde(skip)]
     pub bones: HashMap<Bones, Vec3>,
+    #[serde(skip)]
+    pub bone_transforms: HashMap<Bones, BoneTransform>,
+    /// raw skeleton by joint index, for skinning the mesh model overlay
+    #[serde(skip)]
+    pub skeleton: Vec<BoneTransform>,
+    /// per-joint line-of-sight (1.0 visible, 0.0 not), same indexing as `skeleton`
+    #[serde(skip)]
+    pub bone_visibility: Vec<f32>,
+    /// equipped agent's item def index, for picking which mesh to render
+    #[serde(skip)]
+    pub agent_def_index: u16,
     pub has_defuser: bool,
     pub has_helmet: bool,
     pub has_bomb: bool,

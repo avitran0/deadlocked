@@ -156,8 +156,7 @@ impl AppState {
         }
     }
 
-    pub fn update_trails(&mut self) {
-        let data = self.data.lock();
+    pub fn update_trails(&mut self, data: &Data) {
         for entity in &data.entities {
             let (entity, position) = match entity {
                 EntityInfo::Inferno(info) => (info.entity, info.position),
@@ -211,20 +210,19 @@ impl AppState {
                 return;
             };
 
-            let box_color = if chicken.visible {
-                self.config.player.box_visible_color
-            } else {
-                self.config.player.box_invisible_color
-            };
-            let stroke = Stroke::new(self.config.hud.line_width, box_color);
+            // chickens are neutral, so Color mode just uses the enemy color
+            let stroke = Stroke::new(
+                self.config.hud.line_width,
+                self.config.player.box_colors().enemy_color,
+            );
             self.draw_gap_box(painter, tl, tr, bl, br, stroke);
         }
 
         // skeleton
         let color = match &self.config.player.draw_skeleton {
             DrawMode::None => return,
-            DrawMode::Health => self.health_color(100, 100, self.config.player.skeleton_color.a()),
-            DrawMode::Color => self.config.player.skeleton_color,
+            DrawMode::Health => self.health_color(100, 100, 255),
+            _ => self.config.player.skeleton_colors().enemy_color,
         };
 
         let stroke = Stroke::new(self.config.hud.line_width, color);

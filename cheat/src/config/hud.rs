@@ -17,6 +17,8 @@ pub struct HudConfig {
     pub line_width: f32,
     pub debug: bool,
     pub overlay_text: OverlayTextConfig,
+    /// off by default; on scans automatically on startup instead of prompting
+    pub auto_extract_models: bool,
 }
 
 impl Default for HudConfig {
@@ -33,6 +35,7 @@ impl Default for HudConfig {
             line_width: 2.0,
             debug: false,
             overlay_text: OverlayTextConfig::default(),
+            auto_extract_models: false,
         }
     }
 }

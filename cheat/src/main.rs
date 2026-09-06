@@ -15,6 +15,7 @@ mod cs2;
 mod font;
 mod game;
 mod math;
+mod mesh_extract;
 mod message;
 mod os;
 mod parser;

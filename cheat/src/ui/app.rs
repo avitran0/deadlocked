@@ -60,9 +60,12 @@ pub struct AppState {
 
     pub text_popup: Option<String>,
     pub update_popup: bool,
+    /// asks once when Model ESP is turned on with nothing extracted yet
+    pub extract_prompt: bool,
     pub overlay_egui: Option<egui::Context>,
 
     pub radar_status: RadarStatus,
+    pub mesh_extract_status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>,
 }
 
 pub struct App {
@@ -70,6 +73,7 @@ pub struct App {
     pub overlay: Option<WindowContext>,
     next_frame_time: Instant,
     pub state: AppState,
+    pub player_mesh: crate::ui::mesh::PlayerMeshState,
 }
 
 impl Deref for App {
@@ -100,6 +104,12 @@ impl AppState {
         let update_status = crate::update::check();
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
 
+        let mesh_extract_status =
+            Arc::new(Mutex::new(crate::mesh_extract::ExtractStatus::default()));
+        if config.hud.auto_extract_models {
+            auto_extract_player_model(mesh_extract_status.clone());
+        }
+
         Self {
             channel_game,
             channel_radar,
@@ -123,10 +133,28 @@ impl AppState {
             update_status,
             text_popup: None,
             update_popup,
+            extract_prompt: false,
             overlay_egui: None,
             radar_status: RadarStatus::Disabled,
+            mesh_extract_status,
         }
     }
+}
+
+/// runs mesh extraction once on first launch, if enabled and not done yet
+fn auto_extract_player_model(status: Arc<Mutex<crate::mesh_extract::ExtractStatus>>) {
+    if crate::config::BASE_PATH.join("agent_models.json").exists() {
+        return;
+    }
+
+    std::thread::spawn(move || {
+        *status.lock() = crate::mesh_extract::ExtractStatus::Running;
+        let result = crate::mesh_extract::extract_all_agent_models(&status);
+        *status.lock() = match result {
+            Ok(path) => crate::mesh_extract::ExtractStatus::Done(path),
+            Err(err) => crate::mesh_extract::ExtractStatus::Error(err),
+        };
+    });
 }
 
 impl App {
@@ -141,6 +169,7 @@ impl App {
             overlay: None,
             next_frame_time: Instant::now() + Duration::from_millis(16),
             state,
+            player_mesh: crate::ui::mesh::PlayerMeshState::default(),
         };
         ret.send_config_game();
         ret.send_config_radar();
