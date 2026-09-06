@@ -222,24 +222,45 @@ impl AppState {
             let ifs = icon_cat.font_size * esp_scale;
             let afs = ammo_cat.font_size * esp_scale;
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
+
+            let mut icon_buf = [0u8; 4];
+            let icon_str = player.weapon.to_icon().encode_utf8(&mut icon_buf);
+            
             self.text_sized(
                 painter,
-                player.weapon.to_icon().to_string(),
+                icon_str,
                 icon_anchor,
                 icon_cat.align.to_align2(),
                 Self::alpha(icon_cat.color, alpha),
                 ifs,
             );
             if player.ammo.0 >= 0 {
-                let ammo_anchor = self.box_anchor(tl, tr, bl, br, ammo_cat.position, 0.0, afs);
-                self.text_sized(
-                    painter,
-                    format!("{}/{}", player.ammo.0, player.ammo.1),
-                    ammo_anchor,
-                    ammo_cat.align.to_align2(),
-                    Self::alpha(ammo_cat.color, alpha),
-                    afs,
-                );
+                let ammo_offset = if ammo_cat.position == icon_cat.position {
+                    ifs
+                } else {
+                    0.0
+                };
+
+                let ammo_anchor = self.box_anchor(tl, tr, bl, br, ammo_cat.position, 0.0, ammo_offset);
+                
+                let mut ammo_buff = [0u8; 32];
+                let ammo_str = {
+                    use std::io::Write;
+                    let mut cursor = std::io::Cursor::new(&mut ammo_buff[..]);
+                    let _ = write!(cursor, "{}/{}", player.ammo.0, player.ammo.1);
+                    let len = cursor.position() as usize;
+                    std::str::from_utf8(&ammo_buff[..len]).unwrap_or("")
+                };
+                if !ammo_str.is_empty() {
+                    self.text_sized(
+                        painter,
+                        ammo_str,
+                        ammo_anchor,
+                        ammo_cat.align.to_align2(),
+                        Self::alpha(ammo_cat.color, alpha),
+                        afs,
+                    )
+                }
             }
         }
     }

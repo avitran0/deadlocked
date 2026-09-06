@@ -1,10 +1,28 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::mem::size_of;
 
 use bytemuck::{Pod, Zeroable};
 
 use crate::{cs2::CS2, parser::bvh::Triangle};
 
 const MAX_VECTOR_ITEMS: usize = 2_000_000;
+
+#[derive(Default, Copy, Clone, Pod, Zeroable)]
+#[repr(C)]
+struct PhysicsBodyData {
+    root: i32,
+    _pad0: u32,
+    count_a: i32,
+    _pad1: u32,
+    count_b: i32,
+    _pad2: u32,
+    nodes_ptr: usize,
+    _pad3: [u8; 32],
+    body_type: u32,
+    _pad4: [u8; 20],
+}
+
+const _: () = assert!(size_of::<PhysicsBodyData>() == 88);
 
 pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     let world: usize = cs2.process.read(cs2.offsets.direct.vphys_world);
@@ -25,18 +43,29 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     }
 
     let mut triangles = Vec::new();
+    
     let mut seen_shapes = HashSet::new();
 
+    let mut stack = Vec::with_capacity(32);
+    let mut visited_nodes = Vec::new();
+    let mut hull_face_vertices = Vec::with_capacity(16);
+    let mut hull_visited_edges = Vec::new();
+
+    let mut vtable_cache = HashMap::with_capacity(16);
+
     for body_index in 0..body_count as usize {
-        let body = bodies + body_index * 88;
-        if cs2.process.read::<u32>(body + 0x40) != 2 {
+        let body_address = bodies + body_index * 88;
+        
+        let body_data: PhysicsBodyData = cs2.process.read(body_address);
+        if body_data.body_type != 2 {
             continue;
         }
 
-        let root: i32 = cs2.process.read(body);
-        let nodes_ptr: usize = cs2.process.read(body + 0x18);
-        let count_a: i32 = cs2.process.read(body + 0x08);
-        let count_b: i32 = cs2.process.read(body + 0x10);
+        let root = body_data.root;
+        let nodes_ptr = body_data.nodes_ptr;
+        let count_a = body_data.count_a;
+        let count_b = body_data.count_b;
+
         if nodes_ptr == 0
             || count_a <= 0
             || count_a != count_b
@@ -54,16 +83,34 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
             continue;
         }
 
-        let mut stack = vec![root];
-        let mut visited = HashSet::new();
+        stack.clear();
+        stack.push(root);
+
+        visited_nodes.clear();
+        visited_nodes.resize(count_a as usize, false);
+
         while let Some(index) = stack.pop() {
-            if index < 0 || index >= count_a || !visited.insert(index) {
+            if index < 0 || index >= count_a {
                 continue;
             }
-            let node = nodes[index as usize];
+
+            let idx = index as usize;
+            if visited_nodes[idx] {
+                continue;
+            }
+            visited_nodes[idx] = true;
+
+            let node = nodes[idx];
             if node.left == -1 && node.right == -1 {
                 if node.shape != 0 && seen_shapes.insert(node.shape) {
-                    process_shape(cs2, node.shape, &mut triangles);
+                    process_shape(
+                        cs2, 
+                        node.shape, 
+                        &mut triangles, 
+                        &mut hull_face_vertices, 
+                        &mut hull_visited_edges,
+                        &mut vtable_cache,
+                    );
                 }
                 continue;
             }
@@ -79,15 +126,51 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     (!triangles.is_empty()).then_some(triangles)
 }
 
-fn process_shape(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
-    // m_nInteractsAs: retain only world geometry (bit 0). this excludes
-    // clip/trigger-style collision volumes that otherwise occlude visibility.
+fn process_shape(
+    cs2: &CS2, 
+    shape: usize, 
+    triangles: &mut Vec<Triangle>,
+    face_vertices: &mut Vec<glam::Vec3>,
+    visited_edges: &mut Vec<bool>,
+    vtable_cache: &mut HashMap<usize, String>,
+) {
     if cs2.process.read::<u64>(shape + 0x50) & 1 == 0 {
         return;
     }
-    match rtti_name(cs2, shape).as_str() {
+
+    let vtable: usize = cs2.process.read(shape);
+    if vtable == 0 {
+        return;
+    }
+
+    if let Some(type_name) = vtable_cache.get(&vtable) {
+        dispatch_shape(type_name, cs2, shape, triangles, face_vertices, visited_edges);
+        return;
+    }
+
+    let rtti: usize = cs2.process.read(vtable - 0x08);
+    if rtti == 0 { return; }
+    let name_ptr: usize = cs2.process.read(rtti + 0x08);
+    if name_ptr == 0 { return; }
+    
+    let type_name = cs2.process.read_string(name_ptr);
+    dispatch_shape(&type_name, cs2, shape, triangles, face_vertices, visited_edges);
+    
+    vtable_cache.insert(vtable, type_name);
+}
+
+#[inline(always)]
+fn dispatch_shape(
+    type_name: &str,
+    cs2: &CS2,
+    shape: usize,
+    triangles: &mut Vec<Triangle>,
+    face_vertices: &mut Vec<glam::Vec3>,
+    visited_edges: &mut Vec<bool>,
+) {
+    match type_name {
         "12CRnMeshShape" => process_mesh(cs2, shape, triangles),
-        "12CRnHullShape" => process_hull(cs2, shape, triangles),
+        "12CRnHullShape" => process_hull(cs2, shape, triangles, face_vertices, visited_edges),
         _ => {}
     }
 }
@@ -111,6 +194,7 @@ fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     let indices: Vec<Tri> =
         cs2.process
             .read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
+
     for tri in indices {
         let [a, b, c] = tri.idx;
         if a < 0 || b < 0 || c < 0 {
@@ -128,7 +212,13 @@ fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     }
 }
 
-fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
+fn process_hull(
+    cs2: &CS2, 
+    shape: usize, 
+    triangles: &mut Vec<Triangle>,
+    face_vertices: &mut Vec<glam::Vec3>,
+    visited_edges: &mut Vec<bool>,
+) {
     let hull: usize = cs2.process.read(shape + 0xB8);
     if hull == 0 {
         return;
@@ -152,9 +242,13 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     let edges: Vec<HalfEdge> =
         cs2.process
             .read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
-    let faces: Vec<u8> = (0..faces.count as usize)
-        .map(|i| cs2.process.read(faces.data + i))
-        .collect();
+
+    let faces: Vec<u8> = cs2.process.read_typed_vec(
+        faces.data, 
+        size_of::<u8>(), 
+        faces.count as usize
+    );
+
     if vertices.is_empty() || edges.is_empty() {
         return;
     }
@@ -165,12 +259,18 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
             continue;
         }
         let mut current = start;
-        let mut face_vertices = Vec::new();
-        let mut visited = HashSet::new();
+        
+        face_vertices.clear();
+        visited_edges.clear();
+        visited_edges.resize(edges.len(), false);
+        
+        let mut count = 0;
         loop {
-            if current >= edges.len() || !visited.insert(current) {
+            if current >= edges.len() || visited_edges[current] {
                 break;
             }
+            visited_edges[current] = true;
+
             let edge = edges[current];
             let vertex = edge.origin as usize;
             if vertex >= vertices.len() {
@@ -179,17 +279,22 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
             }
             face_vertices.push(vertices[vertex] * scale);
             current = edge.next as usize;
+            
             if current == start {
                 break;
             }
-            if visited.len() >= edges.len() {
+            
+            count += 1;
+            if count >= edges.len() {
                 face_vertices.clear();
                 break;
             }
         }
+
         if current != start || face_vertices.len() < 3 {
             continue;
         }
+
         for i in 1..face_vertices.len() - 1 {
             let (v0, v1, v2) = (face_vertices[0], face_vertices[i], face_vertices[i + 1]);
             if (v1 - v0).cross(v2 - v0).length_squared() > f32::EPSILON {
@@ -203,22 +308,6 @@ fn valid_vector(vector: UtlVector) -> bool {
     vector.count >= 0
         && vector.count as usize <= MAX_VECTOR_ITEMS
         && (vector.count == 0 || vector.data != 0)
-}
-
-fn rtti_name(cs2: &CS2, object: usize) -> String {
-    let vtable: usize = cs2.process.read(object);
-    if vtable == 0 {
-        return String::new();
-    }
-    let rtti: usize = cs2.process.read(vtable - 0x08);
-    if rtti == 0 {
-        return String::new();
-    }
-    let name: usize = cs2.process.read(rtti + 0x08);
-    if name == 0 {
-        return String::new();
-    }
-    cs2.process.read_string(name)
 }
 
 #[repr(C)]
