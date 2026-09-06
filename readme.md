@@ -88,8 +88,8 @@ cargo run --release
 - Hotkey
 - Box
 - Skeleton
-- Model (real extracted player meshes, works on chickens too)
-- Hitbox (real hitbox capsules)
+- Model
+- Hitbox
 - Health bar
 - Armor bar
 - Player name
