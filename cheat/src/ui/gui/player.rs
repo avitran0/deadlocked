@@ -93,6 +93,10 @@ impl AppState {
                 self.send_config_game();
             }
 
+            if combo_box(ui, "tracers_position", "Tracers Position", &mut self.config.player.tracers_y_value) {
+                self.send_config_game();
+            }
+
             if combo_box(
                 ui,
                 "draw_skeleton",
@@ -121,17 +125,6 @@ impl AppState {
                 DragValue::new(&mut self.config.player.max_tracers_dd_distance)
                     .range(1..=10000)
                     .max_decimals(0)
-                    .speed(1)
-            ) {
-                self.send_config_game();
-            }
-
-            if drag(
-                ui,
-                "Tracers Y Offset (%)",
-                DragValue::new(&mut self.config.player.tracers_y_value)
-                    .range(1..=100)
-                    .max_decimals(2)
                     .speed(1)
             ) {
                 self.send_config_game();

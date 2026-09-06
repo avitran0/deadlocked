@@ -41,6 +41,21 @@ impl std::fmt::Display for TracersMode {
 }
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum TracersYValue {
+    Center,
+    Bottom
+}
+
+impl std::fmt::Display for TracersYValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Center => "Center",
+            Self::Bottom => "Bottom"
+        }.fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum BoxMode {
     Gap,
     Full,
@@ -82,7 +97,7 @@ pub struct PlayerConfig {
     pub sound: SoundConfig,
 
     pub max_tracers_dd_distance: i32,
-    pub tracers_y_value: f32
+    pub tracers_y_value: TracersYValue
 }
 
 impl Default for PlayerConfig {
@@ -111,7 +126,7 @@ impl Default for PlayerConfig {
             sound: SoundConfig::default(),
 
             max_tracers_dd_distance: 3000,
-            tracers_y_value: 75.0
+            tracers_y_value: TracersYValue::Center
         }
     }
 }

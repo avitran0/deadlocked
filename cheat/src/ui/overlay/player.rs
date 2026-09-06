@@ -7,7 +7,7 @@ use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
-    config::player::{BoxMode, TracersMode, DrawMode},
+    config::player::{BoxMode, TracersMode, TracersYValue, DrawMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
     ui::app::AppState,
@@ -265,7 +265,12 @@ impl AppState {
 
         let target_pos = player.position;
 
-        let center = Pos2::new(data.window_size.x / 2.0, data.window_size.y / 100.0 * self.config.player.tracers_y_value);
+        let y_value = match self.config.player.tracers_y_value {
+            TracersYValue::Center => 50.0,
+            TracersYValue::Bottom => 100.0
+        };
+
+        let center = Pos2::new(data.window_size.x / 2.0, data.window_size.y / 100.0 * y_value);
         let target = world_to_screen_normalized(&target_pos, &data);
 
         let points = vec![center, target];
