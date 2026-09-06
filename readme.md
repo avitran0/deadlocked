@@ -88,6 +88,8 @@ cargo run --release
 - Hotkey
 - Box
 - Skeleton
+- Model
+- Hitbox
 - Health bar
 - Armor bar
 - Player name
