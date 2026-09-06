@@ -156,8 +156,7 @@ impl AppState {
         }
     }
 
-    pub fn update_trails(&mut self) {
-        let data = self.data.lock();
+    pub fn update_trails(&mut self, data: &Data) {
         for entity in &data.entities {
             let (entity, position) = match entity {
                 EntityInfo::Inferno(info) => (info.entity, info.position),
@@ -211,8 +210,7 @@ impl AppState {
                 return;
             };
 
-            // chickens are neutral (no team), so Color mode just uses the
-            // enemy color rather than a visible/invisible distinction
+            // chickens are neutral, so Color mode just uses the enemy color
             let stroke = Stroke::new(
                 self.config.hud.line_width,
                 self.config.player.box_colors().enemy_color,

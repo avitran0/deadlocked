@@ -2,8 +2,7 @@ use std::io;
 
 use serde_json::Value;
 
-// only submeshes visible on other players are kept; first-person
-// arm/sleeve meshes are viewmodel-only
+// first-person arm/sleeve meshes are viewmodel-only, not drawn for other players
 const KEEP_PREFIXES: [&str; 2] = ["thirdperson_body", "thirdperson_default_gloves"];
 
 struct Glb {
@@ -84,8 +83,7 @@ fn type_component_count(type_: &str) -> usize {
     }
 }
 
-/// decodes any accessor into per-vertex rows of f64 (a safe superset of every
-/// component type gltf uses), the caller casts down to whatever it needs
+/// decodes any accessor as f64 rows; caller casts down to whatever it needs
 fn accessor_rows(glb: &Glb, accessor_idx: usize) -> Vec<Vec<f64>> {
     let accessors = glb.json["accessors"].as_array().unwrap();
     let acc = &accessors[accessor_idx];
@@ -133,8 +131,6 @@ fn node_mesh_skin_map(glb: &Glb) -> std::collections::HashMap<usize, usize> {
     map
 }
 
-/// maps each glTF node index to its parent node index, from every node's
-/// "children" array
 fn node_parent_map(glb: &Glb) -> std::collections::HashMap<usize, usize> {
     let mut map = std::collections::HashMap::new();
     let Some(nodes) = glb.json["nodes"].as_array() else {
@@ -160,7 +156,9 @@ fn write_string(out: &mut Vec<u8>, s: &str) {
 }
 
 /// converts a VRF-extracted glb into the DLMS v4 format `MeshAsset` loads
-pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
+/// `keep_all`: skip the thirdperson/viewmodel split for models that have no
+/// such distinction (e.g. the chicken model, which is a single mesh)
+pub fn glb_to_dlms(data: &[u8], keep_all: bool) -> Result<Vec<u8>, String> {
     let glb = parse_glb(data).map_err(|e| e.to_string())?;
     let mesh_to_skin = node_mesh_skin_map(&glb);
     let node_parents = node_parent_map(&glb);
@@ -176,7 +174,7 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
 
     for (mesh_idx, mesh) in meshes.iter().enumerate() {
         let mesh_name = mesh["name"].as_str().unwrap_or("unnamed").to_string();
-        if !KEEP_PREFIXES.iter().any(|p| mesh_name.contains(p)) {
+        if !keep_all && !KEEP_PREFIXES.iter().any(|p| mesh_name.contains(p)) {
             continue;
         }
         let Some(&skin_idx) = mesh_to_skin.get(&mesh_idx) else {
@@ -297,10 +295,9 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
         }
     }
 
-    let joint_names =
-        joint_names.ok_or("no thirdperson_body/gloves submeshes with a skin found")?;
+    let joint_names = joint_names.ok_or("no submeshes with a skin found")?;
     if submeshes.is_empty() {
-        return Err("no thirdperson_body/gloves submeshes found".to_string());
+        return Err("no submeshes found".to_string());
     }
 
     let mut out = Vec::new();
@@ -313,8 +310,7 @@ pub fn glb_to_dlms(data: &[u8]) -> Result<Vec<u8>, String> {
             out.extend_from_slice(&value.to_le_bytes());
         }
     }
-    // -1 = no parent within this skeleton, used to walk up to the nearest
-    // named ancestor for joints (fingers, twists) the ESP doesn't track
+    // -1 = no parent within this skeleton
     for &parent in &parent_indices {
         out.extend_from_slice(&parent.to_le_bytes());
     }
@@ -472,7 +468,7 @@ mod tests {
     #[test]
     fn converts_synthetic_glb_and_round_trips_through_the_loader() {
         let glb = synthetic_glb();
-        let dlms = glb_to_dlms(&glb).expect("conversion failed");
+        let dlms = glb_to_dlms(&glb, false).expect("conversion failed");
 
         let asset = MeshAsset::load(&dlms).expect("failed to parse own dlms output");
         assert_eq!(asset.joint_names, vec!["root", "child"]);
@@ -501,8 +497,7 @@ mod tests {
             }
         }
         let inv_bind_len = bin.len() - inv_bind_off;
-        // a single degenerate vertex, just enough for mesh 0's primitive to
-        // parse successfully so mesh 1's mismatch check is actually reached
+        // degenerate vertex, just enough for mesh 0 to parse so mesh 1's check is reached
         let position_off = bin.len();
         for v in [0.0f32, 0.0, 0.0] {
             bin.extend_from_slice(&v.to_le_bytes());
@@ -549,7 +544,7 @@ mod tests {
         glb.extend_from_slice(b"BIN\0");
         glb.extend_from_slice(&bin);
 
-        let err = glb_to_dlms(&glb).expect_err("mismatched joint order must be rejected");
+        let err = glb_to_dlms(&glb, false).expect_err("mismatched joint order must be rejected");
         assert!(err.contains("joint order mismatch"), "got: {err}");
     }
 }

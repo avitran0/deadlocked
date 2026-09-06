@@ -31,7 +31,7 @@ impl AppState {
         self.skeleton(painter, player, data, sound_alpha);
     }
 
-    fn player_sound_alpha(
+    pub(crate) fn player_sound_alpha(
         &self,
         player: &PlayerData,
         sound: Option<&(Instant, SoundType)>,
@@ -80,15 +80,8 @@ impl AppState {
         )
     }
 
-    /// scales stroke width and text off the player's own projected box
-    /// height in screen pixels, not raw distance: a fixed distance formula
-    /// bottoms out well before targets actually stop shrinking on screen
-    /// (it has no idea about the local player's FOV or the window
-    /// resolution), so at long range the stroke/text used to stay pinned
-    /// at a fixed floor size while the box itself kept shrinking
-    /// underneath it, ending up looking oversized relative to the box.
-    /// falls back to a distance-based estimate only if the box can't be
-    /// projected at all (e.g. invalid collision bounds).
+    /// scales stroke/text off the box's own projected height, not raw
+    /// distance; falls back to distance if the box can't be projected
     fn esp_scale(&self, player: &PlayerData, data: &Data, min_scale: f32) -> f32 {
         const REFERENCE_HEIGHT: f32 = 120.0;
         if let Some((tl, _, bl, _)) = self.projected_world_bounds(player, data) {
@@ -400,8 +393,7 @@ impl AppState {
             painter.line(vec![a, b], stroke);
         }
 
-        // real hitbox capsule extracted from the game's own compiled model,
-        // not an approximation
+        // uses the real hitbox capsule, not an approximation
         if !self.config.player.head_circle {
             return;
         }
@@ -503,9 +495,7 @@ impl AppState {
         ))
     }
 
-    pub fn update_player_sounds(&mut self) {
-        let data = self.data.lock();
-
+    pub fn update_player_sounds(&mut self, data: &Data) {
         for player in &data.players {
             let Some(sound) = &player.sound else {
                 continue;

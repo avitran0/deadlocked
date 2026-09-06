@@ -1,5 +1,4 @@
-/// minimal KeyValues (VDF) parser; returns a flat (key, value) list since
-/// KeyValues allows duplicate keys at the same level
+/// minimal KeyValues (VDF) parser; flat list since keys can duplicate
 pub enum Value {
     Str(String),
     Block(Vec<(String, Value)>),

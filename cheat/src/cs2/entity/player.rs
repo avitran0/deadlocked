@@ -249,8 +249,6 @@ impl Player {
         position + eye_offset
     }
 
-    // each bone slot is a 32 byte CTransform: position (12 bytes), then
-    // padding, then a rotation quaternion (x, y, z, w) at offset 16
     fn skeleton_instance(&self, cs2: &CS2) -> usize {
         let gs_node = self.game_scene_node(cs2);
         cs2.process.read(
@@ -266,6 +264,7 @@ impl Player {
             return BoneTransform::default();
         }
 
+        // 32 byte CTransform: position, then a rotation quaternion at offset 16
         let slot = bone_data + (bone_index as usize * 32);
         BoneTransform {
             position: cs2.process.read(slot),
@@ -277,8 +276,7 @@ impl Player {
         self.bone_transform(cs2, bone_index).position
     }
 
-    /// raw bone transforms by numeric index (the ~94-joint compiled
-    /// skeleton), not just the named `Bones` subset
+    /// raw ~94-joint skeleton by numeric index, not just the named `Bones` subset
     pub fn skeleton_transforms(&self, cs2: &CS2, count: usize) -> Vec<BoneTransform> {
         let bone_data = self.skeleton_instance(cs2);
         if bone_data == 0 {
@@ -370,7 +368,6 @@ impl Player {
             .read(self.controller + cs2.offsets.controller.color)
     }
 
-    /// item def index of the equipped agent skin, for picking the mesh
     pub fn agent_def_index(&self, cs2: &CS2) -> u16 {
         cs2.process
             .read(self.controller + cs2.offsets.controller.agent_def_index)
@@ -497,9 +494,7 @@ impl Player {
         true
     }
 
-    /// per-joint BVH line-of-sight for the mesh part-visibility option,
-    /// checked against each named bone's real hitbox capsule (not the raw
-    /// joint, which sits inside the body rather than on its surface)
+    /// per-joint BVH line-of-sight, checked against each bone's hitbox capsule
     pub fn bone_visibility(
         &self,
         cs2: &CS2,

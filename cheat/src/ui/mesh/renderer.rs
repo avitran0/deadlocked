@@ -1,20 +1,15 @@
+use std::collections::HashSet;
+
 use egui_glow::glow::{self, HasContext as _};
 use glam::Mat4;
-use strum::IntoEnumIterator as _;
 
 use super::asset::{MeshAsset, Submesh};
 
 // GLSL uniform array size; CS2 agent skeletons have 94 joints
 const MAX_BONES: usize = 128;
 
-/// for each joint, which joint's visibility value to actually use: itself
-/// if it's one of the 19 named `Bones`, else the nearest ancestor that is
-/// (fingers/toes/twist bones aren't individually raycast)
-fn resolve_visibility_sources(parent_indices: &[i32]) -> Vec<usize> {
-    let named: std::collections::HashSet<usize> = shared::Bones::iter()
-        .map(|bone| bone.u64() as usize)
-        .collect();
-
+/// maps each joint to itself if in `named`, else its nearest ancestor that is
+fn resolve_visibility_sources(parent_indices: &[i32], named: &HashSet<usize>) -> Vec<usize> {
     (0..parent_indices.len())
         .map(|joint| {
             if named.contains(&joint) {
@@ -49,9 +44,12 @@ uniform mat4 u_bone_matrices[128];
 uniform mat4 u_view_projection;
 // 1.0 = visible, 0.0 = behind cover, blended per-vertex like skinning
 uniform float u_bone_visibility[128];
+// 1.0 = on screen, 0.0 = off screen / behind the camera, same blending
+uniform float u_bone_on_screen[128];
 
 out vec3 v_normal;
 out float v_visibility;
+out float v_on_screen;
 
 void main() {
     mat4 skin =
@@ -68,29 +66,31 @@ void main() {
         in_weights.y * u_bone_visibility[in_joints.y] +
         in_weights.z * u_bone_visibility[in_joints.z] +
         in_weights.w * u_bone_visibility[in_joints.w];
+    v_on_screen =
+        in_weights.x * u_bone_on_screen[in_joints.x] +
+        in_weights.y * u_bone_on_screen[in_joints.y] +
+        in_weights.z * u_bone_on_screen[in_joints.z] +
+        in_weights.w * u_bone_on_screen[in_joints.w];
 }
 "#;
 
 const FRAGMENT_SHADER: &str = r#"#version 330 core
 in vec3 v_normal;
 in float v_visibility;
+in float v_on_screen;
 uniform vec4 u_color;
 uniform vec4 u_outline_color;
-// 0 = off, 1 = darken covered parts, 2 = cull them
-uniform int u_visibility_mode;
 out vec4 frag_color;
 
 void main() {
-    if (u_visibility_mode == 2 && v_visibility < 0.5) {
+    if (v_on_screen < 0.5) {
         discard;
     }
 
     float rim = 1.0 - clamp(abs(normalize(v_normal).z), 0.0, 1.0);
     // outline alpha is the blend strength at full rim; 0 = untouched
     vec3 rgb = mix(u_color.rgb, u_outline_color.rgb, rim * u_outline_color.a);
-    if (u_visibility_mode == 1) {
-        rgb *= mix(0.35, 1.0, v_visibility);
-    }
+    rgb *= mix(0.35, 1.0, v_visibility);
     frag_color = vec4(rgb, u_color.a * mix(0.55, 1.0, rim));
 }
 "#;
@@ -105,22 +105,23 @@ pub struct MeshRenderer {
     program: glow::Program,
     submeshes: Vec<GpuSubmesh>,
     inverse_bind: Vec<Mat4>,
-    // for joint j, which joint's u_bone_visibility entry to actually use:
-    // itself if j is one of the 19 named Bones, else its nearest named
-    // ancestor (fingers/toes/twists don't get their own real check)
     visibility_source: Vec<usize>,
     u_bone_matrices: glow::UniformLocation,
     u_view_projection: glow::UniformLocation,
     u_color: glow::UniformLocation,
     u_outline_color: glow::UniformLocation,
     u_bone_visibility: glow::UniformLocation,
-    u_visibility_mode: glow::UniformLocation,
+    u_bone_on_screen: glow::UniformLocation,
 }
 
 impl MeshRenderer {
     /// # Safety
     /// `gl` must be current on the calling thread.
-    pub unsafe fn new(gl: &glow::Context, asset: &MeshAsset) -> Result<Self, String> {
+    pub unsafe fn new(
+        gl: &glow::Context,
+        asset: &MeshAsset,
+        named: &HashSet<usize>,
+    ) -> Result<Self, String> {
         unsafe {
             let program = compile_program(gl, VERTEX_SHADER, FRAGMENT_SHADER)?;
 
@@ -139,9 +140,9 @@ impl MeshRenderer {
             let u_bone_visibility = gl
                 .get_uniform_location(program, "u_bone_visibility[0]")
                 .ok_or("missing u_bone_visibility uniform")?;
-            let u_visibility_mode = gl
-                .get_uniform_location(program, "u_visibility_mode")
-                .ok_or("missing u_visibility_mode uniform")?;
+            let u_bone_on_screen = gl
+                .get_uniform_location(program, "u_bone_on_screen[0]")
+                .ok_or("missing u_bone_on_screen uniform")?;
 
             let mut submeshes = Vec::with_capacity(asset.submeshes.len());
             for submesh in &asset.submeshes {
@@ -155,21 +156,20 @@ impl MeshRenderer {
                     .to_vec(),
                 visibility_source: resolve_visibility_sources(
                     &asset.parent_indices[..asset.parent_indices.len().min(MAX_BONES)],
+                    named,
                 ),
                 u_bone_matrices,
                 u_view_projection,
                 u_color,
                 u_outline_color,
                 u_bone_visibility,
-                u_visibility_mode,
+                u_bone_on_screen,
             })
         }
     }
 
-    /// builds one skin matrix per joint: `world_transform * CORRECTION *
-    /// inverse_bind`. CORRECTION is meters-to-inches scale only, no
-    /// rotation needed (mesh data is in meters, live bones in inches)
     pub fn skin_matrices(&self, live_bones: &[shared::BoneTransform]) -> Vec<Mat4> {
+        // mesh data is in meters, live bones in inches
         const METERS_TO_INCHES: f32 = 39.3701;
         let correction = Mat4::from_scale(glam::Vec3::splat(METERS_TO_INCHES));
         self.inverse_bind
@@ -198,7 +198,7 @@ impl MeshRenderer {
         outline_color: [f32; 4],
         mode: crate::config::player::ModelEspMode,
         bone_visibility: &[f32],
-        visibility_mode: crate::config::player::MeshPartVisibilityMode,
+        bone_on_screen: &[f32],
     ) {
         unsafe {
             gl.use_program(Some(self.program));
@@ -215,15 +215,6 @@ impl MeshRenderer {
                 outline_color[2],
                 outline_color[3],
             );
-            gl.uniform_1_i32(
-                Some(&self.u_visibility_mode),
-                match visibility_mode {
-                    crate::config::player::MeshPartVisibilityMode::Off => 0,
-                    crate::config::player::MeshPartVisibilityMode::Shade => 1,
-                    crate::config::player::MeshPartVisibilityMode::Cull => 2,
-                },
-            );
-
             let count = skin_matrices.len().min(self.inverse_bind.len());
             let flat: Vec<f32> = skin_matrices[..count]
                 .iter()
@@ -231,14 +222,19 @@ impl MeshRenderer {
                 .collect();
             gl.uniform_matrix_4_f32_slice(Some(&self.u_bone_matrices), false, &flat);
 
-            // untracked joints (fingers, toes, twists) use their nearest
-            // named ancestor's value instead of defaulting to visible
             let visibility: Vec<f32> = self
                 .visibility_source
                 .iter()
                 .map(|&source| bone_visibility.get(source).copied().unwrap_or(1.0))
                 .collect();
             gl.uniform_1_f32_slice(Some(&self.u_bone_visibility), &visibility);
+
+            let on_screen: Vec<f32> = self
+                .visibility_source
+                .iter()
+                .map(|&source| bone_on_screen.get(source).copied().unwrap_or(1.0))
+                .collect();
+            gl.uniform_1_f32_slice(Some(&self.u_bone_on_screen), &on_screen);
 
             gl.enable(glow::DEPTH_TEST);
             gl.enable(glow::BLEND);
@@ -364,11 +360,18 @@ unsafe fn upload_submesh(gl: &glow::Context, submesh: &Submesh) -> Result<GpuSub
 mod tests {
     use super::*;
 
+    fn player_bones() -> HashSet<usize> {
+        use strum::IntoEnumIterator as _;
+        shared::Bones::iter()
+            .map(|bone| bone.u64() as usize)
+            .collect()
+    }
+
     #[test]
     fn named_bones_resolve_to_themselves() {
         // index 1 = Bones::Hip, a real named joint
         let parents = vec![-1i32, -1];
-        assert_eq!(resolve_visibility_sources(&parents)[1], 1);
+        assert_eq!(resolve_visibility_sources(&parents, &player_bones())[1], 1);
     }
 
     #[test]
@@ -381,7 +384,7 @@ mod tests {
         parents[8] = 15; // an unnamed joint parented to RightHand
         parents[23] = 8; // fingertip parented to that unnamed joint
 
-        let sources = resolve_visibility_sources(&parents);
+        let sources = resolve_visibility_sources(&parents, &player_bones());
         assert_eq!(sources[1], 1, "Hip is named, resolves to itself");
         assert_eq!(sources[15], 15, "RightHand is named, resolves to itself");
         assert_eq!(sources[8], 15, "inherits RightHand");
@@ -391,7 +394,7 @@ mod tests {
     #[test]
     fn joint_with_no_named_ancestor_falls_back_to_itself() {
         let parents = vec![-1i32, 0];
-        let sources = resolve_visibility_sources(&parents);
+        let sources = resolve_visibility_sources(&parents, &player_bones());
         assert_eq!(sources[0], 0);
         assert_eq!(
             sources[1], 1,

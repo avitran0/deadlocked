@@ -2,8 +2,7 @@ use std::io;
 
 use glam::Mat4;
 
-// binary format produced by crate::mesh_extract, one shared joint table per
-// file since every submesh binds to the same skeleton
+// binary format produced by crate::mesh_extract
 #[allow(dead_code)]
 pub struct Submesh {
     pub name: String,

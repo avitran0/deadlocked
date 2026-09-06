@@ -303,67 +303,93 @@ impl App {
         }
 
         overlay.window().set_cursor_hittest(false).unwrap();
-        {
-            let data_guard = state.data.lock();
-            Self::update_overlay_window(overlay, &data_guard);
-        }
+        // locked once, reused for the whole frame so box/skeleton and model/hitbox match
+        let data = state.data.clone();
+        let data_guard = data.lock();
+        Self::update_overlay_window(overlay, &data_guard);
         if let Err(err) = overlay.make_current() {
             utils::error!("could not make overlay window current: {err}");
             return;
         }
 
-        overlay.run(move |ui| state.overlay(ui));
+        overlay.run(|ui| state.overlay(ui, &data_guard));
         overlay.clear();
 
-        let model_mode = self.state.config.player.draw_model;
-        let hitbox_mode = self.state.config.player.hitbox_esp;
+        let model_mode = state.config.player.draw_model;
+        let hitbox_mode = state.config.player.hitbox_esp;
         let draw_model = model_mode != crate::config::player::ModelEspMode::Off;
         let draw_hitboxes = hitbox_mode != crate::config::player::ModelEspMode::Off;
-        if draw_model || draw_hitboxes {
-            let data_guard = self.state.data.lock();
-            // same master gate box/skeleton ESP already respects
-            if data_guard.esp_active {
-                overlay.clear_depth();
-                let show_friendlies = self.state.config.player.show_friendlies;
-                let visible_only = self.state.config.player.visible_only;
-                let model_color_mode: crate::config::player::DrawMode =
-                    self.state.config.player.model_color_mode.into();
-                let model_colors = self.state.config.player.model_colors().clone();
-                let model_outline_color = self.state.config.player.model_outline_color;
-                let model_part_visibility = self.state.config.player.model_part_visibility;
-                let hitbox_color_mode: crate::config::player::DrawMode =
-                    self.state.config.player.hitbox_color_mode.into();
-                let hitbox_colors = self.state.config.player.hitbox_colors().clone();
-                // SAFETY: overlay.make_current() was just called above, so
-                // its gl context is current on this thread
-                unsafe {
-                    if draw_model {
-                        self.player_mesh.draw(
+        // same master gate box/skeleton ESP already respects
+        if (draw_model || draw_hitboxes) && data_guard.esp_active {
+            overlay.clear_depth();
+            let show_friendlies = state.config.player.show_friendlies;
+            let visible_only = state.config.player.visible_only;
+            let model_color_mode: crate::config::player::DrawMode =
+                state.config.player.model_color_mode.into();
+            let model_colors = state.config.player.model_colors().clone();
+            let model_outline_color = state.config.player.model_outline_color;
+            let hitbox_color_mode: crate::config::player::DrawMode =
+                state.config.player.hitbox_color_mode.into();
+            let hitbox_colors = state.config.player.hitbox_colors().clone();
+            // keyed by (steam_id, name): bots all share steam_id 0
+            let sound_alphas: std::collections::HashMap<(u64, String), f32> =
+                if state.config.player.sound.enabled {
+                    data_guard
+                        .players
+                        .iter()
+                        .chain(data_guard.friendlies.iter())
+                        .map(|player| {
+                            let sound = state.player_sounds.get(&player.steam_id);
+                            let alpha = state
+                                .player_sound_alpha(player, sound, &data_guard)
+                                .unwrap_or(1.0)
+                                .clamp(0.0, 1.0);
+                            ((player.steam_id, player.name.clone()), alpha)
+                        })
+                        .collect()
+                } else {
+                    std::collections::HashMap::new()
+                };
+            // SAFETY: overlay.make_current() was just called above, so
+            // its gl context is current on this thread
+            unsafe {
+                if draw_model {
+                    self.player_mesh.draw(
+                        overlay.gl(),
+                        &data_guard,
+                        model_mode,
+                        model_color_mode,
+                        &model_colors,
+                        model_outline_color,
+                        show_friendlies,
+                        visible_only,
+                        &sound_alphas,
+                    );
+                    if state.config.player.chicken {
+                        self.player_mesh.draw_chickens(
                             overlay.gl(),
                             &data_guard,
                             model_mode,
                             model_color_mode,
                             &model_colors,
-                            model_outline_color,
-                            model_part_visibility,
-                            show_friendlies,
-                            visible_only,
-                        );
-                    }
-                    if draw_hitboxes {
-                        self.player_mesh.draw_hitboxes(
-                            overlay.gl(),
-                            &data_guard,
-                            hitbox_mode,
-                            hitbox_color_mode,
-                            &hitbox_colors,
-                            show_friendlies,
-                            visible_only,
                         );
                     }
                 }
+                if draw_hitboxes {
+                    self.player_mesh.draw_hitboxes(
+                        overlay.gl(),
+                        &data_guard,
+                        hitbox_mode,
+                        hitbox_color_mode,
+                        &hitbox_colors,
+                        show_friendlies,
+                        visible_only,
+                        &sound_alphas,
+                    );
+                }
             }
         }
+        drop(data_guard);
 
         overlay.paint();
 

@@ -32,8 +32,7 @@ impl HitboxCapsule {
     }
 }
 
-// values extracted from the game's own compiled hitbox set (agents share one
-// skeleton, so this table is identical for every agent skin), not approximated
+// extracted from the game's own compiled hitbox set, shared by every agent
 pub const HITBOXES: [HitboxCapsule; 19] = [
     HitboxCapsule {
         bone: Bones::Head,

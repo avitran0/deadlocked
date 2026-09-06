@@ -31,8 +31,7 @@ fn push_ring(
     }
 }
 
-/// builds a solid capsule mesh (cylinder + two hemispheres) from one real
-/// hitbox's point0/point1/radius, already in inches like live bone positions
+/// builds a solid capsule mesh (cylinder + two hemispheres) from one real hitbox
 pub fn build_capsule_mesh(point0: Vec3, point1: Vec3, radius: f32) -> MeshAsset {
     let axis = point1 - point0;
     let length = axis.length();

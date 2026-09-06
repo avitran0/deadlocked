@@ -29,11 +29,7 @@ impl Colors {
     ];
 }
 
-/// red at 0 health, green at full, yellow in between; shared by every
-/// ESP feature's `Health` `DrawMode` (box/skeleton via `AppState`, model/
-/// hitbox mesh via `ui::mesh` directly, neither of which can reach the
-/// other's health data the same way, so this lives as a free function
-/// rather than being duplicated per caller)
+/// red at 0 health, green at full, yellow in between
 pub fn health_color(health: i32, max_health: i32, alpha: u8) -> Color32 {
     let max_health = max_health.max(1);
     let health = health.clamp(0, max_health);

@@ -27,8 +27,7 @@ impl std::fmt::Display for DrawMode {
     }
 }
 
-/// same as `DrawMode` minus `None`; Model/Hitbox ESP have their own
-/// separate on/off switch already, so it'd just duplicate `Health`
+/// `DrawMode` minus `None`, which Model/Hitbox ESP don't need (own on/off switch)
 #[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum MeshColorMode {
     Health,
@@ -76,7 +75,6 @@ impl std::fmt::Display for BoxMode {
     }
 }
 
-/// how the player model mesh gets drawn (see ui::mesh)
 #[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum ModelEspMode {
     Off,
@@ -92,27 +90,6 @@ impl std::fmt::Display for ModelEspMode {
             Self::Highlight => "Highlight",
             Self::Wireframe => "Wireframe",
             Self::Solid => "Solid",
-        }
-        .fmt(f)
-    }
-}
-
-/// per-joint mesh visibility against cover, not just the whole player
-#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
-pub enum MeshPartVisibilityMode {
-    Off,
-    /// darkens body parts behind cover
-    Shade,
-    /// hides body parts behind cover entirely
-    Cull,
-}
-
-impl std::fmt::Display for MeshPartVisibilityMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Off => "Off",
-            Self::Shade => "Shade",
-            Self::Cull => "Cull",
         }
         .fmt(f)
     }
@@ -148,8 +125,7 @@ impl Default for ColorValues {
 }
 
 impl ColorValues {
-    /// resolves a `DrawMode` to a color; `health_color` is the caller's own
-    /// health-based color for `None`/`Health`
+    /// `health_color` is the caller's own color for `None`/`Health`
     pub fn resolve(
         &self,
         mode: DrawMode,
@@ -157,14 +133,16 @@ impl ColorValues {
         data: &Data,
         health_color: Color32,
     ) -> Color32 {
-        if self.c4_carrier_highlight && player.has_bomb {
+        if self.c4_carrier_highlight
+            && player.has_bomb
+            && !matches!(mode, DrawMode::None | DrawMode::Health)
+        {
             return self.c4_carrier_color;
         }
 
         match mode {
             DrawMode::None | DrawMode::Health => health_color,
             DrawMode::Color => self.team_color(player, data),
-            // same team color, dimmed while not visible
             DrawMode::Visibility => {
                 let color = self.team_color(player, data);
                 if player.visible {
@@ -190,7 +168,6 @@ impl ColorValues {
     }
 }
 
-/// linearly interpolates two colors, `t` clamped to `[0, 1]`
 fn lerp_color(a: Color32, b: Color32, t: f32) -> Color32 {
     let t = t.clamp(0.0, 1.0);
     let channel = |from: u8, to: u8| (from as f32 + (to as f32 - from as f32) * t).round() as u8;
@@ -227,7 +204,6 @@ pub struct PlayerConfig {
     /// render style; color comes from `model_color_mode` below instead
     pub draw_model: ModelEspMode,
     pub model_color_mode: MeshColorMode,
-    pub model_part_visibility: MeshPartVisibilityMode,
     pub hitbox_esp: ModelEspMode,
     pub hitbox_color_mode: MeshColorMode,
     /// used by any ESP below that hasn't enabled its own override
@@ -298,7 +274,6 @@ impl Default for PlayerConfig {
             draw_skeleton: DrawMode::Health,
             draw_model: ModelEspMode::Off,
             model_color_mode: MeshColorMode::Color,
-            model_part_visibility: MeshPartVisibilityMode::Off,
             hitbox_esp: ModelEspMode::Off,
             hitbox_color_mode: MeshColorMode::Color,
             colors: ColorValues::default(),

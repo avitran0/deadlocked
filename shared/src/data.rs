@@ -64,16 +64,13 @@ pub struct PlayerData {
     pub bones: HashMap<Bones, Vec3>,
     #[serde(skip)]
     pub bone_transforms: HashMap<Bones, BoneTransform>,
-    /// full raw skeleton (by joint index, not the named `Bones` subset), for
-    /// skinning the mesh player model overlay
+    /// raw skeleton by joint index, for skinning the mesh model overlay
     #[serde(skip)]
     pub skeleton: Vec<BoneTransform>,
-    /// per-joint line-of-sight (1.0 visible, 0.0 not), same indexing as
-    /// `skeleton`, for the mesh ESP's per-body-part visibility shading/cull
+    /// per-joint line-of-sight (1.0 visible, 0.0 not), same indexing as `skeleton`
     #[serde(skip)]
     pub bone_visibility: Vec<f32>,
-    /// equipped agent skin's item definition index, for picking which
-    /// extracted mesh to render for the player model overlay
+    /// equipped agent's item def index, for picking which mesh to render
     #[serde(skip)]
     pub agent_def_index: u16,
     pub has_defuser: bool,

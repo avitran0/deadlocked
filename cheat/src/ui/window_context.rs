@@ -50,8 +50,7 @@ impl WindowContext {
             glutin::config::ConfigTemplateBuilder::new()
                 .prefer_hardware_accelerated(Some(true))
                 .with_transparency(true)
-                // needed for correct self-occlusion (arms in front of the
-                // torso, etc.) when drawing the skinned player mesh
+                // needed for correct self-occlusion when drawing the skinned mesh
                 .with_depth_size(24)
         } else {
             glutin::config::ConfigTemplateBuilder::new()
@@ -208,8 +207,7 @@ impl WindowContext {
         }
     }
 
-    /// egui never uses the depth buffer, so only the mesh player model
-    /// overlay needs this, right before it draws each frame
+    /// only the mesh overlay uses the depth buffer, egui never does
     pub fn clear_depth(&self) {
         unsafe {
             self.glow.clear(glow::DEPTH_BUFFER_BIT);

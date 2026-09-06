@@ -19,6 +19,9 @@ const CLI_ASSET_NAME: &str = "cli-linux-x64.zip";
 pub const FALLBACK_AGENT_T: &str = "tm_phoenix";
 pub const FALLBACK_AGENT_CT: &str = "ctm_fbi";
 const AGENT_INDEX_FILE: &str = "agent_models.json";
+// chickens have one fixed model, no per-def_index variants like agents
+const CHICKEN_MODEL_PATH: &str = "models/chicken/chicken.vmdl_c";
+pub const CHICKEN_MODEL_FILE: &str = "chicken_model.dlms";
 
 #[derive(Default, Clone)]
 pub enum ExtractStatus {
@@ -45,8 +48,7 @@ struct Asset {
     browser_download_url: String,
 }
 
-/// extracts every agent's mesh from the user's own CS2 install and writes
-/// a def_index -> mesh file index. reads only, never redistributes assets.
+/// reads only, never redistributes CS2 assets
 pub fn extract_all_agent_models(
     status: &std::sync::Arc<utils::Mutex<ExtractStatus>>,
 ) -> Result<PathBuf, String> {
@@ -72,7 +74,7 @@ pub fn extract_all_agent_models(
     }
     let unique_models: Vec<&str> = model_to_stem.keys().copied().collect();
 
-    let total = unique_models.len();
+    let total = unique_models.len() + 1; // +1 for the chicken model
     let started_at = std::time::Instant::now();
     *status.lock() = ExtractStatus::Progress {
         done: 0,
@@ -94,7 +96,7 @@ pub fn extract_all_agent_models(
 
         let vmdl_path = format!("{}_c", model_path); // .vmdl -> .vmdl_c
         match run_vrf_extraction(&cli, &vpk_path, &vmdl_path)
-            .and_then(|glb| convert::glb_to_dlms(&glb))
+            .and_then(|glb| convert::glb_to_dlms(&glb, false))
         {
             Ok(dlms_bytes) => {
                 let _ = std::fs::write(&out_path, dlms_bytes);
@@ -110,6 +112,15 @@ pub fn extract_all_agent_models(
         };
     }
 
+    if let Err(err) = extract_chicken_model(&cli, &vpk_path) {
+        utils::warn!("skipping chicken model: {err}");
+    }
+    *status.lock() = ExtractStatus::Progress {
+        done: total,
+        total,
+        started_at,
+    };
+
     let index: HashMap<u16, String> = agent_table
         .into_iter()
         .map(|(def_index, model_path)| (def_index, model_stem(&model_path).to_string()))
@@ -121,12 +132,22 @@ pub fn extract_all_agent_models(
     Ok(index_path)
 }
 
-/// loads the def_index -> model stem table, if it exists yet
 pub fn load_agent_index() -> HashMap<u16, String> {
     let Ok(text) = std::fs::read_to_string(BASE_PATH.join(AGENT_INDEX_FILE)) else {
         return HashMap::new();
     };
     serde_json::from_str(&text).unwrap_or_default()
+}
+
+fn extract_chicken_model(cli: &Path, vpk_path: &Path) -> Result<(), String> {
+    let out_path = BASE_PATH.join(CHICKEN_MODEL_FILE);
+    if out_path.exists() {
+        return Ok(());
+    }
+
+    let glb = run_vrf_extraction(cli, vpk_path, CHICKEN_MODEL_PATH)?;
+    let dlms_bytes = convert::glb_to_dlms(&glb, true)?;
+    std::fs::write(&out_path, dlms_bytes).map_err(|e| e.to_string())
 }
 
 fn model_stem(model_path: &str) -> &str {
@@ -247,13 +268,12 @@ fn ensure_vrf_cli() -> Result<PathBuf, String> {
         .find(|a| a.name == CLI_ASSET_NAME)
         .ok_or_else(|| format!("no {CLI_ASSET_NAME} asset in the latest VRF release"))?;
 
-    // the cli binary itself is ~100MB uncompressed; the zip is well over
-    // ureq's 10MB read_to_vec default
     let mut resp = agent
         .get(&asset.browser_download_url)
         .header("User-Agent", "deadlocked")
         .call()
         .map_err(|e| format!("failed to download VRF cli: {e}"))?;
+    // the cli binary is ~100MB uncompressed, over ureq's 10MB default limit
     let zip_bytes = resp
         .body_mut()
         .with_config()
@@ -289,8 +309,7 @@ fn ensure_vrf_cli() -> Result<PathBuf, String> {
     Ok(cli_path)
 }
 
-/// runs the VRF cli against a single file inside the vpk without
-/// decompiling it, for plain script/text files like items_game.txt
+/// unlike `run_vrf_extraction`, doesn't decompile: for plain text files
 fn run_vrf_extract_raw(cli: &Path, vpk_path: &Path, file_path: &str) -> Result<Vec<u8>, String> {
     let out_path = BASE_PATH.join("vrf_cli/raw_out");
     let _ = std::fs::remove_file(&out_path);

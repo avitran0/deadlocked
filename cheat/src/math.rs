@@ -10,8 +10,8 @@ pub fn angles_from_vector(forward: &Vec3) -> Vec2 {
     Vec2::new(pitch, yaw)
 }
 
-/// unit forward direction for a (pitch, yaw) view angle pair, in degrees.
-/// the inverse of angles_from_vector.
+/// unit forward direction for a (pitch, yaw) view angle pair, in degrees;
+/// the inverse of angles_from_vector
 pub fn forward_vector(view_angles: &Vec2) -> Vec3 {
     let pitch = view_angles.x.to_radians();
     let yaw = view_angles.y.to_radians();

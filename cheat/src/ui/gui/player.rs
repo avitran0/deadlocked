@@ -11,8 +11,6 @@ use crate::{
     },
 };
 
-/// every widget for one `ColorValues` block, reused for the shared and
-/// each per-feature override so they're not defined more than once
 fn color_values_editor(ui: &mut Ui, colors: &mut ColorValues) -> bool {
     let mut changed = false;
     changed |= color_picker(ui, "Enemy", &mut colors.enemy_color);
@@ -202,15 +200,6 @@ impl AppState {
 
             if combo_box(
                 ui,
-                "model_part_visibility",
-                "Model Part Visibility",
-                &mut self.config.player.model_part_visibility,
-            ) {
-                self.send_config_game();
-            }
-
-            if combo_box(
-                ui,
                 "hitbox_esp",
                 "Hitbox ESP",
                 &mut self.config.player.hitbox_esp,
@@ -242,7 +231,6 @@ impl AppState {
         });
     }
 
-    /// spawns the background extraction thread; shared by the button and the prompt
     pub(crate) fn start_mesh_extraction(&self) {
         use crate::mesh_extract::ExtractStatus;
 
@@ -276,7 +264,6 @@ impl AppState {
         });
     }
 
-    /// shown here and in the sidebar, so extraction progress is visible from any tab
     pub(crate) fn mesh_extract_status_line(&self, ui: &mut Ui) {
         use crate::mesh_extract::ExtractStatus;
 
