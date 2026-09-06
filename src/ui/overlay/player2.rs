@@ -1,27 +1,20 @@
-use std::{
-    collections::HashMap,
-    time::{Duration, Instant},
-};
+use std::{collections::HashMap, time::{Duration, Instant}};
 
 use egui::{Color32, Painter, Pos2, Stroke, pos2};
-use shared::{Bones, Data, PlayerData, SoundType};
+use glam::vec3;
 
 use crate::{
     config::player::{BoxMode, DrawMode},
     config::text::TextPosition,
-    math::{CYLINDER_SAMPLES, world_to_screen},
+    cs2::bones::Bones,
+    data::{Data, PlayerData, SoundType},
+    math::world_to_screen,
     ui::app::AppState,
 };
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        
-        // Apply "invisible_only" filter
-        if self.config.player.visible_only == crate::config::player::VisibilityMode::InvisibleOnly && player.visible {
-            return;
-        }
-        // Apply "visible_only" filter
-        if self.config.player.visible_only == crate::config::player::VisibilityMode::VisibleOnly && !player.visible {
+        if self.config.player.visible_only && !player.visible {
             return;
         }
 
@@ -99,11 +92,8 @@ impl AppState {
         let esp_scale = (500.0 / distance).clamp(0.4, 1.0);
         let line_width = self.config.hud.line_width * esp_scale;
 
-        let health_color = self.health_color(
-            player.health,
-            player.max_health,
-            self.config.player.box_visible_color.a(),
-        );
+        let health_color =
+            self.health_color(player.health, self.config.player.box_visible_color.a());
         let mut color = match &self.config.player.draw_box {
             DrawMode::None => health_color,
             DrawMode::Health => health_color,
@@ -120,13 +110,15 @@ impl AppState {
 
         let stroke = Stroke::new(line_width, color);
 
-        let Some((tl, tr, bl, br)) = self.projected_world_bounds(player, data) else {
+        let Some((tl, br)) = self.skeleton_bounds(player, data) else {
             return;
         };
+        let tr = pos2(br.x, tl.y);
+        let bl = pos2(tl.x, br.y);
 
         if self.config.player.draw_box != DrawMode::None {
             if self.config.player.box_mode == BoxMode::Gap {
-                self.draw_projected_gap_box(painter, tl, tr, bl, br, stroke);
+                self.draw_gap_box(painter, tl, tr, bl, br, stroke);
             } else {
                 painter.rect(
                     egui::Rect::from_min_max(tl, br),
@@ -138,30 +130,35 @@ impl AppState {
             }
         }
 
-        let edge = tl - bl;
-        let edge_length = edge.length();
-        if edge_length > f32::EPSILON {
-            let direction = edge / edge_length;
-            let outward = egui::vec2(direction.y, -direction.x);
-            let mut offset = outward * line_width * 2.0;
-            let draw_bar = |offset: egui::Vec2, fraction: f32, color: Color32| {
-                let start = bl + offset;
-                painter.line_segment(
-                    [start, start + edge * fraction.clamp(0.0, 1.0)],
-                    Stroke::new(line_width, Self::alpha(color, alpha)),
-                );
-            };
-            if self.config.player.health_bar {
-                draw_bar(
-                    offset,
-                    player.health.max(0) as f32 / player.max_health.max(1) as f32,
-                    health_color,
-                );
-                offset += outward * line_width * 2.0;
-            }
-            if self.config.player.armor_bar && player.armor > 0 {
-                draw_bar(offset, player.armor as f32 / 100.0, Color32::BLUE);
-            }
+        // health bar
+        if self.config.player.health_bar {
+            let x = bl.x - line_width * 2.0;
+            let delta = bl.y - tl.y;
+            painter.line(
+                vec![
+                    pos2(x, bl.y),
+                    pos2(x, bl.y - (delta * player.health as f32 / 100.0)),
+                ],
+                Stroke::new(line_width, Self::alpha(health_color, alpha)),
+            );
+        }
+
+        if self.config.player.armor_bar && player.armor > 0 {
+            let x = bl.x
+                - line_width
+                    * if self.config.player.health_bar {
+                        4.0
+                    } else {
+                        2.0
+                    };
+            let delta = bl.y - tl.y;
+            painter.line(
+                vec![
+                    pos2(x, bl.y),
+                    pos2(x, bl.y - (delta * player.armor as f32 / 100.0)),
+                ],
+                Stroke::new(line_width, Self::alpha(Color32::BLUE, alpha)),
+            );
         }
 
         let pad = 4.0 * esp_scale;
@@ -230,7 +227,7 @@ impl AppState {
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
-                player.weapon.to_icon().to_string(),
+                player.weapon.to_icon(),
                 icon_anchor,
                 icon_cat.align.to_align2(),
                 Self::alpha(icon_cat.color, alpha),
@@ -291,35 +288,6 @@ impl AppState {
         ))
     }
 
-    fn draw_projected_gap_box(
-        &self,
-        painter: &Painter,
-        tl: Pos2,
-        tr: Pos2,
-        bl: Pos2,
-        br: Pos2,
-        stroke: Stroke,
-    ) {
-        let width = (tr - tl).length();
-        let height = (bl - tl).length();
-        let gap = width.max(height) / 8.0;
-        let corner = width.max(height) / 4.0 - 2.0;
-        let mark = |point: Pos2, first: Pos2, second: Pos2| {
-            painter.line(
-                vec![
-                    point + (first - point).normalized() * gap,
-                    point,
-                    point + (second - point).normalized() * corner,
-                ],
-                stroke,
-            );
-        };
-        mark(tl, tr, bl);
-        mark(tr, tl, br);
-        mark(bl, br, tl);
-        mark(br, bl, tr);
-    }
-
     pub fn draw_gap_box(
         &self,
         painter: &Painter,
@@ -377,36 +345,36 @@ impl AppState {
             .max(1.0);
         let esp_scale = (500.0 / distance).clamp(0.25, 1.0);
 
-        let mut color = match &self.config.player.draw_skeleton {
-            DrawMode::None => return,
-            DrawMode::Health => self.health_color(
-                player.health,
-                player.max_health,
-                self.config.player.skeleton_color.a(),
-            ),
+        let mut skeleton_color = match &self.config.player.draw_skeleton {
+            DrawMode::None => self.health_color(player.health, self.config.player.skeleton_color.a()),
+            DrawMode::Health => {
+                self.health_color(player.health, self.config.player.skeleton_color.a())
+            }
             DrawMode::Color => self.config.player.skeleton_color,
         };
         if let Some(alpha) = alpha {
-            color = Self::alpha(color, alpha);
+            skeleton_color = Self::alpha(skeleton_color, alpha);
         }
-        let stroke = Stroke::new(self.config.hud.line_width * esp_scale, color);
+        let stroke = Stroke::new(self.config.hud.line_width * esp_scale, skeleton_color);
 
-        for (a, b) in &Bones::CONNECTIONS {
-            let Some(a) = player.bones.get(a) else {
-                continue;
-            };
-            let Some(b) = player.bones.get(b) else {
-                continue;
-            };
+        if !matches!(self.config.player.draw_skeleton, DrawMode::None) {
+            for (a, b) in &Bones::CONNECTIONS {
+                let Some(a) = player.bones.get(a) else {
+                    continue;
+                };
+                let Some(b) = player.bones.get(b) else {
+                    continue;
+                };
 
-            let Some(a) = world_to_screen(a, data) else {
-                continue;
-            };
-            let Some(b) = world_to_screen(b, data) else {
-                continue;
-            };
+                let Some(a) = world_to_screen(a, data) else {
+                    continue;
+                };
+                let Some(b) = world_to_screen(b, data) else {
+                    continue;
+                };
 
-            painter.line(vec![a, b], stroke);
+                painter.line(vec![a, b], stroke);
+            }
         }
 
         // head circle
@@ -461,53 +429,34 @@ impl AppState {
         }
     }
 
-    fn projected_world_bounds(
-        &self,
-        player: &PlayerData,
-        data: &Data,
-    ) -> Option<(Pos2, Pos2, Pos2, Pos2)> {
-        let min = player.collision_mins;
-        let max = player.collision_maxs;
-        if !min.is_finite() || !max.is_finite() || min.cmpgt(max).any() || min == max {
-            return None;
-        }
-        const SAMPLES: usize = CYLINDER_SAMPLES;
-        let center = (min + max) * 0.5;
-        let radius = 0.5 * (max.x - min.x).abs().max((max.y - min.y).abs());
-        let mut points = [Pos2::ZERO; CYLINDER_SAMPLES * 2];
-        for layer in 0..2 {
-            let z = if layer == 0 { min.z } else { max.z };
-            for i in 0..SAMPLES {
-                let angle = std::f32::consts::TAU * i as f32 / SAMPLES as f32;
-                let local = glam::Vec3::new(
-                    center.x + radius * angle.cos(),
-                    center.y + radius * angle.sin(),
-                    z,
-                );
-                points[layer * SAMPLES + i] =
-                    world_to_screen(&player.collision_transform.transform_point3(local), data)?;
+    fn skeleton_bounds(&self, player: &PlayerData, data: &Data) -> Option<(Pos2, Pos2)> {
+        let mut screen_bones: HashMap<Bones, Pos2> =
+            HashMap::with_capacity(Bones::CONNECTIONS.len() * 2);
+        for (a, b) in &Bones::CONNECTIONS {
+            for bone in [a, b] {
+                if let Some(world) = player.bones.get(bone)
+                    && let Some(screen) = world_to_screen(world, data)
+                {
+                    screen_bones.insert(*bone, screen);
+                }
             }
         }
-        let left = (0..SAMPLES).min_by(|a, b| {
-            points[*a]
-                .x
-                .min(points[*a + SAMPLES].x)
-                .partial_cmp(&points[*b].x.min(points[*b + SAMPLES].x))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })?;
-        let right = (0..SAMPLES).max_by(|a, b| {
-            points[*a]
-                .x
-                .max(points[*a + SAMPLES].x)
-                .partial_cmp(&points[*b].x.max(points[*b + SAMPLES].x))
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })?;
-        Some((
-            points[left + SAMPLES],
-            points[right + SAMPLES],
-            points[left],
-            points[right],
-        ))
+
+        if screen_bones.is_empty() {
+            let midpoint = (player.position + player.head) / 2.0;
+            let height = (player.head.z - player.position.z + 24.0).max(1.0);
+            let half = height / 2.0;
+            let top = midpoint + vec3(0.0, 0.0, half);
+            let bottom = midpoint - vec3(0.0, 0.0, half);
+            let top = world_to_screen(&top, data)?;
+            let bottom = world_to_screen(&bottom, data)?;
+            let hh = (bottom.y - top.y).max(1.0);
+            let hw = hh / 4.0;
+            return Some((pos2(top.x - hw, top.y), pos2(bottom.x + hw, bottom.y)));
+        }
+
+        let (tl, _tr, _bl, br) = Self::calculate_box_corners(&screen_bones)?;
+        Some((tl, br))
     }
 
     pub fn update_player_sounds(&mut self) {
