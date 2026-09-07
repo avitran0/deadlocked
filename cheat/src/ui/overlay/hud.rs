@@ -120,6 +120,20 @@ impl AppState {
             triggerbot_color,
             cat.font_size,
         );
+
+        let grenade_align_color = if data.grenade_align_active {
+            Color32::GREEN
+        } else {
+            cat.color
+        };
+        self.text_sized(
+            painter,
+            format!("Grenade Align: {:?}", self.config.aim.grenade_align.hotkey),
+            position + vec2(0.0, cat.font_size * 2.0),
+            cat.align.to_align2(),
+            grenade_align_color,
+            cat.font_size,
+        );
     }
 
     pub fn draw_spectator_list(&self, painter: &Painter, data: &Data) {
