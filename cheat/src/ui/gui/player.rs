@@ -92,9 +92,9 @@ impl AppState {
 
             if combo_box(
                 ui,
-                "visible_only",
-                "Visibility Options",
-                &mut self.config.player.visible_only,
+                "visibility",
+                "Visibility",
+                &mut self.config.player.visibility,
             ) {
                 self.send_config_game();
             }

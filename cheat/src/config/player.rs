@@ -40,7 +40,7 @@ impl std::fmt::Display for BoxMode {
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum VisibilityMode {
-    None,
+    All,
     InvisibleOnly,
     VisibleOnly,
 }
@@ -48,7 +48,7 @@ pub enum VisibilityMode {
 impl std::fmt::Display for VisibilityMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::None => "None",
+            Self::All => "All",
             Self::InvisibleOnly => "Invisible Only",
             Self::VisibleOnly => "Visible Only",
         }
@@ -75,7 +75,7 @@ pub struct PlayerConfig {
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
-    pub visible_only: VisibilityMode,
+    pub visibility: VisibilityMode,
     pub sound: SoundConfig,
 }
 
@@ -98,7 +98,7 @@ impl Default for PlayerConfig {
             player_name: true,
             weapon_icon: true,
             tags: true,
-            visible_only: VisibilityMode::None,
+            visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
         }
     }
