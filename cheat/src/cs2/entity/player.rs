@@ -276,7 +276,13 @@ impl Player {
         cs2.process.read(bone_data + (bone_index as usize * 32))
     }
 
-    pub fn skeleton_with_visibility(&self, cs2: &CS2, local_player: &Player) -> Vec<BoneTransform> {
+    pub fn skeleton_and_bones_with_visibility(
+        &self,
+        cs2: &CS2,
+        local_player: &Player,
+    ) -> (HashMap<Bones, Vec3>, Vec<BoneTransform>) {
+        // read the skeleton once for esp and models
+        let mut bones = HashMap::with_capacity(Bones::iter().len());
         let gs_node = self.game_scene_node(cs2);
         let bone_data: usize = cs2.process.read(
             gs_node
@@ -284,12 +290,16 @@ impl Player {
                 + cs2.offsets.model_state.skeleton_instance,
         );
         if bone_data == 0 {
-            return Vec::new();
+            return (bones, Vec::new());
         }
 
         let mut skeleton = (0..crate::constants::cs2::MESH_SKELETON_BONE_COUNT)
             .map(|index| BoneTransform::from_memory(cs2.process.read(bone_data + index * 32)))
             .collect::<Vec<_>>();
+        for bone in Bones::iter() {
+            bones.insert(bone, skeleton[bone.u64() as usize].position);
+        }
+
         let eye_position = local_player.eye_position(cs2);
         let spotted = self.spotted_mask(cs2) & (1 << cs2.target.local_pawn_index) != 0;
         for bone in &mut skeleton {
@@ -299,31 +309,7 @@ impl Player {
                 .map(|bvh| bvh.has_line_of_sight(eye_position, bone.position) as u8 as f32)
                 .unwrap_or(spotted as u8 as f32);
         }
-        skeleton
-    }
-
-    pub fn all_bones(&self, cs2: &CS2) -> HashMap<Bones, Vec3> {
-        let mut bones = HashMap::with_capacity(20);
-        let gs_node = self.game_scene_node(cs2);
-        let bone_data: usize = cs2.process.read(
-            gs_node
-                + cs2.offsets.game_scene_node.model_state
-                + cs2.offsets.model_state.skeleton_instance,
-        );
-
-        if bone_data == 0 {
-            return bones;
-        }
-
-        let bones_data: [u8; 32 * 32] = cs2.process.read_or_zeroed(bone_data);
-
-        for bone in Bones::iter() {
-            let start = bone.u64() as usize * 32;
-            let pos = bytemuck::from_bytes(&bones_data[start..start + 3 * 4]);
-            bones.insert(bone, *pos);
-        }
-
-        bones
+        (bones, skeleton)
     }
 
     pub fn shots_fired(&self, cs2: &CS2) -> i32 {

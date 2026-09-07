@@ -324,6 +324,7 @@ const MAX_BONES: usize = 96;
 const MODEL_UNITS_TO_SOURCE: f32 = 39.3701;
 
 fn skin_palette(primitive: &PrimitiveMesh, skeleton: &[BoneTransform]) -> Vec<f32> {
+    // blend each joint with its inverse bind matrix
     let mut palette = vec![0.0; MAX_BONES * 16];
 
     for (joint_index, _joint_name) in primitive.joint_names.iter().enumerate() {

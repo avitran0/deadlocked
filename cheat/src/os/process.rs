@@ -95,26 +95,6 @@ impl Process {
         P::try_from(self.read::<T>(address)).unwrap_or_default()
     }
 
-    pub fn read_or_zeroed<T: Pod>(&self, address: usize) -> T {
-        let mut t = T::zeroed();
-        let buffer = bytemuck::bytes_of_mut(&mut t);
-
-        let local_iov = iovec {
-            iov_base: buffer.as_mut_ptr() as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
-        let remote_iov = iovec {
-            iov_base: address as *mut libc::c_void,
-            iov_len: buffer.len(),
-        };
-
-        unsafe {
-            process_vm_readv(self.pid, &local_iov, 1, &remote_iov, 1, 0);
-        }
-
-        t
-    }
-
     pub fn read_vec(&self, address: usize, length: usize) -> Vec<u8> {
         let mut buffer = vec![0u8; length];
 

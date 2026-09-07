@@ -16,8 +16,6 @@ pub mod cs2 {
 
     pub const DEFAULT_FOV: u32 = 90;
 
-    // Current agent skeletons use up to 94 joints. Keep two slots of headroom
-    // to match the model shader's 96-bone palette.
     pub const MESH_SKELETON_BONE_COUNT: usize = 96;
 
     pub const SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT: f32 = 2000.0;
