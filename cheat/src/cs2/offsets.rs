@@ -244,6 +244,7 @@ schema! {
             origin: schema("CGameSceneNode", "m_vecAbsOrigin"),
             node_to_world: schema("CGameSceneNode", "m_nodeToWorld"),
             model_state: schema("CSkeletonInstance", "m_modelState"),
+            model_name: schema("CModelState", "m_ModelName"),
         }
         smoke: SmokeOffsets {
             did_smoke_effect: schema("C_SmokeGrenadeProjectile", "m_bDidSmokeEffect"),

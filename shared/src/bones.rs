@@ -1,5 +1,25 @@
+use glam::{Mat4, Quat, Vec3};
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
+
+#[derive(Clone, Copy, Default)]
+pub struct BoneTransform {
+    pub position: Vec3,
+    pub matrix: Mat4,
+    pub visibility: f32,
+}
+
+impl BoneTransform {
+    pub fn from_memory(raw: [f32; 8]) -> Self {
+        let position = Vec3::new(raw[0], raw[1], raw[2]);
+        let rotation = Quat::from_xyzw(raw[4], raw[5], raw[6], raw[7]).normalize();
+        Self {
+            position,
+            matrix: Mat4::from_rotation_translation(rotation, position),
+            visibility: 1.0,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, EnumIter, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Bones {

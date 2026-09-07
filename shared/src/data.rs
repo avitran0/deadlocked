@@ -3,7 +3,12 @@ use std::collections::HashMap;
 use glam::{Mat4, Vec2, Vec3};
 use serde::{Deserialize, Serialize};
 
-use crate::{bones::Bones, entity::EntityInfo, team::Team, weapon::Weapon};
+use crate::{
+    bones::{BoneTransform, Bones},
+    entity::EntityInfo,
+    team::Team,
+    weapon::Weapon,
+};
 
 #[derive(Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub enum SoundType {
@@ -53,10 +58,14 @@ pub struct PlayerData {
     #[serde(skip)]
     pub head: Vec3,
     pub name: String,
+    #[serde(skip)]
+    pub model_name: String,
     pub weapon: Weapon,
     pub ammo: (i32, i32),
     #[serde(skip)]
     pub bones: HashMap<Bones, Vec3>,
+    #[serde(skip)]
+    pub skeleton: Vec<BoneTransform>,
     pub has_defuser: bool,
     pub has_helmet: bool,
     pub has_bomb: bool,

@@ -39,6 +39,22 @@ impl AppState {
                     self.send_config_game();
                 }
 
+                if color_picker(
+                    ui,
+                    "Model (visible)",
+                    &mut self.config.player.model_visible_color,
+                ) {
+                    self.send_config_game();
+                }
+
+                if color_picker(
+                    ui,
+                    "Model (invisible)",
+                    &mut self.config.player.model_invisible_color,
+                ) {
+                    self.send_config_game();
+                }
+
                 if color_picker(ui, "Tracers", &mut self.config.player.snapline_color) {
                     self.send_config_game();
                 }
@@ -86,6 +102,24 @@ impl AppState {
                 "draw_skeleton",
                 "Skeleton",
                 &mut self.config.player.draw_skeleton,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "draw_model",
+                "Model",
+                &mut self.config.player.draw_model,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "model_mode",
+                "Model style",
+                &mut self.config.player.model_mode,
             ) {
                 self.send_config_game();
             }

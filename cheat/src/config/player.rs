@@ -74,6 +74,22 @@ impl std::fmt::Display for BoxMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum ModelRenderMode {
+    Filled,
+    Wireframe,
+}
+
+impl std::fmt::Display for ModelRenderMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Filled => "Filled",
+            Self::Wireframe => "Wireframe",
+        }
+        .fmt(f)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
 pub enum VisibilityMode {
     All,
@@ -108,6 +124,10 @@ pub struct PlayerConfig {
     pub snapline_anchor: SnaplineAnchor,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
+    pub draw_model: DrawMode,
+    pub model_mode: ModelRenderMode,
+    pub model_visible_color: Color32,
+    pub model_invisible_color: Color32,
     pub head_circle: bool,
     pub health_bar: bool,
     pub armor_bar: bool,
@@ -134,6 +154,10 @@ impl Default for PlayerConfig {
             snapline_anchor: SnaplineAnchor::Center,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
+            draw_model: DrawMode::Health,
+            model_mode: ModelRenderMode::Filled,
+            model_visible_color: Color32::from_rgba_unmultiplied(255, 255, 255, 127),
+            model_invisible_color: Color32::from_rgba_unmultiplied(255, 0, 0, 127),
             head_circle: true,
             health_bar: true,
             armor_bar: true,

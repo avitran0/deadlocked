@@ -282,7 +282,8 @@ impl App {
             return;
         }
 
-        overlay.run(move |ui| state.overlay(ui));
+        let glow = overlay.glow();
+        overlay.run(move |ui| state.overlay(ui, &glow));
         overlay.clear();
         overlay.paint();
 
