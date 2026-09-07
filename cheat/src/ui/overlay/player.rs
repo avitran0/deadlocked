@@ -10,7 +10,7 @@ use crate::{
     config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
-    ui::app::AppState,
+    ui::{app::AppState, color::Colors},
 };
 
 impl AppState {
@@ -86,6 +86,17 @@ impl AppState {
         )
     }
 
+    fn player_color(color: i32) -> Color32 {
+        match color {
+            0 => Colors::BLUE,
+            1 => Colors::GREEN,
+            2 => Colors::YELLOW,
+            3 => Colors::ORANGE,
+            4 => Colors::PURPLE,
+            _ => Colors::SUBTEXT,
+        }
+    }
+
     fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
         let alpha = match alpha {
             Some(alpha) => alpha.clamp(0.0, 1.0),
@@ -115,6 +126,7 @@ impl AppState {
                     self.config.player.box_invisible_color
                 }
             }
+            DrawMode::PlayerColor => Self::player_color(player.color),
         };
 
         color = Self::alpha(color, alpha);
@@ -171,13 +183,18 @@ impl AppState {
         if self.config.player.player_name {
             let cat = &self.config.hud.overlay_text.player_name;
             let fs = cat.font_size * esp_scale;
+            let color = if cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                cat.color
+            };
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
             self.text_sized(
                 painter,
                 &player.name,
                 anchor,
                 cat.align.to_align2(),
-                Self::alpha(cat.color, alpha),
+                Self::alpha(color, alpha),
                 fs,
             );
             offset += fs;
@@ -186,6 +203,11 @@ impl AppState {
         if self.config.player.tags {
             let cat = &self.config.hud.overlay_text.player_tags;
             let fs = cat.font_size * esp_scale;
+            let color = if cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                cat.color
+            };
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
             if player.has_defuser {
                 self.text_sized(
@@ -193,7 +215,7 @@ impl AppState {
                     "\u{e00f}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
                 offset += fs;
@@ -205,7 +227,7 @@ impl AppState {
                     "\u{e017}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
                 offset += fs;
@@ -217,7 +239,7 @@ impl AppState {
                     "\u{e01e}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
             }
@@ -228,13 +250,18 @@ impl AppState {
             let ammo_cat = &self.config.hud.overlay_text.ammo_text;
             let ifs = icon_cat.font_size * esp_scale;
             let afs = ammo_cat.font_size * esp_scale;
+            let icon_color = if icon_cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                icon_cat.color
+            };
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
                 player.weapon.to_icon().to_string(),
                 icon_anchor,
                 icon_cat.align.to_align2(),
-                Self::alpha(icon_cat.color, alpha),
+                Self::alpha(icon_color, alpha),
                 ifs,
             );
             if player.ammo.0 >= 0 {
@@ -437,6 +464,7 @@ impl AppState {
                 self.config.player.skeleton_color.a(),
             ),
             DrawMode::Color => self.config.player.skeleton_color,
+            DrawMode::PlayerColor => Self::player_color(player.color),
         };
         if let Some(alpha) = alpha {
             color = Self::alpha(color, alpha);

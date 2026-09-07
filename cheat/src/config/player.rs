@@ -9,6 +9,7 @@ pub enum DrawMode {
     None,
     Health,
     Color,
+    PlayerColor,
 }
 
 impl std::fmt::Display for DrawMode {
@@ -17,6 +18,7 @@ impl std::fmt::Display for DrawMode {
             Self::None => "None",
             Self::Health => "Health",
             Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
         }
         .fmt(f)
     }

@@ -85,6 +85,7 @@ impl TextAlign {
 pub struct TextCategory {
     pub font_size: f32,
     pub color: Color32,
+    pub use_player_color: bool,
     pub position: TextPosition,
     pub align: TextAlign,
 }
@@ -94,6 +95,7 @@ impl Default for TextCategory {
         Self {
             font_size: 16.0,
             color: Colors::TEXT,
+            use_player_color: false,
             position: TextPosition::Center,
             align: TextAlign::CenterCenter,
         }
@@ -105,6 +107,7 @@ impl TextCategory {
         Self {
             font_size,
             color,
+            use_player_color: false,
             position,
             align,
         }
