@@ -15,8 +15,16 @@ use crate::{
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        if self.config.player.visible_only && !player.visible {
-            return;
+        
+        // Apply Visibility filters
+        match self.config.player.visibility {
+            crate::config::player::VisibilityMode::All => {},
+            crate::config::player::VisibilityMode::InvisibleOnly => if player.visible {
+                return;
+            },
+            crate::config::player::VisibilityMode::VisibleOnly => if !player.visible {
+                return;
+            },
         }
 
         let sound = self.player_sounds.get(&player.steam_id);
