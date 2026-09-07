@@ -30,6 +30,7 @@ pub enum SnaplineMode {
     Health,
     Distance,
     Color,
+    PlayerColor,
 }
 
 impl std::fmt::Display for SnaplineMode {
@@ -39,6 +40,7 @@ impl std::fmt::Display for SnaplineMode {
             Self::Health => "Health",
             Self::Distance => "Distance",
             Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
         }
         .fmt(f)
     }

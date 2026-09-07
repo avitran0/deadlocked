@@ -255,6 +255,11 @@ impl AppState {
             } else {
                 icon_cat.color
             };
+            let ammo_color = if ammo_cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                ammo_cat.color
+            };
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
@@ -271,7 +276,7 @@ impl AppState {
                     format!("{}/{}", player.ammo.0, player.ammo.1),
                     ammo_anchor,
                     ammo_cat.align.to_align2(),
-                    Self::alpha(ammo_cat.color, alpha),
+                    Self::alpha(ammo_color, alpha),
                     afs,
                 );
             }
@@ -292,6 +297,7 @@ impl AppState {
         let color: Color32 = match mode {
             SnaplineMode::None => return,
             SnaplineMode::Color => self.config.player.snapline_color,
+            SnaplineMode::PlayerColor => Self::player_color(player.color),
             SnaplineMode::Distance => {
                 const MAX_DIST: f32 = 3000.0;
                 let dist: u8 = (data
