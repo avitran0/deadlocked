@@ -39,7 +39,7 @@ impl AppState {
                     self.send_config_game();
                 }
 
-                if color_picker(ui, "Tracers", &mut self.config.player.tracers_color) {
+                if color_picker(ui, "Tracers", &mut self.config.player.snapline_color) {
                     self.send_config_game();
                 }
             });
@@ -73,27 +73,11 @@ impl AppState {
                 self.send_config_game();
             }
 
-            if checkbox(
-                ui,
-                "Tracers",
-                &mut self.config.player.tracers
-            ) {
-                self.send_config_game();
-            }
-
             if combo_box(ui, "draw_box", "Box", &mut self.config.player.draw_box) {
                 self.send_config_game();
             }
 
             if combo_box(ui, "box_mode", "Box Mode", &mut self.config.player.box_mode) {
-                self.send_config_game();
-            }
-
-            if combo_box(ui, "tracers_mode", "Tracers Mode", &mut self.config.player.tracers_mode) {
-                self.send_config_game();
-            }
-
-            if combo_box(ui, "tracers_position", "Tracers Position", &mut self.config.player.tracers_y_value) {
                 self.send_config_game();
             }
 
@@ -118,14 +102,23 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+        });
 
-            if drag(
+        ui.collapsing("Snaplines", |ui| {
+            if combo_box(
                 ui,
-                "Max Tracer Distance Mode Detection Distance",
-                DragValue::new(&mut self.config.player.max_tracers_dd_distance)
-                    .range(1..=10000)
-                    .max_decimals(0)
-                    .speed(1)
+                "snapline_mode",
+                "Mode",
+                &mut self.config.player.snaplines,
+            ) {
+                self.send_config_game();
+            }
+
+            if combo_box(
+                ui,
+                "snapline_anchor",
+                "Anchor",
+                &mut self.config.player.snapline_anchor,
             ) {
                 self.send_config_game();
             }

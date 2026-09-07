@@ -23,15 +23,17 @@ impl std::fmt::Display for DrawMode {
 }
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
-pub enum TracersMode {
+pub enum SnaplineMode {
+    None,
     Health,
     Distance,
-    Color
+    Color,
 }
 
-impl std::fmt::Display for TracersMode {
+impl std::fmt::Display for SnaplineMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::None => "None",
             Self::Health => "Health",
             Self::Distance => "Distance",
             Self::Color => "Color",
@@ -41,17 +43,18 @@ impl std::fmt::Display for TracersMode {
 }
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
-pub enum TracersYValue {
+pub enum SnaplineAnchor {
     Center,
-    Bottom
+    Bottom,
 }
 
-impl std::fmt::Display for TracersYValue {
+impl std::fmt::Display for SnaplineAnchor {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Center => "Center",
-            Self::Bottom => "Bottom"
-        }.fmt(f)
+            Self::Bottom => "Bottom",
+        }
+        .fmt(f)
     }
 }
 
@@ -95,14 +98,14 @@ pub struct PlayerConfig {
     pub enabled: bool,
     pub chicken: bool,
     pub esp_hotkey: KeyCode,
-    pub tracers: bool,
     pub show_friendlies: bool,
     pub draw_box: DrawMode,
     pub box_mode: BoxMode,
-    pub tracers_mode: TracersMode,
     pub box_visible_color: Color32,
     pub box_invisible_color: Color32,
-    pub tracers_color: Color32,
+    pub snaplines: SnaplineMode,
+    pub snapline_color: Color32,
+    pub snapline_anchor: SnaplineAnchor,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
     pub head_circle: bool,
@@ -113,9 +116,6 @@ pub struct PlayerConfig {
     pub tags: bool,
     pub visibility: VisibilityMode,
     pub sound: SoundConfig,
-
-    pub max_tracers_dd_distance: i32,
-    pub tracers_y_value: TracersYValue
 }
 
 impl Default for PlayerConfig {
@@ -124,14 +124,14 @@ impl Default for PlayerConfig {
             enabled: true,
             chicken: true,
             esp_hotkey: KeyCode::X,
-            tracers: false,
             show_friendlies: false,
             draw_box: DrawMode::Color,
             box_mode: BoxMode::Gap,
-            tracers_mode: TracersMode::Color,
             box_visible_color: Color32::WHITE,
             box_invisible_color: Color32::RED,
-            tracers_color: Color32::PURPLE,
+            snaplines: SnaplineMode::None,
+            snapline_color: Color32::PURPLE,
+            snapline_anchor: SnaplineAnchor::Center,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
             head_circle: true,
@@ -142,9 +142,6 @@ impl Default for PlayerConfig {
             tags: true,
             visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
-
-            max_tracers_dd_distance: 3000,
-            tracers_y_value: TracersYValue::Center
         }
     }
 }

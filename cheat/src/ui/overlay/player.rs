@@ -7,7 +7,7 @@ use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
-    config::player::{BoxMode, DrawMode, TracersMode, TracersYValue, VisibilityMode},
+    config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
     ui::app::AppState,
@@ -258,27 +258,25 @@ impl AppState {
         data: &Data,
         alpha: Option<f32>,
     ) {
-        if !self.config.player.tracers {
-            return;
-        }
-
-        let mode = &self.config.player.tracers_mode;
+        let mode = &self.config.player.snaplines;
 
         let alpha_col = alpha.unwrap_or(255.0) as u8;
 
         let color: Color32 = match mode {
-            TracersMode::Color => self.config.player.tracers_color,
-            TracersMode::Distance => {
+            SnaplineMode::None => return,
+            SnaplineMode::Color => self.config.player.snapline_color,
+            SnaplineMode::Distance => {
+                const MAX_DIST: f32 = 3000.0;
                 let dist: u8 = (data
                     .local_player
                     .position
                     .distance(player.position)
-                    .min(self.config.player.max_tracers_dd_distance as f32)
-                    / self.config.player.max_tracers_dd_distance as f32
+                    .min(MAX_DIST)
+                    / MAX_DIST
                     * 255.0) as u8;
                 Color32::from_rgba_unmultiplied(255 - dist, dist, 0, alpha_col)
             }
-            TracersMode::Health => {
+            SnaplineMode::Health => {
                 let h: u8 = ((player.health as f32 / player.max_health as f32) * 255.0) as u8;
                 Color32::from_rgba_unmultiplied(255 - h, h, 0, alpha_col)
             }
@@ -288,9 +286,9 @@ impl AppState {
 
         let target_pos = player.position;
 
-        let y_value = match self.config.player.tracers_y_value {
-            TracersYValue::Center => 50.0,
-            TracersYValue::Bottom => 100.0,
+        let y_value = match self.config.player.snapline_anchor {
+            SnaplineAnchor::Center => 50.0,
+            SnaplineAnchor::Bottom => 100.0,
         };
 
         let center = Pos2::new(
