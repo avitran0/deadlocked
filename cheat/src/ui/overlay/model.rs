@@ -6,13 +6,10 @@ use glam::{Mat4, Vec3};
 
 use shared::BoneTransform;
 
-use crate::ui::overlay::{models::MODELS, opengl};
-
-#[derive(Clone, Copy)]
-pub enum ModelRenderMode {
-    Filled,
-    Wireframe,
-}
+use crate::{
+    config::player::ModelRenderMode,
+    ui::overlay::{models::MODELS, opengl},
+};
 
 pub struct ModelRenderParams<'a> {
     pub model_name: &'a str,

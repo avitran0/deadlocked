@@ -37,7 +37,7 @@ impl AppState {
         self.skeleton(painter, player, data, sound_alpha);
     }
 
-    fn player_sound_alpha(
+    pub fn player_sound_alpha(
         &self,
         player: &PlayerData,
         sound: Option<&(Instant, SoundType)>,

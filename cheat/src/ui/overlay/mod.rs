@@ -6,7 +6,10 @@ use glam::{Vec3, vec3};
 use shared::{Data, Weapon};
 
 use crate::{
-    config::aim::AimbotConfig,
+    config::{
+        aim::AimbotConfig,
+        player::{DrawMode, VisibilityMode},
+    },
     math::world_to_screen,
     ui::{app::AppState, grenades::Grenade},
 };
@@ -110,8 +113,6 @@ impl AppState {
     }
 
     fn draw_player_models(&self, painter: &Painter, data: &Data) {
-        use crate::config::player::{DrawMode, ModelRenderMode};
-
         let Some(renderer) = self.model_renderer.as_ref() else {
             return;
         };
@@ -130,6 +131,22 @@ impl AppState {
                 .flatten(),
         );
         for player in players {
+            match self.config.player.visibility {
+                VisibilityMode::InvisibleOnly if player.visible => {
+                    continue;
+                }
+                VisibilityMode::VisibleOnly if !player.visible => {
+                    continue;
+                }
+                _ => {}
+            }
+
+            let sound = self.player_sounds.get(&player.steam_id);
+            let sound_alpha = if self.config.player.sound.enabled {
+                self.player_sound_alpha(player, sound, data).unwrap_or(1.0)
+            } else {
+                1.0
+            };
             if player.skeleton.is_empty() {
                 continue;
             }
@@ -137,7 +154,7 @@ impl AppState {
             let model_name = player.model_name.clone();
             let skeleton = player.skeleton.clone();
             let (visible, invisible) = match self.config.player.draw_model {
-                DrawMode::None => unreachable!(),
+                DrawMode::None => (Color32::WHITE, Color32::WHITE),
                 DrawMode::Color => (
                     self.config.player.model_visible_color,
                     self.config.player.model_invisible_color,
@@ -155,10 +172,17 @@ impl AppState {
                     ),
                 ),
             };
-            let mode = match self.config.player.model_mode {
-                ModelRenderMode::Filled => model::ModelRenderMode::Filled,
-                ModelRenderMode::Wireframe => model::ModelRenderMode::Wireframe,
+            let alpha_color = |color: Color32, alpha: f32| {
+                Color32::from_rgba_unmultiplied(
+                    color.r(),
+                    color.g(),
+                    color.b(),
+                    (color.a() as f32 * alpha) as u8,
+                )
             };
+            let visible = alpha_color(visible, sound_alpha);
+            let invisible = alpha_color(invisible, sound_alpha);
+            let mode = self.config.player.model_mode;
             let callback = CallbackFn::new(move |info, painter| {
                 let viewport = info.viewport_in_pixels();
                 renderer.render(
