@@ -86,7 +86,7 @@ impl AppState {
         )
     }
 
-    fn player_color(color: i32) -> Color32 {
+    pub(super) fn player_color(color: i32) -> Color32 {
         match color {
             0 => Colors::BLUE,
             1 => Colors::GREEN,
