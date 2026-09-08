@@ -47,6 +47,7 @@ impl AppState {
         }
 
         self.overlay_debug(&painter, data);
+        self.draw_player_models(&painter, data);
 
         for player in &data.players {
             if data.esp_active {
@@ -68,7 +69,6 @@ impl AppState {
             }
         }
 
-        self.draw_player_models(&painter, data);
         self.draw_bomb_timer(&painter, data);
         self.draw_fov_circle(&painter, data);
         self.draw_sniper_crosshair(&painter, data);
