@@ -72,6 +72,7 @@ pub struct App {
     pub overlay: Option<WindowContext>,
     next_frame_time: Instant,
     pub state: AppState,
+    pub gui_focused: bool,
 }
 
 impl Deref for App {
@@ -144,6 +145,7 @@ impl App {
             overlay: None,
             next_frame_time: Instant::now() + Duration::from_millis(16),
             state,
+            gui_focused: true,
         };
         ret.send_config_game();
         ret.send_config_radar();
@@ -236,6 +238,13 @@ impl ApplicationHandler for App {
 
         match &window_event {
             WindowEvent::CloseRequested => event_loop.exit(),
+
+            WindowEvent::Focused(focused) => {
+                if gui.window().id() == window_id {
+                    self.gui_focused = *focused
+                }
+            }
+
             WindowEvent::Resized(new_size) => {
                 window.resize(*new_size);
             }
