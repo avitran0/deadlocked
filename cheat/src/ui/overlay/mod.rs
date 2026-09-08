@@ -171,6 +171,23 @@ impl AppState {
                         self.config.player.model_invisible_color.a(),
                     ),
                 ),
+                DrawMode::PlayerColor => {
+                    let color = Self::player_color(player.color);
+                    (
+                        Color32::from_rgba_unmultiplied(
+                            color.r(),
+                            color.g(),
+                            color.b(),
+                            self.config.player.model_visible_color.a(),
+                        ),
+                        Color32::from_rgba_unmultiplied(
+                            color.r(),
+                            color.g(),
+                            color.b(),
+                            self.config.player.model_invisible_color.a(),
+                        ),
+                    )
+                }
             };
             let alpha_color = |color: Color32, alpha: f32| {
                 Color32::from_rgba_unmultiplied(

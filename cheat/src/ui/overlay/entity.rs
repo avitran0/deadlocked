@@ -225,6 +225,7 @@ impl AppState {
             DrawMode::None => return,
             DrawMode::Health => self.health_color(100, 100, self.config.player.skeleton_color.a()),
             DrawMode::Color => self.config.player.skeleton_color,
+            DrawMode::PlayerColor => self.config.player.skeleton_color,
         };
 
         let stroke = Stroke::new(self.config.hud.line_width, color);

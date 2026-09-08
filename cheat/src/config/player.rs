@@ -9,6 +9,7 @@ pub enum DrawMode {
     None,
     Health,
     Color,
+    PlayerColor,
 }
 
 impl std::fmt::Display for DrawMode {
@@ -17,6 +18,7 @@ impl std::fmt::Display for DrawMode {
             Self::None => "None",
             Self::Health => "Health",
             Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
         }
         .fmt(f)
     }
@@ -28,6 +30,7 @@ pub enum SnaplineMode {
     Health,
     Distance,
     Color,
+    PlayerColor,
 }
 
 impl std::fmt::Display for SnaplineMode {
@@ -37,6 +40,7 @@ impl std::fmt::Display for SnaplineMode {
             Self::Health => "Health",
             Self::Distance => "Distance",
             Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
         }
         .fmt(f)
     }
