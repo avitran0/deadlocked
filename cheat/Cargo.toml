@@ -8,6 +8,7 @@ shared.workspace = true
 utils.workspace = true
 
 glam.workspace = true
+gltf = { version = "1.4", features = ["extras"] }
 postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true

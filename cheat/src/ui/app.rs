@@ -24,6 +24,7 @@ use crate::{
     ui::{
         grenades::{Grenade, GrenadeList, read_grenades},
         gui::{Tab, aimbot::AimbotTab},
+        overlay::model::ModelRenderer,
         trail::Trail,
         window_context::WindowContext,
     },
@@ -61,6 +62,7 @@ pub struct AppState {
     pub text_popup: Option<String>,
     pub update_popup: bool,
     pub overlay_egui: Option<egui::Context>,
+    pub model_renderer: Option<Arc<ModelRenderer>>,
 
     pub radar_status: RadarStatus,
 }
@@ -124,6 +126,7 @@ impl AppState {
             text_popup: None,
             update_popup,
             overlay_egui: None,
+            model_renderer: None,
             radar_status: RadarStatus::Disabled,
         }
     }

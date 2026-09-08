@@ -168,6 +168,7 @@ impl CS2 {
                 continue;
             }
 
+            let (bones, skeleton) = player.skeleton_and_bones_with_visibility(self, &local_player);
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 money: player.money(self),
@@ -178,9 +179,11 @@ impl CS2 {
                 position: player.position(self),
                 head: player.bone_position(self, Bones::Head.u64()),
                 name: player.name(self),
+                model_name: player.model_name(self),
                 weapon: player.weapon(self),
                 ammo: (player.clip_ammo(self), player.reserve_ammo(self)),
-                bones: player.all_bones(self),
+                bones,
+                skeleton,
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
@@ -208,6 +211,8 @@ impl CS2 {
             }
         }
 
+        let (local_bones, local_skeleton) =
+            local_player.skeleton_and_bones_with_visibility(self, &local_player);
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             money: local_player.money(self),
@@ -218,12 +223,14 @@ impl CS2 {
             position: local_player.position(self),
             head: local_player.bone_position(self, Bones::Head.u64()),
             name: local_player.name(self),
+            model_name: local_player.model_name(self),
             weapon: local_player.weapon(self),
             ammo: (
                 local_player.clip_ammo(self),
                 local_player.reserve_ammo(self),
             ),
-            bones: local_player.all_bones(self),
+            bones: local_bones,
+            skeleton: local_skeleton,
             has_defuser: local_player.has_defuser(self),
             has_helmet: local_player.has_helmet(self),
             has_bomb: local_player.has_bomb(self),

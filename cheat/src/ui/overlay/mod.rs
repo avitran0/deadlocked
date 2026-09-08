@@ -1,15 +1,24 @@
-use egui::{Align2, Color32, Painter, Pos2, Shape, Stroke, Ui, pos2};
+use std::sync::Arc;
+
+use egui::{Align2, Color32, PaintCallback, Painter, Pos2, Rect, Shape, Stroke, Ui, pos2};
+use egui_glow::{CallbackFn, glow};
 use glam::{Vec3, vec3};
 use shared::{Data, Weapon};
 
 use crate::{
-    config::aim::AimbotConfig,
+    config::{
+        aim::AimbotConfig,
+        player::{DrawMode, VisibilityMode},
+    },
     math::world_to_screen,
     ui::{app::AppState, grenades::Grenade},
 };
 
 mod entity;
 mod hud;
+pub mod model;
+mod models;
+mod opengl;
 mod player;
 
 impl AppState {
@@ -22,13 +31,20 @@ impl AppState {
         &self.config.aim.global.aimbot
     }
 
-    pub fn overlay(&mut self, ui: &mut Ui) {
+    pub fn overlay(&mut self, ui: &mut Ui, glow: &Arc<glow::Context>) {
         ui.ctx().set_pixels_per_point(1.0);
         let painter = ui.layer_painter(egui::LayerId::background());
 
         self.update_trails();
         self.update_player_sounds();
         let data = &self.data.lock();
+
+        if self.model_renderer.is_none() {
+            match model::ModelRenderer::new(glow.clone()) {
+                Ok(renderer) => self.model_renderer = Some(Arc::new(renderer)),
+                Err(error) => utils::error!("failed to initialize model renderer: {error}"),
+            }
+        }
 
         self.overlay_debug(&painter, data);
 
@@ -52,6 +68,7 @@ impl AppState {
             }
         }
 
+        self.draw_player_models(&painter, data);
         self.draw_bomb_timer(&painter, data);
         self.draw_fov_circle(&painter, data);
         self.draw_sniper_crosshair(&painter, data);
@@ -93,6 +110,105 @@ impl AppState {
         }
 
         self.grenade_manager(data, &painter);
+    }
+
+    fn draw_player_models(&self, painter: &Painter, data: &Data) {
+        let Some(renderer) = self.model_renderer.as_ref() else {
+            return;
+        };
+        if !data.esp_active || self.config.player.draw_model == DrawMode::None {
+            return;
+        }
+
+        let view = data.view_matrix.to_cols_array();
+        let window = data.window_size;
+        let players = data.players.iter().chain(
+            self.config
+                .player
+                .show_friendlies
+                .then_some(data.friendlies.iter())
+                .into_iter()
+                .flatten(),
+        );
+        for player in players {
+            match self.config.player.visibility {
+                VisibilityMode::InvisibleOnly if player.visible => {
+                    continue;
+                }
+                VisibilityMode::VisibleOnly if !player.visible => {
+                    continue;
+                }
+                _ => {}
+            }
+
+            let sound = self.player_sounds.get(&player.steam_id);
+            let sound_alpha = if self.config.player.sound.enabled {
+                self.player_sound_alpha(player, sound, data).unwrap_or(1.0)
+            } else {
+                1.0
+            };
+            if player.skeleton.is_empty() {
+                continue;
+            }
+            let renderer = renderer.clone();
+            let model_name = player.model_name.clone();
+            let skeleton = player.skeleton.clone();
+            let (visible, invisible) = match self.config.player.draw_model {
+                DrawMode::None => (Color32::WHITE, Color32::WHITE),
+                DrawMode::Color => (
+                    self.config.player.model_visible_color,
+                    self.config.player.model_invisible_color,
+                ),
+                DrawMode::Health => (
+                    self.health_color(
+                        player.health,
+                        player.max_health,
+                        self.config.player.model_visible_color.a(),
+                    ),
+                    self.health_color(
+                        player.health,
+                        player.max_health,
+                        self.config.player.model_invisible_color.a(),
+                    ),
+                ),
+            };
+            let alpha_color = |color: Color32, alpha: f32| {
+                Color32::from_rgba_unmultiplied(
+                    color.r(),
+                    color.g(),
+                    color.b(),
+                    (color.a() as f32 * alpha) as u8,
+                )
+            };
+            let visible = alpha_color(visible, sound_alpha);
+            let invisible = alpha_color(invisible, sound_alpha);
+            let mode = self.config.player.model_mode;
+            let callback = CallbackFn::new(move |info, painter| {
+                let viewport = info.viewport_in_pixels();
+                renderer.render(
+                    painter.gl(),
+                    model::ModelRenderParams {
+                        model_name: &model_name,
+                        skeleton: &skeleton,
+                        viewport: (
+                            viewport.left_px,
+                            viewport.from_bottom_px,
+                            viewport.width_px,
+                            viewport.height_px,
+                        ),
+                        view: &view,
+                        model: &model::model_matrix(),
+                        visible_color: visible.to_normalized_gamma_f32(),
+                        invisible_color: invisible.to_normalized_gamma_f32(),
+                        mode,
+                    },
+                );
+            });
+            painter.add(PaintCallback {
+                rect: Rect::from_min_size(Pos2::ZERO, egui::vec2(window.x, window.y)),
+                callback: Arc::new(callback),
+            });
+        }
     }
 
     fn grenade_manager(&self, data: &Data, painter: &Painter) {
