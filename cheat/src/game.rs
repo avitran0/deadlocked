@@ -54,7 +54,10 @@ impl GameManager {
         loop {
             let start = Instant::now();
             while let Ok(message) = self.channel.try_receive() {
-                self.config = *message.0;
+                match message {
+                    GameMessage::Config(config) => self.config = *config,
+                    GameMessage::Grenades(grenades) => self.cs2.set_grenades(*grenades),
+                }
             }
 
             let mut is_valid = self.cs2.is_valid();
