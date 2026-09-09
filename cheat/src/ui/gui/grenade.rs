@@ -96,6 +96,7 @@ impl AppState {
 
         if should_write {
             write_grenades(&self.grenades);
+            self.send_grenades_game();
         }
     }
 
@@ -148,6 +149,7 @@ impl AppState {
 
                 grenade_list.push(new_grenade);
                 write_grenades(&self.grenades);
+                self.send_grenades_game();
             }
         });
     }
@@ -166,19 +168,26 @@ impl AppState {
                 return;
             };
 
+            let mut changed = false;
+
             ui.horizontal(|ui| {
-                ui.text_edit_singleline(&mut grenade.name);
+                changed |= ui.text_edit_singleline(&mut grenade.name).changed();
                 ui.label("Name");
             });
 
             ui.horizontal(|ui| {
-                ui.text_edit_multiline(&mut grenade.description);
+                changed |= ui.text_edit_multiline(&mut grenade.description).changed();
                 ui.label("Description");
             });
 
-            ui.checkbox(&mut grenade.modifiers.jump, "Jump");
-            ui.checkbox(&mut grenade.modifiers.duck, "Duck");
-            ui.checkbox(&mut grenade.modifiers.run, "Run");
+            changed |= ui.checkbox(&mut grenade.modifiers.jump, "Jump").changed();
+            changed |= ui.checkbox(&mut grenade.modifiers.duck, "Duck").changed();
+            changed |= ui.checkbox(&mut grenade.modifiers.run, "Run").changed();
+
+            if changed {
+                write_grenades(&self.grenades);
+                self.send_grenades_game();
+            }
         });
     }
 }
