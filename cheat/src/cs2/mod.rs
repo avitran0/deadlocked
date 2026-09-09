@@ -28,7 +28,7 @@ use crate::{
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
     parser::{bvh::Bvh, read_map},
-    ui::grenades::{GrenadeList, read_grenades},
+    ui::grenades::GrenadeList,
 };
 
 pub mod bvh;
@@ -58,13 +58,16 @@ pub struct CS2 {
     esp: EspToggle,
     grenade_align: GrenadeAlign,
     grenades: GrenadeList,
-    last_grenades_read: Instant,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
     last_cache: Instant,
 }
 
 impl CS2 {
+    pub fn set_grenades(&mut self, grenades: GrenadeList) {
+        self.grenades = grenades;
+    }
+
     pub fn is_valid(&self) -> bool {
         self.is_valid && self.process.is_valid()
     }
@@ -127,11 +130,6 @@ impl CS2 {
         self.triggerbot_shoot(mouse);
 
         self.find_target(config);
-
-        if self.last_grenades_read.elapsed() > Duration::from_secs(1) {
-            self.grenades = read_grenades();
-            self.last_grenades_read = Instant::now();
-        }
 
         if !self.aimbot(config, mouse) {
             self.rcs(config, mouse);
@@ -323,8 +321,7 @@ impl CS2 {
             trigger: Triggerbot::default(),
             esp: EspToggle::default(),
             grenade_align: GrenadeAlign::default(),
-            grenades: read_grenades(),
-            last_grenades_read: Instant::now(),
+            grenades: GrenadeList::default(),
             weapon: Weapon::default(),
             planted_c4: None,
             last_cache: Instant::now(),
