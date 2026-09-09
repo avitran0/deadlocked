@@ -42,8 +42,12 @@ pub enum Tab {
 
 impl AppState {
     pub fn send_config_game(&self) {
-        self.send_message_game(GameMessage(Box::new(self.config.clone())));
+        self.send_message_game(GameMessage::Config(Box::new(self.config.clone())));
         self.save();
+    }
+
+    pub fn send_grenades_game(&self) {
+        self.send_message_game(GameMessage::Grenades(Box::new(self.grenades.clone())));
     }
 
     pub fn send_message_game(&self, message: GameMessage) {
