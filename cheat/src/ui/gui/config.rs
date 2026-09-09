@@ -25,6 +25,7 @@ impl AppState {
                 if right.button("Refresh").clicked() {
                     self.available_configs = available_configs();
                     self.grenades = read_grenades();
+                    self.send_grenades_game();
                 }
 
                 right.horizontal(|right| {

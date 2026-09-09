@@ -144,6 +144,7 @@ impl App {
         };
         ret.send_config_game();
         ret.send_config_radar();
+        ret.send_grenades_game();
         ret
     }
 
