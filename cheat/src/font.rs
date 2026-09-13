@@ -14,6 +14,7 @@ pub enum Font {
     Inter,
     Nunito,
     Ubuntu,
+    JetBrainsMono,
 }
 
 impl Font {
@@ -24,6 +25,7 @@ impl Font {
             Self::Inter => include_bytes!("../assets/Inter.ttf"),
             Self::Nunito => include_bytes!("../assets/Nunito.ttf"),
             Self::Ubuntu => include_bytes!("../assets/Ubuntu.ttf"),
+            Self::JetBrainsMono => include_bytes!("../assets/JetBrainsMono.ttf"),
         }
     }
 
@@ -34,6 +36,7 @@ impl Font {
             Self::Inter => "inter",
             Self::Nunito => "nunito",
             Self::Ubuntu => "ubuntu",
+            Self::JetBrainsMono => "jetbrainsmono",
         }
     }
 
@@ -78,6 +81,7 @@ impl Display for Font {
                 Self::Inter => "Inter",
                 Self::Nunito => "Nunito",
                 Self::Ubuntu => "Ubuntu",
+                Self::JetBrainsMono => "JetBrainsMono",
             }
         )
     }
