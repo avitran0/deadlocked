@@ -254,18 +254,38 @@ impl AppState {
 }
 
 impl App {
-    pub fn render(&mut self) {
+    pub fn render(&mut self) {  
         let gui = self.gui.as_mut().unwrap();
         let overlay = self.overlay.as_mut().unwrap();
         let state = &mut self.state;
+
+        if self.gui_focused {
+            if let Err(err) = gui.make_current() {
+                utils::error!("could not make gui window current: {err}");
+                return;
+            }
+            gui.run(|ui| state.gui(ui));
+            gui.clear();
+            gui.paint();
+
+            if let Err(err) = gui.swap_buffers() {
+                utils::error!("could not swap gui window buffers: {err}");
+            }
+        }
+
+        overlay.window().set_cursor_hittest(false).unwrap();
+        {
+            let data_guard = state.data.lock();
+            Self::update_overlay_window(overlay, &data_guard);
+        }
 
         if let Err(err) = gui.make_current() {
             utils::error!("could not make gui window current: {err}");
             return;
         }
-        gui.run(|ui| state.gui(ui));
-        gui.clear();
-        gui.paint();
+        overlay.run(|ui| state.overlay(ui));
+        overlay.clear();
+        overlay.paint();
 
         if let Err(err) = gui.swap_buffers() {
             utils::error!("could not swap gui window buffers: {err}");
