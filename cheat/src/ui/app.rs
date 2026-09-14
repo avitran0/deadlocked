@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, VecDeque},
     ops::{Deref, DerefMut},
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -16,14 +16,13 @@ use winit::{
 
 use crate::{
     config::{
-        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME,
-        application::{ApplicationConfig, read_app_config, write_app_config},
-        available_configs, parse_config, write_config,
+        application::{read_app_config, write_app_config, ApplicationConfig},
+        available_configs, parse_config, write_config, Config, CONFIG_PATH, DEFAULT_CONFIG_NAME,
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     ui::{
-        grenades::{Grenade, GrenadeList, read_grenades},
-        gui::{Tab, aimbot::AimbotTab},
+        grenades::{read_grenades, Grenade, GrenadeList},
+        gui::{aimbot::AimbotTab, Tab},
         overlay::model::ModelRenderer,
         trail::Trail,
         window_context::WindowContext,
@@ -93,10 +92,22 @@ impl AppState {
         channel_radar: Channel<RadarMessage, RadarStatus>,
         data: Arc<Mutex<Data>>,
     ) -> Self {
-        let config = parse_config(&CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
-        write_config(&config, &CONFIG_PATH.join(DEFAULT_CONFIG_NAME));
+        let mut app_config = read_app_config();
+        let config_name = Path::new(&app_config.config_name)
+            .file_name()
+            .filter(|name| name.to_string_lossy() == app_config.config_name)
+            .filter(|name| name.to_string_lossy().ends_with(".toml"))
+            .map(|name| name.to_string_lossy().into_owned())
+            .unwrap_or_else(|| DEFAULT_CONFIG_NAME.to_owned());
+        if app_config.config_name != config_name {
+            app_config.config_name = config_name.clone();
+            write_app_config(&app_config);
+        }
+
+        let current_config = CONFIG_PATH.join(&config_name);
+        let config = parse_config(&current_config);
+        write_config(&config, &current_config);
         let grenades = read_grenades();
-        let app_config = read_app_config();
         write_app_config(&app_config);
 
         let update_status = crate::update::check();
@@ -108,7 +119,7 @@ impl AppState {
             data,
             app_config,
             config,
-            current_config: CONFIG_PATH.join(DEFAULT_CONFIG_NAME),
+            current_config,
             available_configs: available_configs(),
             new_config_name: String::new(),
             game_status: GameStatus::NotStarted,

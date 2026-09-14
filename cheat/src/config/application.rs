@@ -3,7 +3,7 @@ use std::{path::PathBuf, sync::LazyLock};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::config::BASE_PATH;
+use crate::config::{BASE_PATH, DEFAULT_CONFIG_NAME};
 
 pub static APP_CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| BASE_PATH.join("deadlocked.toml"));
 
@@ -11,19 +11,16 @@ pub static APP_CONFIG_PATH: LazyLock<PathBuf> = LazyLock::new(|| BASE_PATH.join(
 #[serde(default)]
 pub struct ApplicationConfig {
     pub first_launch: bool,
-    #[serde(default = "new_uuid")]
     pub radar_uuid: Uuid,
-}
-
-fn new_uuid() -> Uuid {
-    Uuid::new_v4()
+    pub config_name: String,
 }
 
 impl Default for ApplicationConfig {
     fn default() -> Self {
         Self {
             first_launch: true,
-            radar_uuid: new_uuid(),
+            radar_uuid: Uuid::new_v4(),
+            config_name: DEFAULT_CONFIG_NAME.to_owned(),
         }
     }
 }

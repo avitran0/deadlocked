@@ -2,8 +2,8 @@ use egui::{Align, Button, Ui};
 
 use crate::{
     config::{
-        BASE_PATH, CONFIG_PATH, Config, available_configs, delete_config, parse_config,
-        write_config,
+        application::write_app_config, available_configs, delete_config, parse_config,
+        write_config, Config, BASE_PATH, CONFIG_PATH,
     },
     ui::{
         app::AppState,
@@ -36,6 +36,13 @@ impl AppState {
                         write_config(&self.config, &path);
                         self.new_config_name.clear();
                         self.current_config = path;
+                        self.app_config.config_name = self
+                            .current_config
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .into_owned();
+                        write_app_config(&self.app_config);
                         self.available_configs = available_configs();
                     }
                     right.text_edit_singleline(&mut self.new_config_name);
@@ -114,6 +121,13 @@ impl AppState {
         if let Some(config_path) = clicked_config {
             self.config = parse_config(&config_path);
             self.current_config = config_path;
+            self.app_config.config_name = self
+                .current_config
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            write_app_config(&self.app_config);
             self.send_config_game();
             ui.ctx().global_style_mut(|style| {
                 style.visuals.selection.bg_fill = self.config.accent_color
@@ -124,6 +138,13 @@ impl AppState {
             delete_config(&config);
             self.available_configs = available_configs();
             self.current_config = self.available_configs[0].clone();
+            self.app_config.config_name = self
+                .current_config
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            write_app_config(&self.app_config);
             self.config = parse_config(&self.current_config);
         }
     }
