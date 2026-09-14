@@ -80,7 +80,7 @@ pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
 
     let changed = res.changed();
     if changed {
-        *color = Color32::from_rgba_premultiplied(r, g, b, a);
+        *color = Color32::from_rgba_unmultiplied(r, g, b, a);
     }
 
     changed
