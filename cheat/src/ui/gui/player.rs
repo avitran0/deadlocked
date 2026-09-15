@@ -3,8 +3,8 @@ use egui::{DragValue, Ui};
 use crate::ui::{
     app::AppState,
     gui::helpers::{
-        checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
-        text_settings_button,
+        audio_settings_button, checkbox, checkbox_hover, collapsing_open, color_picker, combo_box,
+        drag, keybind, scroll, text_settings_button,
     },
 };
 
@@ -208,6 +208,26 @@ impl AppState {
                     self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_tags");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.sound.hit_sound, "Hit Sound")
+                    .changed()
+                {
+                    self.send_config_game();
+                }
+                audio_settings_button(ui);
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.sound.kill_sound, "Kill Sound")
+                    .changed()
+                {
+                    self.send_config_game();
+                }
+                audio_settings_button(ui);
             });
         });
 

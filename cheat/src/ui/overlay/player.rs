@@ -612,4 +612,39 @@ impl AppState {
         self.player_sounds
             .retain(|_, (time, _)| time.elapsed() < total_duration);
     }
+
+    pub fn update_player_audio(&mut self) {
+        let data = self.data.lock();
+        let current = (
+            data.local_player.steam_id,
+            data.local_player.round_damage,
+            data.local_player.round_kills,
+        );
+
+        let Some(previous) = self.previous_player_stats.replace(current) else {
+            return;
+        };
+        if previous.0 != current.0 || current.1 < previous.1 || current.2 < previous.2 {
+            return;
+        }
+        if current.1 <= previous.1 {
+            return;
+        }
+
+        if current.2 > previous.2 {
+            if self.config.player.sound.kill_sound
+                && let Some(audio_player) = &self.audio_player
+            {
+                audio_player.play_kill();
+            } else if self.config.player.sound.hit_sound
+                && let Some(audio_player) = &self.audio_player
+            {
+                audio_player.play_hit();
+            }
+        } else if self.config.player.sound.hit_sound
+            && let Some(audio_player) = &self.audio_player
+        {
+            audio_player.play_hit();
+        }
+    }
 }

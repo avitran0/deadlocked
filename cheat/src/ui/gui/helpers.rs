@@ -92,6 +92,13 @@ pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &s
     }
 }
 
+pub fn audio_settings_button(ui: &mut Ui) {
+    if ui.button("⚙").on_hover_text("Open audio folder").clicked() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+        let _ = std::process::Command::new("xdg-open").arg(path).spawn();
+    }
+}
+
 pub fn text_settings_popup(
     ui: &mut Ui,
     label: &str,
