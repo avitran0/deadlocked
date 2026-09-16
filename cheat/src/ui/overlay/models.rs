@@ -72,6 +72,7 @@ pub static MODELS: &[ModelInfo] = &[
     model!("ctm_swat_varianth"),
     model!("ctm_swat_varianti"),
     model!("ctm_swat_variantj"),
+    model!("ctm_swat_variantk"),
     model!("tm_balkan_variantf"),
     model!("tm_balkan_variantg"),
     model!("tm_balkan_varianth"),
