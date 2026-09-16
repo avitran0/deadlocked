@@ -97,6 +97,8 @@ impl ModelRenderer {
             .unwrap_or(params.model_name)
             .trim_end_matches(".vmdl_c")
             .trim_end_matches(".vmdl");
+        #[cfg(feature = "reduced-models")]
+        let model_key = reduced_model_key(model_key);
         let Some(model) = self
             .meshes
             .get(params.model_name)
@@ -174,6 +176,15 @@ impl Drop for ModelRenderer {
             self.glow.delete_program(self.program);
         }
     }
+}
+
+#[cfg(feature = "reduced-models")]
+fn reduced_model_key(name: &str) -> &str {
+    ["_variant", "_var"]
+        .iter()
+        .filter_map(|suffix| name.find(suffix))
+        .min()
+        .map_or(name, |index| &name[..index])
 }
 
 fn load_model(glow: &glow::Context, data: &[u8]) -> Result<ModelMesh, String> {

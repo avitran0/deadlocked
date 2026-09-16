@@ -41,4 +41,6 @@ urlencoding = "2.1"
 winit = { version = "0.30", default-features = false, features = ["x11"] }
 
 [features]
+default = []
+reduced-models = []
 read-only = []
