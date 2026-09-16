@@ -617,4 +617,65 @@ impl AppState {
         self.player_sounds
             .retain(|_, (time, _)| time.elapsed() < total_duration);
     }
+
+    pub fn update_player_audio(&mut self) {
+        if !self.config.player.sound.hit_sound && !self.config.player.sound.kill_sound {
+            self.previous_player_stats = None;
+            return;
+        }
+
+        let data = self.data.lock();
+        if !data.in_game {
+            self.previous_player_stats = None;
+            return;
+        }
+
+        let current = (
+            data.local_player.steam_id,
+            data.local_player.round_damage,
+            data.local_player.round_kills,
+        );
+
+        let Some(previous) = self.previous_player_stats else {
+            self.previous_player_stats = Some(current);
+            return;
+        };
+
+        // reset tracking on steam_id change or round restart
+        if previous.0 != current.0 || current.1 < previous.1 - 1.0 || current.2 < previous.2 {
+            self.previous_player_stats = Some(current);
+            return;
+        }
+
+        let kills = (current.2 - previous.2).max(0) as usize;
+        let hit_detected = current.1 > previous.1;
+
+        self.previous_player_stats = Some(current);
+
+        let kill_sound_active = self.config.player.sound.kill_sound;
+        let hit_sound_active = self.config.player.sound.hit_sound;
+
+        if kills > 0 {
+            if kill_sound_active
+                && let Some(audio_player) = self.audio_player.as_ref()
+            {
+                for _ in 0..kills {
+                    audio_player.play_kill();
+                }
+            } else if hit_sound_active
+                && let Some(audio_player) = self.audio_player.as_ref()
+            {
+                for _ in 0..kills {
+                    audio_player.play_hit();
+                }
+            }
+        }
+
+        if hit_detected
+            && hit_sound_active
+            && let Some(audio_player) = self.audio_player.as_ref()
+        {
+            audio_player.play_hit();
+        }
+    }
 }
