@@ -111,6 +111,11 @@ impl AppState {
         let current_config = CONFIG_PATH.join(&config_name);
         let config = parse_config(&current_config);
         write_config(&config, &current_config);
+        let mut audio_player = AudioPlayer::new();
+        if let Some(audio_player) = &mut audio_player {
+            audio_player.set_hit_volume(config.player.sound.hit_volume);
+            audio_player.set_kill_volume(config.player.sound.kill_volume);
+        }
         let grenades = read_grenades();
         write_app_config(&app_config);
 
@@ -130,7 +135,7 @@ impl AppState {
             display_scale: 1.0,
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
-            audio_player: AudioPlayer::new(),
+            audio_player,
             previous_player_stats: None,
             frame_times: VecDeque::with_capacity(500),
             grenades,
