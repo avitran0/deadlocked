@@ -1,9 +1,10 @@
 use std::hash::Hash;
 
-use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
+use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Stroke, Ui, Widget};
 
 use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
+use crate::ui::color::Colors;
 
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(title)
@@ -92,11 +93,41 @@ pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &s
     }
 }
 
-pub fn audio_settings_button(ui: &mut Ui) {
-    if ui.button("⚙").on_hover_text("Open audio folder").clicked() {
-        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
-        let _ = std::process::Command::new("xdg-open").arg(path).spawn();
-    }
+pub fn audio_settings_button(ui: &mut Ui, volume: &mut f32) -> bool {
+    let mut changed = false;
+    ui.menu_button("⚙", |ui| {
+        ui.set_width(180.0);
+        ui.label("Audio Volume");
+        changed = ui
+            .scope(|ui| {
+                ui.spacing_mut().slider_width = 180.0;
+                ui.add(egui::Slider::new(volume, 0.0..=2.0).show_value(false))
+            })
+            .inner
+            .changed();
+        ui.label(format!("{volume:.2}"));
+
+        ui.add_space(16.0);
+        let open_folder = ui
+            .scope(|ui| {
+                let accent = ui.visuals().selection.bg_fill;
+                let hovered = &mut ui.style_mut().visuals.widgets.hovered;
+                hovered.bg_fill = Colors::HIGHLIGHT.linear_multiply(1.35);
+                hovered.bg_stroke = Stroke::new(1.0, accent);
+                ui.add(
+                    egui::Button::new("Open audio Folder")
+                        .min_size(egui::vec2(ui.available_width(), ui.spacing().interact_size.y)),
+                )
+            })
+            .inner;
+
+        if open_folder.clicked()
+        {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("assets");
+            let _ = std::process::Command::new("xdg-open").arg(path).spawn();
+        }
+    });
+    changed
 }
 
 pub fn text_settings_popup(

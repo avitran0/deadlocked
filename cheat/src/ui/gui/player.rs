@@ -217,7 +217,13 @@ impl AppState {
                 {
                     self.send_config_game();
                 }
-                audio_settings_button(ui);
+
+                if audio_settings_button(ui, &mut self.config.player.sound.hit_volume) {
+                    if let Some(audio_player) = self.audio_player.as_mut() {
+                        audio_player.set_hit_volume(self.config.player.sound.hit_volume);
+                    }
+                    self.send_config_game();
+                }
             });
 
             ui.horizontal(|ui| {
@@ -227,7 +233,13 @@ impl AppState {
                 {
                     self.send_config_game();
                 }
-                audio_settings_button(ui);
+
+                if audio_settings_button(ui, &mut self.config.player.sound.kill_volume) {
+                    if let Some(audio_player) = self.audio_player.as_mut() {
+                        audio_player.set_kill_volume(self.config.player.sound.kill_volume);
+                    }
+                    self.send_config_game();
+                }
             });
         });
 

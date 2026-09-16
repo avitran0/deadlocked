@@ -59,7 +59,7 @@
     }
 
     input[type="range"] {
-        width: 8rem;
+        width: 14rem;
     }
 
     output {

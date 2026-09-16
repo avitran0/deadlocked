@@ -633,16 +633,16 @@ impl AppState {
 
         if current.2 > previous.2 {
             if self.config.player.sound.kill_sound
-                && let Some(audio_player) = &self.audio_player
+                && let Some(audio_player) = self.audio_player.as_mut()
             {
                 audio_player.play_kill();
             } else if self.config.player.sound.hit_sound
-                && let Some(audio_player) = &self.audio_player
+                && let Some(audio_player) = self.audio_player.as_mut()
             {
                 audio_player.play_hit();
             }
         } else if self.config.player.sound.hit_sound
-            && let Some(audio_player) = &self.audio_player
+            && let Some(audio_player) = self.audio_player.as_mut()
         {
             audio_player.play_hit();
         }

@@ -93,7 +93,20 @@ pub fn parse_config(path: &Path) -> Config {
         return Config::default();
     };
 
-    let config = toml::from_str(&config_string);
+    let config = toml::from_str(&config_string).and_then(|mut config: toml::Value| {
+        // Migrate the former shared sound volume without changing existing profiles' volume.
+        if let Some(sound) = config
+            .get_mut("player")
+            .and_then(toml::Value::as_table_mut)
+            .and_then(|player| player.get_mut("sound"))
+            .and_then(toml::Value::as_table_mut)
+            && let Some(volume) = sound.remove("volume")
+        {
+            sound.entry("hit_volume").or_insert_with(|| volume.clone());
+            sound.entry("kill_volume").or_insert(volume);
+        }
+        config.try_into()
+    });
     if config.is_err() {
         utils::warn!("config file invalid");
     } else if let Some(file_name) = path.file_name() {
