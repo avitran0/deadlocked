@@ -505,6 +505,9 @@ impl AppState {
         let Some(spine) = player.bones.get(&Bones::Spine3) else {
             return;
         };
+        let Some(head) = player.bones.get(&Bones::Head) else {
+            return;
+        };
 
         let Some(neck) = world_to_screen(neck, data) else {
             return;
@@ -512,10 +515,12 @@ impl AppState {
         let Some(spine) = world_to_screen(spine, data) else {
             return;
         };
+        let Some(head) = world_to_screen(head, data) else {
+            return;
+        };
 
-        let height = spine.y - neck.y;
-        let pos = pos2(neck.x - (spine.x - neck.x) / 2.0, neck.y - height / 2.0);
-        painter.circle_stroke(pos, height / 2.0, stroke);
+        let radius = (spine.y - neck.y).abs() / 2.4;
+        painter.circle_stroke(head, radius, stroke);
     }
 
     #[allow(clippy::too_many_arguments)]

@@ -16,14 +16,15 @@ use winit::{
 
 use crate::{
     config::{
-        application::{read_app_config, write_app_config, ApplicationConfig},
-        available_configs, parse_config, write_config, Config, CONFIG_PATH, DEFAULT_CONFIG_NAME,
+        CONFIG_PATH, Config, DEFAULT_CONFIG_NAME,
+        application::{ApplicationConfig, read_app_config, write_app_config},
+        available_configs, parse_config, write_config,
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     ui::{
         audio::AudioPlayer,
-        grenades::{read_grenades, Grenade, GrenadeList},
-        gui::{aimbot::AimbotTab, Tab},
+        grenades::{Grenade, GrenadeList, read_grenades},
+        gui::{Tab, aimbot::AimbotTab},
         overlay::model::ModelRenderer,
         trail::Trail,
         window_context::WindowContext,
@@ -184,6 +185,55 @@ impl App {
     fn frame_duration(&self) -> Duration {
         Duration::from_secs_f32(1.0 / self.state.config.fps as f32)
     }
+
+    fn render_gui(&mut self) {
+        let state = &mut self.state;
+        let gui = self.gui.as_mut().unwrap();
+
+        gui.make_current().unwrap();
+        gui.run(|ui| state.gui(ui));
+        gui.clear();
+        gui.paint();
+        gui.swap_buffers().unwrap();
+
+        if gui.egui().has_requested_repaint() {
+            gui.window().request_redraw();
+        }
+    }
+
+    fn render_overlay(&mut self) {
+        let state = &mut self.state;
+        let overlay = self.overlay.as_mut().unwrap();
+
+        overlay.window().set_cursor_hittest(false).unwrap();
+        {
+            let data = state.data.lock();
+            Self::update_overlay_window(overlay, &data);
+        }
+        overlay.make_current().unwrap();
+        let glow = overlay.glow();
+        overlay.run(|ui| state.overlay(ui, &glow));
+        overlay.clear();
+        overlay.paint();
+        overlay.swap_buffers().unwrap();
+    }
+
+    fn receive_events(&mut self) {
+        while let Ok(message) = self.state.channel_game.try_receive() {
+            match message {
+                UiMessage::Status(status) => self.state.game_status = status,
+                UiMessage::FrameTime(time) => {
+                    if self.state.frame_times.len() >= 500 {
+                        self.state.frame_times.pop_front();
+                    }
+                    self.state.frame_times.push_back(time);
+                }
+            }
+        }
+        while let Ok(message) = self.state.channel_radar.try_receive() {
+            self.state.radar_status = message;
+        }
+    }
 }
 
 impl ApplicationHandler for App {
@@ -196,7 +246,8 @@ impl ApplicationHandler for App {
                 self.next_frame_time = now + self.frame_duration();
             }
 
-            self.render();
+            self.receive_events();
+            self.render_overlay();
 
             event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                 self.next_frame_time,
@@ -211,93 +262,77 @@ impl ApplicationHandler for App {
         event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
             self.next_frame_time,
         ));
+        self.gui.as_ref().unwrap().window().request_redraw();
     }
 
     fn window_event(
         &mut self,
         event_loop: &winit::event_loop::ActiveEventLoop,
         window_id: winit::window::WindowId,
-        window_event: WindowEvent,
+        event: WindowEvent,
     ) {
-        while let Ok(message) = self.state.channel_game.try_receive() {
-            match message {
-                UiMessage::Status(status) => self.state.game_status = status,
-                UiMessage::FrameTime(time) => {
-                    if self.state.frame_times.len() >= 500 {
-                        self.state.frame_times.pop_front();
-                    }
-                    self.state.frame_times.push_back(time);
-                }
-            }
+        self.receive_events();
+
+        let gui_window_id = self.gui.as_ref().map(|gui| gui.window().id());
+        let overlay_window_id = self.overlay.as_ref().map(|overlay| overlay.window().id());
+        let is_gui = gui_window_id == Some(window_id);
+        let is_overlay = overlay_window_id == Some(window_id);
+
+        if !is_gui && !is_overlay {
+            return;
         }
 
-        while let Ok(message) = self.state.channel_radar.try_receive() {
-            self.state.radar_status = message;
-        }
-
-        let Some(gui) = &self.gui else {
-            return;
-        };
-        let Some(overlay) = &self.overlay else {
-            return;
-        };
-
-        let window = if gui.window().id() == window_id {
-            gui
-        } else if overlay.window().id() == window_id {
-            overlay
-        } else {
-            return;
-        };
-
-        match &window_event {
+        match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(new_size) => {
-                window.resize(*new_size);
-            }
-            WindowEvent::RedrawRequested => {
-                if !self
-                    .gui
-                    .as_ref()
-                    .map(|window| window.window().id() == window_id)
-                    .unwrap_or_default()
-                {
-                    return;
+                if is_gui {
+                    let Some(gui) = self.gui.as_mut() else { return };
+                    gui.resize(new_size);
+                    let response = gui.process_event(&WindowEvent::Resized(new_size));
+                    if response.repaint {
+                        gui.window().request_redraw();
+                    }
+                } else if is_overlay {
+                    let Some(overlay) = self.overlay.as_mut() else {
+                        return;
+                    };
+                    overlay.resize(new_size);
+                    let response = overlay.process_event(&WindowEvent::Resized(new_size));
+                    if response.repaint {
+                        overlay.window().request_redraw();
+                    }
                 }
-                self.render();
             }
-            WindowEvent::KeyboardInput {
-                event,
-                is_synthetic: false,
-                ..
-            } => {
-                if let winit::keyboard::Key::Named(key) = event.logical_key {
+            WindowEvent::RedrawRequested if is_gui => self.render_gui(),
+            _ if is_gui => {
+                let Some(gui) = self.gui.as_mut() else { return };
+                if let WindowEvent::KeyboardInput {
+                    event,
+                    is_synthetic: false,
+                    ..
+                } = &event
+                    && let winit::keyboard::Key::Named(key) = event.logical_key
+                {
                     let modifiers = match key {
                         NamedKey::Control => Some(egui::Modifiers::CTRL),
                         NamedKey::Shift => Some(egui::Modifiers::SHIFT),
                         NamedKey::Alt => Some(egui::Modifiers::ALT),
                         _ => None,
                     };
-
                     if let Some(modifiers) = modifiers {
-                        self.gui.as_mut().unwrap().process_modifier(
+                        gui.process_modifier(
                             modifiers,
                             event.state == ElementState::Pressed,
                             event.repeat,
                         );
                     }
                 }
-                let _ = self
-                    .gui
-                    .as_mut()
-                    .map(|gui| gui.process_event(&window_event));
+                let response = gui.process_event(&event);
+                if response.repaint {
+                    gui.window().request_redraw();
+                }
             }
-            _ => {
-                let _ = self
-                    .gui
-                    .as_mut()
-                    .map(|gui| gui.process_event(&window_event));
-            }
+            _ => {}
         }
     }
 }

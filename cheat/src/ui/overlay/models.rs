@@ -1,13 +1,16 @@
 macro_rules! model {
-    ($model:literal) => {
+    ($name:literal) => {
+        model!($name, $name)
+    };
+    ($name:literal, $file:literal) => {
         ModelInfo {
             data: include_bytes!(concat!(
                 env!("CARGO_MANIFEST_DIR"),
                 "/assets/models/",
-                $model,
+                $file,
                 ".glb"
             )),
-            name: $model,
+            name: $name,
         }
     };
 }
@@ -18,6 +21,22 @@ pub struct ModelInfo {
     pub name: &'static str,
 }
 
+#[cfg(feature = "reduced-models")]
+pub static MODELS: &[ModelInfo] = &[
+    model!("ctm_diver", "ctm_diver_varianta"),
+    model!("ctm_fbi"),
+    model!("ctm_gendarmerie", "ctm_gendarmerie_varianta"),
+    model!("ctm_sas"),
+    model!("ctm_st6", "ctm_st6_variante"),
+    model!("ctm_swat", "ctm_swat_variante"),
+    model!("tm_balkan", "tm_balkan_variantf"),
+    model!("tm_jungle_raider", "tm_jungle_raider_varianta"),
+    model!("tm_leet", "tm_leet_varianta"),
+    model!("tm_phoenix"),
+    model!("tm_professional", "tm_professional_varf"),
+];
+
+#[cfg(not(feature = "reduced-models"))]
 pub static MODELS: &[ModelInfo] = &[
     model!("ctm_diver_varianta"),
     model!("ctm_diver_variantb"),

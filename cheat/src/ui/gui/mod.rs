@@ -70,7 +70,7 @@ impl AppState {
         write_config(&self.config, &self.current_config);
     }
 
-    fn gui(&mut self, ui: &mut Ui) {
+    pub(crate) fn gui(&mut self, ui: &mut Ui) {
         ui.ctx().set_pixels_per_point(self.display_scale);
         egui::Panel::left("sidebar")
             .resizable(false)
@@ -254,45 +254,7 @@ impl AppState {
 }
 
 impl App {
-    pub fn render(&mut self) {
-        let gui = self.gui.as_mut().unwrap();
-        let overlay = self.overlay.as_mut().unwrap();
-        let state = &mut self.state;
-
-        if let Err(err) = gui.make_current() {
-            utils::error!("could not make gui window current: {err}");
-            return;
-        }
-        gui.run(|ui| state.gui(ui));
-        gui.clear();
-        gui.paint();
-
-        if let Err(err) = gui.swap_buffers() {
-            utils::error!("could not swap gui window buffers: {err}");
-            return;
-        }
-
-        overlay.window().set_cursor_hittest(false).unwrap();
-        {
-            let data_guard = state.data.lock();
-            Self::update_overlay_window(overlay, &data_guard);
-        }
-        if let Err(err) = overlay.make_current() {
-            utils::error!("could not make overlay window current: {err}");
-            return;
-        }
-
-        let glow = overlay.glow();
-        overlay.run(move |ui| state.overlay(ui, &glow));
-        overlay.clear();
-        overlay.paint();
-
-        if let Err(err) = overlay.swap_buffers() {
-            utils::error!("could not swap overlay window buffers: {err}");
-        }
-    }
-
-    fn update_overlay_window(overlay: &WindowContext, data: &Data) {
+    pub(crate) fn update_overlay_window(overlay: &WindowContext, data: &Data) {
         use winit::dpi::PhysicalPosition;
         let position =
             PhysicalPosition::new(data.window_position.x as i32, data.window_position.y as i32);
