@@ -4,7 +4,7 @@ use shared::WeaponClass;
 use crate::{
     config::Config,
     cs2::{CS2, entity::player::Player},
-    math::{angles_to_fov, vec2_clamp},
+    math::vec2_clamp,
     os::mouse::Mouse,
 };
 
@@ -14,16 +14,24 @@ pub struct Aimbot {
     inertia: Vec2,
 }
 
+impl Aimbot {
+    fn reset(&mut self) {
+        self.inertia = Vec2::ZERO;
+    }
+}
+
 impl CS2 {
     pub fn aimbot(&mut self, config: &Config, mouse: &mut Mouse) -> bool {
         let hotkey = config.aim.aimbot_hotkey;
         let config = self.aimbot_config(config);
 
         if !config.enabled {
+            self.aim.reset();
             return false;
         }
 
         if !Self::check_hotkey(&self.input, config.mode, hotkey, &mut self.aim.active) {
+            self.aim.reset();
             return false;
         }
 
@@ -53,45 +61,12 @@ impl CS2 {
             return false;
         }
 
-        if config.visibility_check && !target.visible(self, &local_player) {
-            return false;
-        }
-
         if local_player.shots_fired(self) < config.start_bullet {
             return false;
         }
 
-        let target_angle = {
-            let mut smallest_fov = 360.0;
-            let mut smallest_angle = glam::Vec2::ZERO;
-            let target_velocity = target.velocity(self);
-            let prediction_time = config.prediction_time.clamp(0.0, 0.25);
-            for bone in &config.bones {
-                let bone_pos =
-                    target.bone_position(self, bone.u64()) + target_velocity * prediction_time;
-                let angle =
-                    self.angle_to_target(&local_player, &bone_pos, &self.target.previous_aim_punch);
-                let fov = angles_to_fov(&local_player.view_angles(self), &angle);
-                if fov < smallest_fov {
-                    smallest_fov = fov;
-                    smallest_angle = angle;
-                }
-            }
-
-            smallest_angle
-        };
-
+        let target_angle = self.target.angle;
         let view_angles = local_player.view_angles(self);
-        if angles_to_fov(&view_angles, &target_angle)
-            > (config.fov
-                * if config.distance_adjusted_fov {
-                    self.distance_scale(self.target.distance)
-                } else {
-                    1.0
-                })
-        {
-            return false;
-        }
 
         let mut aim_angles = view_angles - target_angle;
         if aim_angles.y < -180.0 {
@@ -100,6 +75,10 @@ impl CS2 {
         vec2_clamp(&mut aim_angles);
 
         let sensitivity = self.get_sensitivity() * local_player.fov_multiplier(self);
+        if !sensitivity.is_finite() || sensitivity <= f32::EPSILON {
+            self.aim.reset();
+            return false;
+        }
 
         let mouse_angles = vec2(
             aim_angles.y / sensitivity * 45.45,
