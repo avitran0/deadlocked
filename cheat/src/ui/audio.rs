@@ -2,8 +2,8 @@ use std::io::Cursor;
 
 use rodio::{buffer::SamplesBuffer, Decoder, OutputStream, OutputStreamBuilder, Sink, Source};
 
-const HIT_SOUND: &[u8] = include_bytes!("../../assets/hitSound.mp3");
-const KILL_SOUND: &[u8] = include_bytes!("../../assets/killSound.mp3");
+const HIT_SOUND: &[u8] = include_bytes!("../../assets/hitSound.wav");
+const KILL_SOUND: &[u8] = include_bytes!("../../assets/killSound.wav");
 
 pub struct AudioPlayer {
     _stream: OutputStream,
