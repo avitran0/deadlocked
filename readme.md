@@ -27,7 +27,7 @@ The built-in update checker compares against the latest release tag and will pro
 >
 > See the [compatibility,md](compatibility.md).
 
-Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
+Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` (or `deadlocked-reduced-models`) binary and `setup.sh`.
 
 **Setup (one-time only):**
 
@@ -42,9 +42,7 @@ You only need to do this once, even when updating to newer versions.
 
 **Run:**
 
-```bash
-./deadlocked
-```
+`./deadlocked` or `./deadlocked-reduced-models`, depending on which version you downloaded.
 
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
@@ -57,15 +55,7 @@ Also make sure the `uinput` kernel module is loaded.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://github.com/avitran0/deadlocked
 cd deadlocked
-cargo run --release
-```
-
-<br>
-
-## Running
-
-```bash
-./run.sh
+cargo run --release --bin deadlocked
 ```
 
 <br>
@@ -117,6 +107,12 @@ cargo run --release
 - Aimbot
 - Triggerbot
 - RCS
+
+## Web Radar
+
+- Web radar
+- Follow player
+- Shareable
 
 ### Misc
 
