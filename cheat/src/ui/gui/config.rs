@@ -2,8 +2,8 @@ use egui::{Align, Button, Ui};
 
 use crate::{
     config::{
-        application::write_app_config, available_configs, delete_config, parse_config,
-        write_config, Config, BASE_PATH, CONFIG_PATH,
+        BASE_PATH, CONFIG_PATH, Config, application::write_app_config, available_configs,
+        delete_config, parse_config, write_config,
     },
     ui::{
         app::AppState,
