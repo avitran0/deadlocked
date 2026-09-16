@@ -3076,7 +3076,7 @@ checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 [[package]]
 name = "utils"
 version = "0.1.0"
-source = "git+https://codeberg.org/avitrano/utils#78d7266e6647e9b87952455e16753c90aa655ef7"
+source = "git+https://codeberg.org/avitrano/utils#ab553a19822dc4d360c9dd1881c4a146c1a36418"
 dependencies = [
  "parking_lot",
 ]
