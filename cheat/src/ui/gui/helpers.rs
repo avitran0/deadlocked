@@ -92,6 +92,40 @@ pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &s
     }
 }
 
+pub fn audio_settings_button(
+    ui: &mut Ui,
+    path: &mut String,
+    volume: &mut f32,
+    test_clicked: &mut bool,
+) -> bool {
+    let mut changed = false;
+    let button_response = ui.button("⚙");
+    egui::Popup::menu(&button_response)
+        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+        .show(|ui| {
+            ui.set_width(200.0);
+            ui.label("Audio Volume");
+            changed |= ui
+                .scope(|ui| {
+                    ui.spacing_mut().slider_width = 200.0;
+                    ui.add(egui::Slider::new(volume, 0.0..=2.0).show_value(false))
+                })
+                .inner
+                .changed();
+            ui.label(format!("{:.0}%", *volume * 100.0));
+
+            ui.add_space(8.0);
+            ui.label("Audio Path");
+            changed |= ui.text_edit_singleline(path).changed();
+
+            ui.add_space(8.0);
+            if ui.button("Test").clicked() {
+                *test_clicked = true;
+            }
+        });
+    changed
+}
+
 pub fn text_settings_popup(
     ui: &mut Ui,
     label: &str,

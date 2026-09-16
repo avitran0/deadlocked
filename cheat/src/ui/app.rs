@@ -22,6 +22,7 @@ use crate::{
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     ui::{
+        audio::AudioPlayer,
         grenades::{Grenade, GrenadeList, read_grenades},
         gui::{Tab, aimbot::AimbotTab},
         overlay::model::ModelRenderer,
@@ -40,6 +41,8 @@ pub struct AppState {
     pub display_scale: f32,
     pub trails: HashMap<usize, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
+    pub audio_player: Option<AudioPlayer>,
+    pub previous_player_stats: Option<(u64, f32, i32)>,
     pub frame_times: VecDeque<Duration>,
 
     pub grenades: GrenadeList,
@@ -113,6 +116,7 @@ impl AppState {
 
         let update_status = crate::update::check();
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
+        let audio_player = AudioPlayer::new(&config.player.sound);
 
         Self {
             channel_game,
@@ -127,6 +131,8 @@ impl AppState {
             display_scale: 1.0,
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
+            audio_player,
+            previous_player_stats: None,
             frame_times: VecDeque::with_capacity(500),
             grenades,
             new_grenade: Grenade::new(),
