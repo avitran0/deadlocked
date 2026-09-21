@@ -21,6 +21,7 @@ use crate::{
         available_configs, parse_config, write_config,
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
+    os::is_omarchy,
     ui::{
         audio::AudioPlayer,
         grenades::{Grenade, GrenadeList, read_grenades},
@@ -64,6 +65,7 @@ pub struct AppState {
 
     pub text_popup: Option<String>,
     pub update_popup: bool,
+    pub omarchy_popup: bool,
     pub overlay_egui: Option<egui::Context>,
     pub model_renderer: Option<Arc<ModelRenderer>>,
 
@@ -147,6 +149,7 @@ impl AppState {
             update_status,
             text_popup: None,
             update_popup,
+            omarchy_popup: is_omarchy(),
             overlay_egui: None,
             model_renderer: None,
             radar_status: RadarStatus::Disabled,
