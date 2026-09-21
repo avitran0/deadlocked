@@ -108,7 +108,7 @@ pub fn audio_settings_button(
             changed |= ui
                 .scope(|ui| {
                     ui.spacing_mut().slider_width = 200.0;
-                    ui.add(egui::Slider::new(volume, 0.0..=2.0).show_value(false))
+                    ui.add(egui::Slider::new(volume, 0.0..=1.5).show_value(false))
                 })
                 .inner
                 .changed();
