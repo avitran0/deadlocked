@@ -4,7 +4,7 @@ use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
 
 use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
-use crate::ui::audio::audio_options;
+use crate::ui::audio::{audio_display_name, audio_options};
 
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(title)
@@ -128,14 +128,18 @@ pub fn audio_settings_button(
                 options.sort_unstable();
                 egui::ComboBox::new(id, "Audio")
                     .selected_text(if options.contains(&path.as_str()) {
-                        path.as_str()
+                        audio_display_name(path)
                     } else {
                         "Select audio"
                     })
                     .show_ui(ui, |ui| {
                         for option in options {
                             changed |= ui
-                                .selectable_value(path, option.to_owned(), option)
+                                .selectable_value(
+                                    path,
+                                    option.to_owned(),
+                                    audio_display_name(option),
+                                )
                                 .changed();
                         }
                     });

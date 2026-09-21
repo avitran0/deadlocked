@@ -1,5 +1,6 @@
 use std::{
     io::Cursor,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
@@ -30,6 +31,13 @@ pub fn normalize_audio_path(path: &str) -> String {
     } else {
         first_audio().unwrap_or_default().to_owned()
     }
+}
+
+pub fn audio_display_name(path: &str) -> &str {
+    Path::new(path)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .unwrap_or(path)
 }
 
 pub struct AudioPlayer {
