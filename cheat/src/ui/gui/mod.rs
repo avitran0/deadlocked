@@ -153,6 +153,47 @@ impl AppState {
                 self.update_popup = false;
             }
         }
+
+        if self.omarchy_popup {
+            let mut close = false;
+            egui::Window::new("Omarchy Warning")
+                .id(egui::Id::new("omarchy_warning_popup"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    ui.label(
+                        egui::RichText::new(
+                            "Warning: Omarchy is part of the normalization of fascism in open source.",
+                        )
+                        .color(Colors::YELLOW)
+                        .size(18.0),
+                    );
+                    ui.add_space(8.0);
+                    ui.label(
+                        "DHH's Linux distribution is backed by the Omacom Foundation and a network of wealthy tech executives and companies. The article documents the white-nationalist and far-right politics behind that funding.",
+                    );
+                    ui.add_space(8.0);
+                    ui.label("I would greatly suggest picking another distro.");
+                    ui.add_space(8.0);
+                    ui.label("Read the article for the full context:");
+                    if ui
+                        .link("Normalized Fascism in Open Source: $12 Million Given to DHH")
+                        .clicked()
+                    {
+                        open_url(
+                            "https://brennan.day/normalized-fascism-in-open-source-12-million-given-to-dhh/",
+                        );
+                    }
+                    ui.separator();
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+            if close {
+                self.omarchy_popup = false;
+            }
+        }
     }
 
     fn weapon_config(&mut self) -> &mut WeaponConfig {
