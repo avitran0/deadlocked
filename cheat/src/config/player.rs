@@ -140,6 +140,8 @@ pub struct PlayerConfig {
     pub tags: bool,
     pub visibility: VisibilityMode,
     pub sound: SoundConfig,
+    pub hit_sound: HitSoundConfig,
+    pub kill_sound: HitSoundConfig,
 }
 
 impl Default for PlayerConfig {
@@ -170,6 +172,8 @@ impl Default for PlayerConfig {
             tags: true,
             visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
+            hit_sound: HitSoundConfig::default(),
+            kill_sound: HitSoundConfig::default(),
         }
     }
 }
@@ -178,12 +182,6 @@ impl Default for PlayerConfig {
 #[serde(default)]
 pub struct SoundConfig {
     pub enabled: bool,
-    pub hit_sound: bool,
-    pub kill_sound: bool,
-    pub hit_path: String,
-    pub kill_path: String,
-    pub hit_volume: f32,
-    pub kill_volume: f32,
     pub footstep_diameter: f32,
     pub gunshot_diameter: f32,
     pub weapon_diameter: f32,
@@ -196,18 +194,30 @@ impl Default for SoundConfig {
     fn default() -> Self {
         Self {
             enabled: false,
-            hit_sound: false,
-            kill_sound: false,
-            hit_path: String::new(),
-            kill_path: String::new(),
-            hit_volume: 1.0,
-            kill_volume: 1.0,
             footstep_diameter: crate::constants::cs2::SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT,
             gunshot_diameter: crate::constants::cs2::SOUND_ESP_GUNSHOT_DIAMETER_DEFAULT,
             weapon_diameter: crate::constants::cs2::SOUND_ESP_WEAPON_DIAMETER_DEFAULT,
             fadeout_start: 1.0,
             fadeout_duration: 1.0,
             show_visible: true,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HitSoundConfig {
+    pub enabled: bool,
+    pub path: String,
+    pub volume: f32,
+}
+
+impl Default for HitSoundConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            path: String::new(),
+            volume: 1.0,
         }
     }
 }

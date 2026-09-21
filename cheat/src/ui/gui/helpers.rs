@@ -4,6 +4,7 @@ use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
 
 use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
+use crate::ui::audio::audio_options;
 
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(title)
@@ -94,35 +95,57 @@ pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &s
 
 pub fn audio_settings_button(
     ui: &mut Ui,
+    id: &str,
+    open: &mut bool,
     path: &mut String,
     volume: &mut f32,
     test_clicked: &mut bool,
 ) -> bool {
     let mut changed = false;
-    let button_response = ui.button("⚙");
-    egui::Popup::menu(&button_response)
-        .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
-        .show(|ui| {
-            ui.set_width(200.0);
-            ui.label("Audio Volume");
-            changed |= ui
-                .scope(|ui| {
-                    ui.spacing_mut().slider_width = 200.0;
-                    ui.add(egui::Slider::new(volume, 0.0..=1.5).show_value(false))
-                })
-                .inner
-                .changed();
-            ui.label(format!("{:.0}%", *volume * 100.0));
+    if ui.button("⚙").clicked() {
+        *open = !*open;
+    }
+    if *open {
+        egui::Window::new("Audio settings")
+            .id(egui::Id::new(id))
+            .open(open)
+            .collapsible(false)
+            .resizable(false)
+            .show(ui.ctx(), |ui| {
+                ui.set_width(200.0);
+                ui.label("Audio Volume");
+                changed |= ui
+                    .scope(|ui| {
+                        ui.spacing_mut().slider_width = 200.0;
+                        ui.add(egui::Slider::new(volume, 0.0..=2.0).show_value(false))
+                    })
+                    .inner
+                    .changed();
+                ui.label(format!("{:.0}%", *volume * 100.0));
 
-            ui.add_space(8.0);
-            ui.label("Audio Path");
-            changed |= ui.text_edit_singleline(path).changed();
+                ui.add_space(8.0);
+                let mut options = audio_options().collect::<Vec<_>>();
+                options.sort_unstable();
+                egui::ComboBox::new(id, "Audio")
+                    .selected_text(if options.contains(&path.as_str()) {
+                        path.as_str()
+                    } else {
+                        "Select audio"
+                    })
+                    .show_ui(ui, |ui| {
+                        for option in options {
+                            changed |= ui
+                                .selectable_value(path, option.to_owned(), option)
+                                .changed();
+                        }
+                    });
 
-            ui.add_space(8.0);
-            if ui.button("Test").clicked() {
-                *test_clicked = true;
-            }
-        });
+                ui.add_space(8.0);
+                if ui.button("Test").clicked() {
+                    *test_clicked = true;
+                }
+            });
+    }
     changed
 }
 

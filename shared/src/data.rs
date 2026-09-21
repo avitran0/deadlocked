@@ -74,7 +74,7 @@ pub struct PlayerData {
     pub color: i32,
     pub rotation: f32,
     #[serde(skip)]
-    pub round_damage: f32,
+    pub total_hits: i32,
     #[serde(skip)]
     pub round_kills: i32,
     #[serde(skip)]

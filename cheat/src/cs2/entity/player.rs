@@ -446,16 +446,17 @@ impl Player {
         )
     }
 
-    #[allow(dead_code)]
-    pub fn round_damage(&self, cs2: &CS2) -> Option<f32> {
-        let action_tracking_services = self.action_tracking_services(cs2);
-        if action_tracking_services == 0 {
+    pub fn total_hits(&self, cs2: &CS2) -> Option<i32> {
+        let bullet_services: usize = cs2
+            .process
+            .read(*self.pawn + cs2.offsets.pawn.bullet_services);
+        if bullet_services == 0 {
             return None;
         }
 
         Some(
             cs2.process
-                .read(action_tracking_services + cs2.offsets.action_tracking.round_damage),
+                .read(bullet_services + cs2.offsets.bullet_services.total_hits),
         )
     }
 

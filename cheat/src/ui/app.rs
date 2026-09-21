@@ -41,8 +41,8 @@ pub struct AppState {
     pub display_scale: f32,
     pub trails: HashMap<usize, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
-    pub audio_player: Option<AudioPlayer>,
-    pub previous_player_stats: Option<(u64, f32, i32)>,
+    pub audio_player: AudioPlayer,
+    pub previous_player_stats: PlayerAudioStats,
     pub frame_times: VecDeque<Duration>,
 
     pub grenades: GrenadeList,
@@ -63,11 +63,20 @@ pub struct AppState {
     pub update_status: UpdateStatus,
 
     pub text_popup: Option<String>,
+    pub hit_audio_popup: bool,
+    pub kill_audio_popup: bool,
     pub update_popup: bool,
     pub overlay_egui: Option<egui::Context>,
     pub model_renderer: Option<Arc<ModelRenderer>>,
 
     pub radar_status: RadarStatus,
+}
+
+#[derive(Default)]
+pub struct PlayerAudioStats {
+    pub steam_id: u64,
+    pub total_hits: i32,
+    pub round_kills: i32,
 }
 
 pub struct App {
@@ -109,14 +118,20 @@ impl AppState {
         }
 
         let current_config = CONFIG_PATH.join(&config_name);
-        let config = parse_config(&current_config);
+        let mut config = parse_config(&current_config);
+        config.player.hit_sound.path = crate::ui::audio::normalize_audio_path(
+            &config.player.hit_sound.path,
+        );
+        config.player.kill_sound.path = crate::ui::audio::normalize_audio_path(
+            &config.player.kill_sound.path,
+        );
         write_config(&config, &current_config);
+        let audio_player = AudioPlayer::new(&config.player.hit_sound, &config.player.kill_sound);
         let grenades = read_grenades();
         write_app_config(&app_config);
 
         let update_status = crate::update::check();
         let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
-        let audio_player = AudioPlayer::new(&config.player.sound);
 
         Self {
             channel_game,
@@ -132,7 +147,7 @@ impl AppState {
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
             audio_player,
-            previous_player_stats: None,
+            previous_player_stats: PlayerAudioStats::default(),
             frame_times: VecDeque::with_capacity(500),
             grenades,
             new_grenade: Grenade::new(),
@@ -142,12 +157,15 @@ impl AppState {
             aimbot_weapon: Weapon::AK47,
             update_status,
             text_popup: None,
+            hit_audio_popup: false,
+            kill_audio_popup: false,
             update_popup,
             overlay_egui: None,
             model_renderer: None,
             radar_status: RadarStatus::Disabled,
         }
     }
+
 }
 
 impl App {

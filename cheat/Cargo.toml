@@ -31,10 +31,11 @@ glutin-winit = { version = "0.5", default-features = false, features = [
     "x11",
     "egl",
 ] }
+include_dir = "0.7"
 nix = { version = "0.31", features = ["ioctl"] }
 rand = "0.10"
 rand_distr = "0.6"
-rodio = "0.21"
+rodio = "0.22"
 semver = "1.0"
 toml = "1.0"
 ureq = { version = "3", features = ["json"] }

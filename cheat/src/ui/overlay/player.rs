@@ -10,7 +10,7 @@ use crate::{
     config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
-    ui::{app::AppState, color::Colors},
+    ui::{app::{AppState, PlayerAudioStats}, color::Colors},
 };
 
 impl AppState {
@@ -619,63 +619,55 @@ impl AppState {
     }
 
     pub fn update_player_audio(&mut self) {
-        if !self.config.player.sound.hit_sound && !self.config.player.sound.kill_sound {
-            self.previous_player_stats = None;
+        if !self.config.player.hit_sound.enabled && !self.config.player.kill_sound.enabled {
+            self.previous_player_stats = PlayerAudioStats::default();
             return;
         }
 
         let data = self.data.lock();
         if !data.in_game {
-            self.previous_player_stats = None;
+            self.previous_player_stats = PlayerAudioStats::default();
             return;
         }
 
-        let current = (
-            data.local_player.steam_id,
-            data.local_player.round_damage,
-            data.local_player.round_kills,
-        );
-
-        let Some(previous) = self.previous_player_stats else {
-            self.previous_player_stats = Some(current);
-            return;
+        let current = PlayerAudioStats {
+            steam_id: data.local_player.steam_id,
+            total_hits: data.local_player.total_hits,
+            round_kills: data.local_player.round_kills,
         };
+        let previous = &self.previous_player_stats;
 
         // reset tracking on steam_id change or round restart
-        if previous.0 != current.0 || current.1 < previous.1 - 1.0 || current.2 < previous.2 {
-            self.previous_player_stats = Some(current);
+        if previous.steam_id != current.steam_id
+            || current.total_hits < previous.total_hits
+            || current.round_kills < previous.round_kills
+        {
+            self.previous_player_stats = current;
             return;
         }
 
-        let kills = (current.2 - previous.2).max(0) as usize;
-        let hit_detected = current.1 > previous.1;
+        let kills = (current.round_kills - previous.round_kills).max(0) as usize;
+        let hit_detected = current.total_hits > previous.total_hits;
 
-        self.previous_player_stats = Some(current);
+        self.previous_player_stats = current;
 
-        let kill_sound_active = self.config.player.sound.kill_sound;
-        let hit_sound_active = self.config.player.sound.hit_sound;
+        let kill_sound_active = self.config.player.kill_sound.enabled;
+        let hit_sound_active = self.config.player.hit_sound.enabled;
 
         if kills > 0 {
-            if kill_sound_active
-                && let Some(audio_player) = self.audio_player.as_ref()
-            {
+            if kill_sound_active {
                 for _ in 0..kills {
-                    audio_player.play_kill();
+                    self.audio_player.play_kill();
                 }
-            } else if hit_sound_active
-                && let Some(audio_player) = self.audio_player.as_ref()
-            {
+            } else if hit_sound_active {
                 for _ in 0..kills {
-                    audio_player.play_hit();
+                    self.audio_player.play_hit();
                 }
             }
         }
 
-        if hit_detected
-            && hit_sound_active
-            && let Some(audio_player) = self.audio_player.as_ref()
-        {
-            audio_player.play_hit();
+        if hit_detected && hit_sound_active {
+            self.audio_player.play_hit();
         }
     }
 }

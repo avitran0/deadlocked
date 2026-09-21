@@ -212,60 +212,70 @@ impl AppState {
 
             ui.horizontal(|ui| {
                 if ui
-                    .checkbox(&mut self.config.player.sound.hit_sound, "Hit Sound")
+                    .checkbox(&mut self.config.player.hit_sound.enabled, "Hit Sound")
                     .changed()
                 {
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
                     self.send_config_game();
                 }
 
                 let mut test_hit = false;
                 let changed = audio_settings_button(
                     ui,
-                    &mut self.config.player.sound.hit_path,
-                    &mut self.config.player.sound.hit_volume,
+                    "hit_audio",
+                    &mut self.hit_audio_popup,
+                    &mut self.config.player.hit_sound.path,
+                    &mut self.config.player.hit_sound.volume,
                     &mut test_hit,
                 );
                 if changed || test_hit {
-                    if let Some(audio_player) = self.audio_player.as_mut() {
-                        audio_player.update(&self.config.player.sound);
-                    }
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
                     if changed {
                         self.send_config_game();
                     }
-                    if test_hit
-                        && let Some(audio_player) = self.audio_player.as_ref()
-                    {
-                        audio_player.play_hit();
+                    if test_hit {
+                        self.audio_player.play_hit();
                     }
                 }
             });
 
             ui.horizontal(|ui| {
                 if ui
-                    .checkbox(&mut self.config.player.sound.kill_sound, "Kill Sound")
+                    .checkbox(&mut self.config.player.kill_sound.enabled, "Kill Sound")
                     .changed()
                 {
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
                     self.send_config_game();
                 }
 
                 let mut test_kill = false;
                 let changed = audio_settings_button(
                     ui,
-                    &mut self.config.player.sound.kill_path,
-                    &mut self.config.player.sound.kill_volume,
+                    "kill_audio",
+                    &mut self.kill_audio_popup,
+                    &mut self.config.player.kill_sound.path,
+                    &mut self.config.player.kill_sound.volume,
                     &mut test_kill,
                 );
                 if changed || test_kill {
-                    if let Some(audio_player) = self.audio_player.as_mut() {
-                        audio_player.update(&self.config.player.sound);
-                    }
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
                     if changed {
                         self.send_config_game();
                     }
-                    if test_kill
-                        && let Some(audio_player) = self.audio_player.as_ref()
-                    {
-                        audio_player.play_kill();
+                    if test_kill {
+                        self.audio_player.play_kill();
                     }
                 }
             });
