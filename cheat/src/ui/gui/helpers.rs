@@ -4,8 +4,6 @@ use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
 
 use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
-use crate::ui::audio::{audio_display_name, audio_options};
-
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(title)
         .default_open(true)
@@ -91,66 +89,6 @@ pub fn text_settings_button(ui: &mut Ui, open_popup: &mut Option<String>, id: &s
     if ui.button("⚙").on_hover_text("Text settings").clicked() {
         *open_popup = Some(id.to_string());
     }
-}
-
-pub fn audio_settings_button(
-    ui: &mut Ui,
-    id: &str,
-    open: &mut bool,
-    path: &mut String,
-    volume: &mut f32,
-    test_clicked: &mut bool,
-) -> bool {
-    let mut changed = false;
-    if ui.button("⚙").clicked() {
-        *open = !*open;
-    }
-    if *open {
-        egui::Window::new("Audio settings")
-            .id(egui::Id::new(id))
-            .open(open)
-            .collapsible(false)
-            .resizable(false)
-            .show(ui.ctx(), |ui| {
-                ui.set_width(200.0);
-                ui.label("Audio Volume");
-                changed |= ui
-                    .scope(|ui| {
-                        ui.spacing_mut().slider_width = 200.0;
-                        ui.add(egui::Slider::new(volume, 0.0..=2.0).show_value(false))
-                    })
-                    .inner
-                    .changed();
-                ui.label(format!("{:.0}%", *volume * 100.0));
-
-                ui.add_space(8.0);
-                let mut options = audio_options().collect::<Vec<_>>();
-                options.sort_unstable();
-                egui::ComboBox::new(id, "Audio")
-                    .selected_text(if options.contains(&path.as_str()) {
-                        audio_display_name(path)
-                    } else {
-                        "Select audio"
-                    })
-                    .show_ui(ui, |ui| {
-                        for option in options {
-                            changed |= ui
-                                .selectable_value(
-                                    path,
-                                    option.to_owned(),
-                                    audio_display_name(option),
-                                )
-                                .changed();
-                        }
-                    });
-
-                ui.add_space(8.0);
-                if ui.button("Test").clicked() {
-                    *test_clicked = true;
-                }
-            });
-    }
-    changed
 }
 
 pub fn text_settings_popup(
