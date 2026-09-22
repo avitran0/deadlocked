@@ -402,7 +402,7 @@ fn audio_settings_popup(
                     ui.spacing_mut().slider_width = ui.available_width();
                     //Users have the right of becoming deaf or using low quality audio if they want,
                     //so we don't limit the volume to 1.0
-                    ui.add(egui::Slider::new(volume, 0.0..=10.0).show_value(false)) 
+                    ui.add(egui::Slider::new(volume, 0.0..=3.0).show_value(false)) 
                 })
                 .inner
                 .changed();
