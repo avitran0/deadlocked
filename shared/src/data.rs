@@ -76,6 +76,8 @@ pub struct PlayerData {
     #[serde(skip)]
     pub total_hits: i32,
     #[serde(skip)]
+    pub damage: i32,
+    #[serde(skip)]
     pub round_kills: i32,
     #[serde(skip)]
     pub sound: Option<SoundType>,

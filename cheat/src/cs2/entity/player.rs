@@ -446,6 +446,19 @@ impl Player {
         )
     }
 
+    pub fn damage(&self, cs2: &CS2) -> Option<i32> {
+        let action_tracking_services = self.action_tracking_services(cs2);
+        if action_tracking_services == 0 {
+            return None;
+        }
+
+        Some(cs2.process.read(
+            action_tracking_services
+                + cs2.offsets.action_tracking.per_round_stats
+                + cs2.offsets.per_round_stats.damage,
+        ))
+    }
+
     pub fn total_hits(&self, cs2: &CS2) -> Option<i32> {
         let bullet_services: usize = cs2
             .process

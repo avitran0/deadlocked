@@ -77,6 +77,7 @@ pub struct AppState {
 pub struct PlayerAudioStats {
     pub steam_id: u64,
     pub total_hits: i32,
+    pub damage: i32,
     pub round_kills: i32,
 }
 

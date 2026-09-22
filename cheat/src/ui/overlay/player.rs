@@ -633,13 +633,14 @@ impl AppState {
         let current = PlayerAudioStats {
             steam_id: data.local_player.steam_id,
             total_hits: data.local_player.total_hits,
+            damage: data.local_player.damage,
             round_kills: data.local_player.round_kills,
         };
         let previous = &self.previous_player_stats;
 
         // reset tracking on steam_id change or round restart
         if previous.steam_id != current.steam_id
-            || current.total_hits < previous.total_hits
+            || current.damage < previous.damage
             || current.round_kills < previous.round_kills
         {
             self.previous_player_stats = current;
@@ -647,7 +648,8 @@ impl AppState {
         }
 
         let kills = (current.round_kills - previous.round_kills).max(0) as usize;
-        let hit_detected = current.total_hits > previous.total_hits;
+        let hit_detected = current.total_hits > previous.total_hits
+            || current.damage > previous.damage;
 
         self.previous_player_stats = current;
 
@@ -659,14 +661,15 @@ impl AppState {
                 for _ in 0..kills {
                     self.audio_player.play_kill();
                 }
-            } else if hit_sound_active {
+            }
+            if hit_sound_active && !kill_sound_active {
                 for _ in 0..kills {
                     self.audio_player.play_hit();
                 }
             }
         }
 
-        if hit_detected && hit_sound_active {
+        if hit_detected && hit_sound_active && !(kills > 0 && kill_sound_active) {
             self.audio_player.play_hit();
         }
     }
