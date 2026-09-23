@@ -3,8 +3,8 @@ use egui::{DragValue, Ui};
 use crate::ui::{
     app::AppState,
     gui::helpers::{
-        checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
-        text_settings_button,
+        audio_settings_button, checkbox, checkbox_hover, collapsing_open, color_picker, combo_box,
+        drag, keybind, scroll, text_settings_button,
     },
 };
 
@@ -208,6 +208,66 @@ impl AppState {
                     self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_tags");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.sound.hit_sound, "Hit Sound")
+                    .changed()
+                {
+                    self.send_config_game();
+                }
+
+                let mut test_hit = false;
+                let changed = audio_settings_button(
+                    ui,
+                    &mut self.config.player.sound.hit_path,
+                    &mut self.config.player.sound.hit_volume,
+                    &mut test_hit,
+                );
+                if changed || test_hit {
+                    if let Some(audio_player) = self.audio_player.as_mut() {
+                        audio_player.update(&self.config.player.sound);
+                    }
+                    if changed {
+                        self.send_config_game();
+                    }
+                    if test_hit
+                        && let Some(audio_player) = self.audio_player.as_ref()
+                    {
+                        audio_player.play_hit();
+                    }
+                }
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.sound.kill_sound, "Kill Sound")
+                    .changed()
+                {
+                    self.send_config_game();
+                }
+
+                let mut test_kill = false;
+                let changed = audio_settings_button(
+                    ui,
+                    &mut self.config.player.sound.kill_path,
+                    &mut self.config.player.sound.kill_volume,
+                    &mut test_kill,
+                );
+                if changed || test_kill {
+                    if let Some(audio_player) = self.audio_player.as_mut() {
+                        audio_player.update(&self.config.player.sound);
+                    }
+                    if changed {
+                        self.send_config_game();
+                    }
+                    if test_kill
+                        && let Some(audio_player) = self.audio_player.as_ref()
+                    {
+                        audio_player.play_kill();
+                    }
+                }
             });
         });
 

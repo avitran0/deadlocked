@@ -178,6 +178,12 @@ impl Default for PlayerConfig {
 #[serde(default)]
 pub struct SoundConfig {
     pub enabled: bool,
+    pub hit_sound: bool,
+    pub kill_sound: bool,
+    pub hit_path: String,
+    pub kill_path: String,
+    pub hit_volume: f32,
+    pub kill_volume: f32,
     pub footstep_diameter: f32,
     pub gunshot_diameter: f32,
     pub weapon_diameter: f32,
@@ -190,6 +196,12 @@ impl Default for SoundConfig {
     fn default() -> Self {
         Self {
             enabled: false,
+            hit_sound: false,
+            kill_sound: false,
+            hit_path: String::new(),
+            kill_path: String::new(),
+            hit_volume: 1.0,
+            kill_volume: 1.0,
             footstep_diameter: crate::constants::cs2::SOUND_ESP_FOOTSTEP_DIAMETER_DEFAULT,
             gunshot_diameter: crate::constants::cs2::SOUND_ESP_GUNSHOT_DIAMETER_DEFAULT,
             weapon_diameter: crate::constants::cs2::SOUND_ESP_WEAPON_DIAMETER_DEFAULT,
