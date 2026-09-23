@@ -177,7 +177,7 @@ schema! {
         button_state: interface_fn(interface, input, 19, 0x14),
         view_matrix: scan("C6 83 ? ? 00 00 01 4C 8D 05", client, rel(0x0A, 0x00, 0x04)),
         sdl_window: module_export(sdl, "SDL_GetKeyboardFocus", rel(0x02, 0x06, 0x03, 0x07)),
-        global_vars: scan("48 8D 05 ? ? ? ? 45 31 E4 48 8B 00 8B 78 10", client, rel(0x03, 0x07)),
+        global_vars: scan("48 8D 05 ? ? ? ? 45 31 E4 48 8B 00 44 8B 40 10", client, rel(0x03, 0x07)),
         vphys_world: scan_ptr("4c 8d 35 ? ? ? ? 49 8b 3e e8 ? ? ? ? 48 89 c2", client, rel(3, 7)),
         build_date: scan("4c 89 e6 e8 ? ? ? ? 48 8d 35 ? ? ? ? 48 8d 3d", engine, rel(11, 15)),
     }
