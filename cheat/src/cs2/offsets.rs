@@ -278,6 +278,7 @@ schema! {
         }
         action_tracking: ActionTrackingServicesOffsets {
             round_kills: schema("CCSPlayerController_ActionTrackingServices", "m_iNumRoundKills"),
+            round_damage: schema("CCSPlayerController_ActionTrackingServices", "m_flTotalRoundDamageDealt"),
             per_round_stats: schema("CCSPlayerController_ActionTrackingServices", "m_perRoundStats"),
         }
         bullet_services: BulletServicesOffsets {

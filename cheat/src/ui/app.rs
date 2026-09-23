@@ -62,11 +62,11 @@ pub struct AppState {
     pub aimbot_weapon: Weapon,
 
     pub update_status: UpdateStatus,
-    pub omarchy_popup: bool,
     pub text_popup: Option<String>,
     pub hit_audio_popup: bool,
     pub kill_audio_popup: bool,
     pub update_popup: bool,
+    pub omarchy_popup: bool,
     pub overlay_egui: Option<egui::Context>,
     pub model_renderer: Option<Arc<ModelRenderer>>,
 
@@ -168,7 +168,6 @@ impl AppState {
             radar_status: RadarStatus::Disabled,
         }
     }
-
 }
 
 impl App {

@@ -5,6 +5,7 @@ use utils::{
     Channel, Mutex,
     log::{Level, LoggerOptions},
 };
+use winit::platform::x11::EventLoopBuilderExtX11;
 
 use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
 
@@ -59,7 +60,7 @@ fn main() {
         radar::Radar::new(channel_radar, data_radar).run();
     });
 
-    let event_loop = match winit::event_loop::EventLoop::builder().build() {
+    let event_loop = match winit::event_loop::EventLoop::builder().with_x11().build() {
         Ok(event_loop) => event_loop,
         Err(err) => {
             utils::error!("failed to create event loop: {err}");

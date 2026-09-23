@@ -4,6 +4,7 @@ use egui::{CollapsingHeader, Color32, DragValue, Event, Sense, Ui, Widget};
 
 use crate::config::text::TextCategory;
 use crate::cs2::key_codes::KeyCode;
+
 pub fn collapsing_open(ui: &mut Ui, title: &str, add_body: impl FnOnce(&mut Ui)) {
     CollapsingHeader::new(title)
         .default_open(true)
