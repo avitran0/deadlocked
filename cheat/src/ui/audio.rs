@@ -149,6 +149,17 @@ impl AudioPlayer {
         let stream_initializing = Arc::clone(&self.stream_initializing);
         std::thread::spawn(move || {
             let result = DeviceSinkBuilder::from_default_device()
+                .map(|builder| {
+                    builder.with_error_callback(|error| {
+                        if matches!(
+                            error,
+                            rodio::cpal::StreamError::DeviceNotAvailable
+                                | rodio::cpal::StreamError::StreamInvalidated
+                        ) {
+                            utils::error!("audio stream error: {error}");
+                        }
+                    })
+                })
                 .and_then(|builder| builder.open_sink_or_fallback())
                 .map_err(|error| utils::error!("failed to initialize audio output: {error}"))
                 .ok();
