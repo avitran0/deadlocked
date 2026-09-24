@@ -10,7 +10,7 @@ use crate::{
     config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
-    ui::{app::AppState, color::Colors},
+    ui::{app::{AppState, PlayerAudioStats}, color::Colors},
 };
 
 impl AppState {
@@ -616,5 +616,61 @@ impl AppState {
         let total_duration = self.total_sound_duration();
         self.player_sounds
             .retain(|_, (time, _)| time.elapsed() < total_duration);
+    }
+
+    pub fn update_player_audio(&mut self) {
+        if !self.config.player.hit_sound.enabled && !self.config.player.kill_sound.enabled {
+            self.previous_player_stats = PlayerAudioStats::default();
+            return;
+        }
+
+        let data = self.data.lock();
+        if !data.in_game {
+            self.previous_player_stats = PlayerAudioStats::default();
+            return;
+        }
+
+        let current = PlayerAudioStats {
+            steam_id: data.local_player.steam_id,
+            total_hits: data.local_player.total_hits,
+            damage: data.local_player.damage,
+            round_kills: data.local_player.round_kills,
+        };
+        let previous = &self.previous_player_stats;
+
+        // reset tracking on steam_id change or round restart
+        if previous.steam_id != current.steam_id
+            || current.damage < previous.damage
+            || current.round_kills < previous.round_kills
+        {
+            self.previous_player_stats = current;
+            return;
+        }
+
+        let kills = (current.round_kills - previous.round_kills).max(0) as usize;
+        let hit_detected = current.total_hits > previous.total_hits
+            || current.damage > previous.damage;
+
+        self.previous_player_stats = current;
+
+        let kill_sound_active = self.config.player.kill_sound.enabled;
+        let hit_sound_active = self.config.player.hit_sound.enabled;
+
+        if kills > 0 {
+            if kill_sound_active {
+                for _ in 0..kills {
+                    self.audio_player.play_kill();
+                }
+            }
+            if hit_sound_active && !kill_sound_active {
+                for _ in 0..kills {
+                    self.audio_player.play_hit();
+                }
+            }
+        }
+
+        if hit_detected && hit_sound_active && !(kills > 0 && kill_sound_active) {
+            self.audio_player.play_hit();
+        }
     }
 }

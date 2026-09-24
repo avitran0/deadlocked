@@ -140,6 +140,8 @@ pub struct PlayerConfig {
     pub tags: bool,
     pub visibility: VisibilityMode,
     pub sound: SoundConfig,
+    pub hit_sound: HitSoundConfig,
+    pub kill_sound: HitSoundConfig,
 }
 
 impl Default for PlayerConfig {
@@ -170,6 +172,8 @@ impl Default for PlayerConfig {
             tags: true,
             visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
+            hit_sound: HitSoundConfig::default(),
+            kill_sound: HitSoundConfig::default(),
         }
     }
 }
@@ -196,6 +200,24 @@ impl Default for SoundConfig {
             fadeout_start: 1.0,
             fadeout_duration: 1.0,
             show_visible: true,
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HitSoundConfig {
+    pub enabled: bool,
+    pub path: String,
+    pub volume: f32,
+}
+
+impl Default for HitSoundConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            path: String::new(),
+            volume: 1.0,
         }
     }
 }

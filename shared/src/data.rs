@@ -74,6 +74,12 @@ pub struct PlayerData {
     pub color: i32,
     pub rotation: f32,
     #[serde(skip)]
+    pub total_hits: i32,
+    #[serde(skip)]
+    pub damage: i32,
+    #[serde(skip)]
+    pub round_kills: i32,
+    #[serde(skip)]
     pub sound: Option<SoundType>,
     #[serde(skip)]
     pub collision_mins: Vec3,
