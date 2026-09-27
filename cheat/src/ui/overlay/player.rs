@@ -7,16 +7,22 @@ use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
-    config::player::{BoxMode, DrawMode},
+    config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
     config::text::TextPosition,
-    math::{CYLINDER_SAMPLES, world_to_screen},
-    ui::app::AppState,
+    math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
+    ui::{app::AppState, color::Colors},
 };
 
 impl AppState {
     pub fn draw_player(&self, painter: &Painter, player: &PlayerData, data: &Data) {
-        if self.config.player.visible_only && !player.visible {
-            return;
+        match self.config.player.visibility {
+            VisibilityMode::InvisibleOnly if player.visible => {
+                return;
+            }
+            VisibilityMode::VisibleOnly if !player.visible => {
+                return;
+            }
+            _ => {}
         }
 
         let sound = self.player_sounds.get(&player.steam_id);
@@ -27,10 +33,11 @@ impl AppState {
         };
 
         self.player_box(painter, player, data, sound_alpha);
+        self.player_tracers(painter, player, data, sound_alpha);
         self.skeleton(painter, player, data, sound_alpha);
     }
 
-    fn player_sound_alpha(
+    pub fn player_sound_alpha(
         &self,
         player: &PlayerData,
         sound: Option<&(Instant, SoundType)>,
@@ -79,6 +86,17 @@ impl AppState {
         )
     }
 
+    pub(super) fn player_color(color: i32) -> Color32 {
+        match color {
+            0 => Colors::BLUE,
+            1 => Colors::GREEN,
+            2 => Colors::YELLOW,
+            3 => Colors::ORANGE,
+            4 => Colors::PURPLE,
+            _ => Colors::SUBTEXT,
+        }
+    }
+
     fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
         let alpha = match alpha {
             Some(alpha) => alpha.clamp(0.0, 1.0),
@@ -108,6 +126,7 @@ impl AppState {
                     self.config.player.box_invisible_color
                 }
             }
+            DrawMode::PlayerColor => Self::player_color(player.color),
         };
 
         color = Self::alpha(color, alpha);
@@ -164,13 +183,18 @@ impl AppState {
         if self.config.player.player_name {
             let cat = &self.config.hud.overlay_text.player_name;
             let fs = cat.font_size * esp_scale;
+            let color = if cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                cat.color
+            };
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
             self.text_sized(
                 painter,
                 &player.name,
                 anchor,
                 cat.align.to_align2(),
-                Self::alpha(cat.color, alpha),
+                Self::alpha(color, alpha),
                 fs,
             );
             offset += fs;
@@ -179,6 +203,11 @@ impl AppState {
         if self.config.player.tags {
             let cat = &self.config.hud.overlay_text.player_tags;
             let fs = cat.font_size * esp_scale;
+            let color = if cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                cat.color
+            };
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
             if player.has_defuser {
                 self.text_sized(
@@ -186,7 +215,7 @@ impl AppState {
                     "\u{e00f}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
                 offset += fs;
@@ -198,7 +227,7 @@ impl AppState {
                     "\u{e017}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
                 offset += fs;
@@ -210,7 +239,7 @@ impl AppState {
                     "\u{e01e}",
                     anchor,
                     cat.align.to_align2(),
-                    Self::alpha(cat.color, alpha),
+                    Self::alpha(color, alpha),
                     fs,
                 );
             }
@@ -221,13 +250,23 @@ impl AppState {
             let ammo_cat = &self.config.hud.overlay_text.ammo_text;
             let ifs = icon_cat.font_size * esp_scale;
             let afs = ammo_cat.font_size * esp_scale;
+            let icon_color = if icon_cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                icon_cat.color
+            };
+            let ammo_color = if ammo_cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                ammo_cat.color
+            };
             let icon_anchor = self.box_anchor(tl, tr, bl, br, icon_cat.position, 0.0, 0.0);
             self.text_sized(
                 painter,
                 player.weapon.to_icon().to_string(),
                 icon_anchor,
                 icon_cat.align.to_align2(),
-                Self::alpha(icon_cat.color, alpha),
+                Self::alpha(icon_color, alpha),
                 ifs,
             );
             if player.ammo.0 >= 0 {
@@ -237,11 +276,63 @@ impl AppState {
                     format!("{}/{}", player.ammo.0, player.ammo.1),
                     ammo_anchor,
                     ammo_cat.align.to_align2(),
-                    Self::alpha(ammo_cat.color, alpha),
+                    Self::alpha(ammo_color, alpha),
                     afs,
                 );
             }
         }
+    }
+
+    fn player_tracers(
+        &self,
+        painter: &Painter,
+        player: &PlayerData,
+        data: &Data,
+        alpha: Option<f32>,
+    ) {
+        let mode = &self.config.player.snaplines;
+
+        let alpha_col = alpha.unwrap_or(255.0) as u8;
+
+        let color: Color32 = match mode {
+            SnaplineMode::None => return,
+            SnaplineMode::Color => self.config.player.snapline_color,
+            SnaplineMode::PlayerColor => Self::player_color(player.color),
+            SnaplineMode::Distance => {
+                const MAX_DIST: f32 = 3000.0;
+                let dist: u8 = (data
+                    .local_player
+                    .position
+                    .distance(player.position)
+                    .min(MAX_DIST)
+                    / MAX_DIST
+                    * 255.0) as u8;
+                Color32::from_rgba_unmultiplied(255 - dist, dist, 0, alpha_col)
+            }
+            SnaplineMode::Health => {
+                let h: u8 = ((player.health as f32 / player.max_health as f32) * 255.0) as u8;
+                Color32::from_rgba_unmultiplied(255 - h, h, 0, alpha_col)
+            }
+        };
+
+        let stroke = Stroke::new(self.config.hud.line_width, color);
+
+        let target_pos = player.position;
+
+        let y_value = match self.config.player.snapline_anchor {
+            SnaplineAnchor::Center => 50.0,
+            SnaplineAnchor::Bottom => 100.0,
+        };
+
+        let center = Pos2::new(
+            data.window_size.x / 2.0,
+            data.window_size.y / 100.0 * y_value,
+        );
+        let target = world_to_screen_normalized(&target_pos, data);
+
+        let points = vec![center, target];
+
+        painter.line(points, stroke);
     }
 
     pub fn calculate_box_corners<K>(
@@ -379,6 +470,7 @@ impl AppState {
                 self.config.player.skeleton_color.a(),
             ),
             DrawMode::Color => self.config.player.skeleton_color,
+            DrawMode::PlayerColor => Self::player_color(player.color),
         };
         if let Some(alpha) = alpha {
             color = Self::alpha(color, alpha);
@@ -413,6 +505,9 @@ impl AppState {
         let Some(spine) = player.bones.get(&Bones::Spine3) else {
             return;
         };
+        let Some(head) = player.bones.get(&Bones::Head) else {
+            return;
+        };
 
         let Some(neck) = world_to_screen(neck, data) else {
             return;
@@ -420,10 +515,12 @@ impl AppState {
         let Some(spine) = world_to_screen(spine, data) else {
             return;
         };
+        let Some(head) = world_to_screen(head, data) else {
+            return;
+        };
 
-        let height = spine.y - neck.y;
-        let pos = pos2(neck.x - (spine.x - neck.x) / 2.0, neck.y - height / 2.0);
-        painter.circle_stroke(pos, height / 2.0, stroke);
+        let radius = (spine.y - neck.y).abs() / 2.4;
+        painter.circle_stroke(head, radius, stroke);
     }
 
     #[allow(clippy::too_many_arguments)]

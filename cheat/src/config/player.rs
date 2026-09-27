@@ -9,6 +9,7 @@ pub enum DrawMode {
     None,
     Health,
     Color,
+    PlayerColor,
 }
 
 impl std::fmt::Display for DrawMode {
@@ -17,6 +18,45 @@ impl std::fmt::Display for DrawMode {
             Self::None => "None",
             Self::Health => "Health",
             Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
+        }
+        .fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum SnaplineMode {
+    None,
+    Health,
+    Distance,
+    Color,
+    PlayerColor,
+}
+
+impl std::fmt::Display for SnaplineMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::None => "None",
+            Self::Health => "Health",
+            Self::Distance => "Distance",
+            Self::Color => "Color",
+            Self::PlayerColor => "Player Color",
+        }
+        .fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum SnaplineAnchor {
+    Center,
+    Bottom,
+}
+
+impl std::fmt::Display for SnaplineAnchor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Center => "Center",
+            Self::Bottom => "Bottom",
         }
         .fmt(f)
     }
@@ -38,6 +78,40 @@ impl std::fmt::Display for BoxMode {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum ModelRenderMode {
+    Filled,
+    Wireframe,
+}
+
+impl std::fmt::Display for ModelRenderMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Filled => "Filled",
+            Self::Wireframe => "Wireframe",
+        }
+        .fmt(f)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+pub enum VisibilityMode {
+    All,
+    InvisibleOnly,
+    VisibleOnly,
+}
+
+impl std::fmt::Display for VisibilityMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::All => "All",
+            Self::InvisibleOnly => "Invisible Only",
+            Self::VisibleOnly => "Visible Only",
+        }
+        .fmt(f)
+    }
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct PlayerConfig {
@@ -49,15 +123,22 @@ pub struct PlayerConfig {
     pub box_mode: BoxMode,
     pub box_visible_color: Color32,
     pub box_invisible_color: Color32,
+    pub snaplines: SnaplineMode,
+    pub snapline_color: Color32,
+    pub snapline_anchor: SnaplineAnchor,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
+    pub draw_model: DrawMode,
+    pub model_mode: ModelRenderMode,
+    pub model_visible_color: Color32,
+    pub model_invisible_color: Color32,
     pub head_circle: bool,
     pub health_bar: bool,
     pub armor_bar: bool,
     pub player_name: bool,
     pub weapon_icon: bool,
     pub tags: bool,
-    pub visible_only: bool,
+    pub visibility: VisibilityMode,
     pub sound: SoundConfig,
 }
 
@@ -72,15 +153,22 @@ impl Default for PlayerConfig {
             box_mode: BoxMode::Gap,
             box_visible_color: Color32::WHITE,
             box_invisible_color: Color32::RED,
+            snaplines: SnaplineMode::None,
+            snapline_color: Color32::PURPLE,
+            snapline_anchor: SnaplineAnchor::Center,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
+            draw_model: DrawMode::Health,
+            model_mode: ModelRenderMode::Filled,
+            model_visible_color: Color32::from_rgba_unmultiplied(255, 255, 255, 127),
+            model_invisible_color: Color32::from_rgba_unmultiplied(255, 0, 0, 127),
             head_circle: true,
             health_bar: true,
             armor_bar: true,
             player_name: true,
             weapon_icon: true,
             tags: true,
-            visible_only: false,
+            visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
         }
     }

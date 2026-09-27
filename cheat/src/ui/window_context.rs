@@ -213,6 +213,10 @@ impl WindowContext {
     pub fn egui(&self) -> &egui::Context {
         &self.egui_glow.egui_ctx
     }
+
+    pub fn glow(&self) -> Arc<glow::Context> {
+        self.glow.clone()
+    }
 }
 
 impl Drop for WindowContext {

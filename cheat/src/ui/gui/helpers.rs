@@ -80,7 +80,7 @@ pub fn color_picker(ui: &mut Ui, label: &str, color: &mut Color32) -> bool {
 
     let changed = res.changed();
     if changed {
-        *color = Color32::from_rgba_premultiplied(r, g, b, a);
+        *color = Color32::from_rgba_unmultiplied(r, g, b, a);
     }
 
     changed
@@ -126,6 +126,15 @@ pub fn text_settings_popup(
                 .inner;
 
             changed |= color_picker(ui, "Color", &mut category.color);
+
+            if matches!(
+                popup_id,
+                "player_name" | "player_tags" | "weapon_icon" | "ammo_text"
+            ) {
+                changed |= ui
+                    .checkbox(&mut category.use_player_color, "Use Player Color")
+                    .changed();
+            }
 
             ui.separator();
 

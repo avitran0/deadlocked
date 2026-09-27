@@ -24,16 +24,17 @@ The built-in update checker compares against the latest release tag and will pro
 
 > [!NOTE]
 > Running NixOS, Fedora Atomic, Hyprland (Legacy .conf config)?
-> 
+>
 > See the [compatibility,md](compatibility.md).
 
-Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` binary and `setup.sh`.
+Download the [latest release](https://github.com/avitran0/deadlocked/releases). Each release contains the `deadlocked` (or `deadlocked-reduced-models`) binary and `setup.sh`.
 
 **Setup (one-time only):**
 
 ```bash
 ./setup.sh
 ```
+
 > **Restart your machine (required)**
 
 This creates a `uinput` group, adds your user to it, and installs a udev rule.
@@ -41,9 +42,7 @@ You only need to do this once, even when updating to newer versions.
 
 **Run:**
 
-```bash
-./deadlocked
-```
+`./deadlocked` or `./deadlocked-reduced-models`, depending on which version you downloaded.
 
 The binary will refuse to start if setup hasn't been completed.
 Also make sure the `uinput` kernel module is loaded.
@@ -56,15 +55,7 @@ Also make sure the `uinput` kernel module is loaded.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 git clone https://github.com/avitran0/deadlocked
 cd deadlocked
-cargo run --release
-```
-
-<br>
-
-## Running
-
-```bash
-./run.sh
+cargo run --release --bin deadlocked
 ```
 
 <br>
@@ -117,11 +108,18 @@ cargo run --release
 - Triggerbot
 - RCS
 
+## Web Radar
+
+- Web radar
+- Follow player
+- Shareable
+
 ### Misc
 
 - Sniper crosshair
 - Bomb timer
 - Grenade lineup alignment
+- Web radar ([FAQ](radar.md))
 
 ### Unsafe
 
@@ -151,20 +149,20 @@ Configs are saved in `$XDG_CONFIG_HOME` with fallback to `$HOME/.config`. Otherw
 
 **Best support:**
 
-* GNOME (Mutter)
-* KDE (KWin)
+- GNOME (Mutter)
+- KDE (KWin)
 
 **Good support:**
 
-* SwayWM
-* Weston
+- SwayWM
+- Weston
 
 **Fair support:**
 
-* i3
-* OpenBox
-* XFCE
-* Hyprland (tweaks may be needed, no guarantees; see [compatibility,md](compatibility.md/#hyprland))
+- i3
+- OpenBox
+- XFCE
+- Hyprland (tweaks may be needed, no guarantees; see [compatibility.md](compatibility.md/#hyprland))
 
 </details>
 

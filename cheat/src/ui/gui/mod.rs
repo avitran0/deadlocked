@@ -74,7 +74,7 @@ impl AppState {
         write_config(&self.config, &self.current_config);
     }
 
-    fn gui(&mut self, ui: &mut Ui) {
+    pub(crate) fn gui(&mut self, ui: &mut Ui) {
         ui.ctx().set_pixels_per_point(self.display_scale);
         egui::Panel::left("sidebar")
             .resizable(false)
@@ -155,6 +155,47 @@ impl AppState {
                 });
             if close {
                 self.update_popup = false;
+            }
+        }
+
+        if self.omarchy_popup {
+            let mut close = false;
+            egui::Window::new("Omarchy Warning")
+                .id(egui::Id::new("omarchy_warning_popup"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    ui.label(
+                        egui::RichText::new(
+                            "Warning: Omarchy is part of the normalization of fascism in open source.",
+                        )
+                        .color(Colors::YELLOW)
+                        .size(18.0),
+                    );
+                    ui.add_space(8.0);
+                    ui.label(
+                        "DHH's Linux distribution is backed by the Omacom Foundation and a network of wealthy tech executives and companies. The article documents the white-nationalist and far-right politics behind that funding.",
+                    );
+                    ui.add_space(8.0);
+                    ui.label("I would greatly suggest picking another distro.");
+                    ui.add_space(8.0);
+                    ui.label("Read the article for the full context:");
+                    if ui
+                        .link("Normalized Fascism in Open Source: $12 Million Given to DHH")
+                        .clicked()
+                    {
+                        open_url(
+                            "https://brennan.day/normalized-fascism-in-open-source-12-million-given-to-dhh/",
+                        );
+                    }
+                    ui.separator();
+                    if ui.button("Close").clicked() {
+                        close = true;
+                    }
+                });
+            if close {
+                self.omarchy_popup = false;
             }
         }
     }
@@ -258,44 +299,7 @@ impl AppState {
 }
 
 impl App {
-    pub fn render(&mut self) {
-        let gui = self.gui.as_mut().unwrap();
-        let overlay = self.overlay.as_mut().unwrap();
-        let state = &mut self.state;
-
-        if let Err(err) = gui.make_current() {
-            utils::error!("could not make gui window current: {err}");
-            return;
-        }
-        gui.run(|ui| state.gui(ui));
-        gui.clear();
-        gui.paint();
-
-        if let Err(err) = gui.swap_buffers() {
-            utils::error!("could not swap gui window buffers: {err}");
-            return;
-        }
-
-        overlay.window().set_cursor_hittest(false).unwrap();
-        {
-            let data_guard = state.data.lock();
-            Self::update_overlay_window(overlay, &data_guard);
-        }
-        if let Err(err) = overlay.make_current() {
-            utils::error!("could not make overlay window current: {err}");
-            return;
-        }
-
-        overlay.run(move |ui| state.overlay(ui));
-        overlay.clear();
-        overlay.paint();
-
-        if let Err(err) = overlay.swap_buffers() {
-            utils::error!("could not swap overlay window buffers: {err}");
-        }
-    }
-
-    fn update_overlay_window(overlay: &WindowContext, data: &Data) {
+    pub(crate) fn update_overlay_window(overlay: &WindowContext, data: &Data) {
         use winit::dpi::PhysicalPosition;
         let position =
             PhysicalPosition::new(data.window_position.x as i32, data.window_position.y as i32);

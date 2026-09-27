@@ -1,6 +1,6 @@
 [package]
 name = "deadlocked"
-version = "1.2.0"
+version = "1.3.1"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,7 @@ shared.workspace = true
 utils.workspace = true
 
 glam.workspace = true
+gltf = { version = "1.4", features = ["extras"] }
 postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -15,14 +16,13 @@ strum.workspace = true
 uuid.workspace = true
 
 bytemuck = "1.24"
-egui = "0.36"
+egui = { version = "0.36", features = ["serde"] }
 egui_glow = { version = "0.36", features = ["winit"] }
 egui-winit = { version = "0.36", default-features = false, features = [
     "clipboard",
     "links",
     "x11",
 ] }
-epaint = { version = "0.36", features = ["serde"] }
 glutin = { version = "0.32", default-features = false, features = [
     "x11",
     "egl",
@@ -41,4 +41,6 @@ urlencoding = "2.1"
 winit = { version = "0.30", default-features = false, features = ["x11"] }
 
 [features]
+default = []
+reduced-models = []
 read-only = []
