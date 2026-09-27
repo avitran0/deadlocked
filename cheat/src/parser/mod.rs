@@ -4,6 +4,7 @@ use crate::{
 };
 
 pub mod bvh;
+pub mod cache;
 
 pub fn read_map(cs2: &CS2) -> Option<Bvh> {
     let triangles = read_bvh(cs2)?;

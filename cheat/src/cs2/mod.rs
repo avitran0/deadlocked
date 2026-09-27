@@ -27,7 +27,7 @@ use crate::{
     },
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
-    parser::{bvh::Bvh, read_map},
+    parser::{bvh::Bvh, cache, read_map},
     ui::grenades::GrenadeList,
 };
 
@@ -412,9 +412,23 @@ impl CS2 {
     fn check_bvh(&mut self) {
         let current_map = self.current_map();
         if current_map != self.current_bvh {
+            let game_version = cache::game_version(&self.process);
+            if let Some(version) = &game_version
+                && let Some(bvh) = cache::load(&current_map, version)
+            {
+                utils::info!("loaded bvh for {current_map} from cache");
+                self.bvh = Some(bvh);
+                self.current_bvh = current_map;
+                return;
+            }
+
             self.bvh = read_map(self);
-            if self.bvh.is_some() {
-                utils::info!("loaded bvh for {current_map}");
+            if let Some(bvh) = self.bvh.take() {
+                utils::info!("built bvh for {current_map}");
+                self.bvh = Some(match &game_version {
+                    Some(version) => cache::save(&current_map, version, bvh),
+                    None => bvh,
+                });
                 self.current_bvh = current_map;
             }
         }
