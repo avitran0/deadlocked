@@ -3,7 +3,10 @@ use std::{fmt::Display, time::Duration};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use crate::config::{Config, radar::RadarConfig};
+use crate::{
+    config::{Config, radar::RadarConfig},
+    ui::grenades::GrenadeList,
+};
 
 #[derive(Clone, Serialize, Deserialize, PartialEq)]
 pub enum GameStatus {
@@ -21,7 +24,10 @@ impl Display for GameStatus {
 }
 
 #[derive(Clone)]
-pub struct GameMessage(pub Box<Config>);
+pub enum GameMessage {
+    Config(Box<Config>),
+    Grenades(Box<GrenadeList>),
+}
 
 #[derive(Clone)]
 pub enum UiMessage {

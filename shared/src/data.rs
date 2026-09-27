@@ -43,6 +43,8 @@ pub struct Data {
     #[serde(skip)]
     pub triggerbot_active: bool,
     #[serde(skip)]
+    pub grenade_align_active: bool,
+    #[serde(skip)]
     pub esp_active: bool,
 }
 

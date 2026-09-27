@@ -118,6 +118,7 @@ cargo run --release --bin deadlocked
 
 - Sniper crosshair
 - Bomb timer
+- Grenade lineup alignment
 - Web radar ([FAQ](radar.md))
 
 ### Unsafe

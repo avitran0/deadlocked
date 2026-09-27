@@ -16,7 +16,10 @@ use crate::{
             player::Player,
             weapon::{weapon_clip_ammo, weapon_reserve_ammo},
         },
-        features::{aimbot::Aimbot, esp_toggle::EspToggle, rcs::Recoil, triggerbot::Triggerbot},
+        features::{
+            aimbot::Aimbot, esp_toggle::EspToggle, grenade_align::GrenadeAlign, rcs::Recoil,
+            triggerbot::Triggerbot,
+        },
         input::Input,
         key_codes::KeyCode,
         offsets::Offsets,
@@ -25,6 +28,7 @@ use crate::{
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
     parser::{bvh::Bvh, read_map},
+    ui::grenades::GrenadeList,
 };
 
 pub mod bvh;
@@ -52,12 +56,18 @@ pub struct CS2 {
     aim: Aimbot,
     trigger: Triggerbot,
     esp: EspToggle,
+    grenade_align: GrenadeAlign,
+    grenades: GrenadeList,
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
     last_cache: Instant,
 }
 
 impl CS2 {
+    pub fn set_grenades(&mut self, grenades: GrenadeList) {
+        self.grenades = grenades;
+    }
+
     pub fn is_valid(&self) -> bool {
         self.is_valid && self.process.is_valid()
     }
@@ -124,6 +134,8 @@ impl CS2 {
         if !self.aimbot(config, mouse) {
             self.rcs(config, mouse);
         }
+
+        self.grenade_align(config, mouse);
     }
 
     pub fn data(&self, config: &Config, data: &mut Data) {
@@ -282,6 +294,7 @@ impl CS2 {
         } else {
             false
         };
+        data.grenade_align_active = self.input.is_key_pressed(config.aim.grenade_align.hotkey);
         data.esp_active = self.esp_enabled(config);
 
         data.view_matrix = self.process.read::<Mat4>(self.offsets.direct.view_matrix);
@@ -314,6 +327,8 @@ impl CS2 {
             aim: Aimbot::default(),
             trigger: Triggerbot::default(),
             esp: EspToggle::default(),
+            grenade_align: GrenadeAlign::default(),
+            grenades: GrenadeList::default(),
             weapon: Weapon::default(),
             planted_c4: None,
             last_cache: Instant::now(),
