@@ -2,24 +2,24 @@ use std::collections::HashSet;
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::{cs2::CS2, parser::bvh::Triangle};
+use crate::{os::process::Process, parser::bvh::Triangle};
 
 const MAX_VECTOR_ITEMS: usize = 2_000_000;
 
-pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
-    let world: usize = cs2.process.read(cs2.offsets.direct.vphys_world);
+pub fn read_bvh(process: &Process, vphys_world: usize) -> Option<Vec<Triangle>> {
+    let world: usize = process.read(vphys_world);
     if world == 0 {
         return None;
     }
-    let inner: usize = cs2.process.read(world + 0x30);
+    let inner: usize = process.read(world + 0x30);
     if inner == 0 {
         return None;
     }
-    let bodies: usize = cs2.process.read(inner + 0x118);
+    let bodies: usize = process.read(inner + 0x118);
     if bodies == 0 {
         return None;
     }
-    let body_count: i32 = cs2.process.read(bodies + 0x268);
+    let body_count: i32 = process.read(bodies + 0x268);
     if body_count <= 0 || body_count as usize > MAX_VECTOR_ITEMS {
         return None;
     }
@@ -29,14 +29,14 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
 
     for body_index in 0..body_count as usize {
         let body = bodies + body_index * 88;
-        if cs2.process.read::<u32>(body + 0x40) != 2 {
+        if process.read::<u32>(body + 0x40) != 2 {
             continue;
         }
 
-        let root: i32 = cs2.process.read(body);
-        let nodes_ptr: usize = cs2.process.read(body + 0x18);
-        let count_a: i32 = cs2.process.read(body + 0x08);
-        let count_b: i32 = cs2.process.read(body + 0x10);
+        let root: i32 = process.read(body);
+        let nodes_ptr: usize = process.read(body + 0x18);
+        let count_a: i32 = process.read(body + 0x08);
+        let count_b: i32 = process.read(body + 0x10);
         if nodes_ptr == 0
             || count_a <= 0
             || count_a != count_b
@@ -48,8 +48,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
         }
 
         let nodes: Vec<OuterNode> =
-            cs2.process
-                .read_typed_vec(nodes_ptr, size_of::<OuterNode>(), count_a as usize);
+            process.read_typed_vec(nodes_ptr, size_of::<OuterNode>(), count_a as usize);
         if nodes.len() != count_a as usize {
             continue;
         }
@@ -63,7 +62,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
             let node = nodes[index as usize];
             if node.left == -1 && node.right == -1 {
                 if node.shape != 0 && seen_shapes.insert(node.shape) {
-                    process_shape(cs2, node.shape, &mut triangles);
+                    process_shape(process, node.shape, &mut triangles);
                 }
                 continue;
             }
@@ -79,38 +78,37 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
     (!triangles.is_empty()).then_some(triangles)
 }
 
-fn process_shape(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
+fn process_shape(process: &Process, shape: usize, triangles: &mut Vec<Triangle>) {
     // m_nInteractsAs: retain only world geometry (bit 0). this excludes
     // clip/trigger-style collision volumes that otherwise occlude visibility.
-    if cs2.process.read::<u64>(shape + 0x50) & 1 == 0 {
+    if process.read::<u64>(shape + 0x50) & 1 == 0 {
         return;
     }
-    match rtti_name(cs2, shape).as_str() {
-        "12CRnMeshShape" => process_mesh(cs2, shape, triangles),
-        "12CRnHullShape" => process_hull(cs2, shape, triangles),
+    match rtti_name(process, shape).as_str() {
+        "12CRnMeshShape" => process_mesh(process, shape, triangles),
+        "12CRnHullShape" => process_hull(process, shape, triangles),
         _ => {}
     }
 }
 
-fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
-    let mesh: usize = cs2.process.read(shape + 0xC0);
+fn process_mesh(process: &Process, shape: usize, triangles: &mut Vec<Triangle>) {
+    let mesh: usize = process.read(shape + 0xC0);
     if mesh == 0 {
         return;
     }
-    let vertices: UtlVector = cs2.process.read(mesh + 0x30);
-    let indices: UtlVector = cs2.process.read(mesh + 0x48);
+    let vertices: UtlVector = process.read(mesh + 0x30);
+    let indices: UtlVector = process.read(mesh + 0x48);
     if !valid_vector(vertices) || !valid_vector(indices) {
         return;
     }
 
-    let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
+    let vertices: Vec<glam::Vec3> = process.read_typed_vec(
         vertices.data,
         size_of::<glam::Vec3>(),
         vertices.count as usize,
     );
     let indices: Vec<Tri> =
-        cs2.process
-            .read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
+        process.read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
     for tri in indices {
         let [a, b, c] = tri.idx;
         if a < 0 || b < 0 || c < 0 {
@@ -128,33 +126,30 @@ fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     }
 }
 
-fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
-    let hull: usize = cs2.process.read(shape + 0xB8);
+fn process_hull(process: &Process, shape: usize, triangles: &mut Vec<Triangle>) {
+    let hull: usize = process.read(shape + 0xB8);
     if hull == 0 {
         return;
     }
-    let scale: f32 = cs2.process.read(shape + 0xB0);
+    let scale: f32 = process.read(shape + 0xB0);
     if !scale.is_finite() {
         return;
     }
-    let vertices: UtlVector = cs2.process.read(hull + 0x70);
-    let edges: UtlVector = cs2.process.read(hull + 0xC8);
-    let faces: UtlVector = cs2.process.read(hull + 0xE0);
+    let vertices: UtlVector = process.read(hull + 0x70);
+    let edges: UtlVector = process.read(hull + 0xC8);
+    let faces: UtlVector = process.read(hull + 0xE0);
     if !valid_vector(vertices) || !valid_vector(edges) || !valid_vector(faces) {
         return;
     }
 
-    let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
+    let vertices: Vec<glam::Vec3> = process.read_typed_vec(
         vertices.data,
         size_of::<glam::Vec3>(),
         vertices.count as usize,
     );
     let edges: Vec<HalfEdge> =
-        cs2.process
-            .read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
-    let faces: Vec<u8> = (0..faces.count as usize)
-        .map(|i| cs2.process.read(faces.data + i))
-        .collect();
+        process.read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
+    let faces: Vec<u8> = process.read_typed_vec(faces.data, 1, faces.count as usize);
     if vertices.is_empty() || edges.is_empty() {
         return;
     }
@@ -205,20 +200,20 @@ fn valid_vector(vector: UtlVector) -> bool {
         && (vector.count == 0 || vector.data != 0)
 }
 
-fn rtti_name(cs2: &CS2, object: usize) -> String {
-    let vtable: usize = cs2.process.read(object);
+fn rtti_name(process: &Process, object: usize) -> String {
+    let vtable: usize = process.read(object);
     if vtable == 0 {
         return String::new();
     }
-    let rtti: usize = cs2.process.read(vtable - 0x08);
+    let rtti: usize = process.read(vtable - 0x08);
     if rtti == 0 {
         return String::new();
     }
-    let name: usize = cs2.process.read(rtti + 0x08);
+    let name: usize = process.read(rtti + 0x08);
     if name == 0 {
         return String::new();
     }
-    cs2.process.read_string(name)
+    process.read_string(name)
 }
 
 #[repr(C)]

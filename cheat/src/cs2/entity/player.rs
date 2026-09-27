@@ -9,6 +9,14 @@ use crate::cs2::{
     entity::{base_entity::BaseEntity, weapon::weapon_from_handle},
 };
 
+const VISIBILITY_BONES: [Bones; 5] = [
+    Bones::Head,
+    Bones::LeftFoot,
+    Bones::RightFoot,
+    Bones::LeftHand,
+    Bones::RightHand,
+];
+
 #[derive(Clone, Copy, PartialEq)]
 pub struct Player {
     controller: usize,
@@ -261,14 +269,17 @@ impl Player {
         }
     }
 
-    pub fn bone_position(&self, cs2: &CS2, bone_index: u64) -> Vec3 {
+    fn bone_data(&self, cs2: &CS2) -> usize {
         let gs_node = self.game_scene_node(cs2);
-        let bone_data: usize = cs2.process.read(
+        cs2.process.read(
             gs_node
                 + cs2.offsets.game_scene_node.model_state
                 + cs2.offsets.model_state.skeleton_instance,
-        );
+        )
+    }
 
+    pub fn bone_position(&self, cs2: &CS2, bone_index: u64) -> Vec3 {
+        let bone_data = self.bone_data(cs2);
         if bone_data == 0 {
             return Vec3::ZERO;
         }
@@ -283,18 +294,21 @@ impl Player {
     ) -> (HashMap<Bones, Vec3>, Vec<BoneTransform>) {
         // read the skeleton once for esp and models
         let mut bones = HashMap::with_capacity(Bones::iter().len());
-        let gs_node = self.game_scene_node(cs2);
-        let bone_data: usize = cs2.process.read(
-            gs_node
-                + cs2.offsets.game_scene_node.model_state
-                + cs2.offsets.model_state.skeleton_instance,
-        );
+        let bone_data = self.bone_data(cs2);
         if bone_data == 0 {
             return (bones, Vec::new());
         }
 
-        let mut skeleton = (0..crate::constants::cs2::MESH_SKELETON_BONE_COUNT)
-            .map(|index| BoneTransform::from_memory(cs2.process.read(bone_data + index * 32)))
+        // one read for the whole bone array instead of one per bone
+        let mut skeleton = cs2
+            .process
+            .read_typed_vec::<[f32; 8]>(
+                bone_data,
+                32,
+                crate::constants::cs2::MESH_SKELETON_BONE_COUNT,
+            )
+            .into_iter()
+            .map(BoneTransform::from_memory)
             .collect::<Vec<_>>();
         for bone in Bones::iter() {
             bones.insert(bone, skeleton[bone.u64() as usize].position);
@@ -471,17 +485,32 @@ impl Player {
     }
 
     pub fn visible(&self, cs2: &CS2, local_player: &Player) -> bool {
-        const CHECKED_BONES: [Bones; 5] = [
-            Bones::Head,
-            Bones::LeftFoot,
-            Bones::RightFoot,
-            Bones::LeftHand,
-            Bones::RightHand,
-        ];
+        let Some(bvh) = &cs2.bvh else {
+            return (self.spotted_mask(cs2) & (1 << cs2.target.local_pawn_index)) != 0;
+        };
 
-        CHECKED_BONES
-            .iter()
-            .any(|bone| self.bone_visible(cs2, local_player, bone.u64()))
+        let eye_position = local_player.eye_position(cs2);
+        let bone_data = self.bone_data(cs2);
+        VISIBILITY_BONES.iter().any(|bone| {
+            let position = if bone_data == 0 {
+                Vec3::ZERO
+            } else {
+                cs2.process.read(bone_data + bone.u64() as usize * 32)
+            };
+            bvh.has_line_of_sight(eye_position, position)
+        })
+    }
+
+    /// same result as `visible`, but reuses the visibility already computed for the skeleton
+    pub fn skeleton_visible(skeleton: &[BoneTransform]) -> Option<bool> {
+        if skeleton.is_empty() {
+            return None;
+        }
+        Some(VISIBILITY_BONES.iter().any(|bone| {
+            skeleton
+                .get(bone.u64() as usize)
+                .is_some_and(|bone| bone.visibility > 0.5)
+        }))
     }
 
     pub fn crosshair_entity(&self, cs2: &CS2) -> Option<Self> {

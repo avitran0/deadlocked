@@ -1,12 +1,9 @@
-use crate::{
-    cs2::{CS2, bvh::read_bvh},
-    parser::bvh::Bvh,
-};
+use crate::{cs2::bvh::read_bvh, os::process::Process, parser::bvh::Bvh};
 
 pub mod bvh;
 
-pub fn read_map(cs2: &CS2) -> Option<Bvh> {
-    let triangles = read_bvh(cs2)?;
+pub fn read_map(process: &Process, vphys_world: usize) -> Option<Bvh> {
+    let triangles = read_bvh(process, vphys_world)?;
     let mut bvh = Bvh::new();
     bvh.set(triangles);
     bvh.build();

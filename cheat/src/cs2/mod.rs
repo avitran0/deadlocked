@@ -1,4 +1,7 @@
-use std::time::{Duration, Instant};
+use std::{
+    thread::JoinHandle,
+    time::{Duration, Instant},
+};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 use shared::{Bones, Data, EntityInfo, PlayerData, Weapon, WeaponInfo};
@@ -48,6 +51,7 @@ pub struct CS2 {
     input: Input,
     bvh: Option<Bvh>,
     current_bvh: String,
+    bvh_loader: Option<(String, JoinHandle<Option<Bvh>>)>,
     target: Target,
     players: Vec<Player>,
     dead_players: Vec<Player>,
@@ -181,6 +185,9 @@ impl CS2 {
             }
 
             let (bones, skeleton) = player.skeleton_and_bones_with_visibility(self, &local_player);
+            let head = bones.get(&Bones::Head).copied().unwrap_or(Vec3::ZERO);
+            let visible = Player::skeleton_visible(&skeleton)
+                .unwrap_or_else(|| player.visible(self, &local_player));
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 money: player.money(self),
@@ -189,7 +196,7 @@ impl CS2 {
                 max_health: player.max_health(self),
                 armor: player.armor(self),
                 position: player.position(self),
-                head: player.bone_position(self, Bones::Head.u64()),
+                head,
                 name: player.name(self),
                 model_name: player.model_name(self),
                 weapon: player.weapon(self),
@@ -199,7 +206,7 @@ impl CS2 {
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
-                visible: player.visible(self, &local_player),
+                visible,
                 color: player.color(self),
                 rotation: player.rotation(self),
                 sound: player.is_making_sound(self),
@@ -319,6 +326,7 @@ impl CS2 {
             input: Input::new(),
             bvh: None,
             current_bvh: String::new(),
+            bvh_loader: None,
             target: Target::default(),
             players: Vec::with_capacity(64),
             dead_players: Vec::with_capacity(12),
@@ -407,14 +415,32 @@ impl CS2 {
     }
 
     fn check_bvh(&mut self) {
-        let current_map = self.current_map();
-        if current_map != self.current_bvh {
-            self.bvh = read_map(self);
-            if self.bvh.is_some() {
-                utils::info!("loaded bvh for {current_map}");
-                self.current_bvh = current_map;
+        // map parsing and bvh building take seconds, so they run on a separate thread
+        if let Some((_, handle)) = &self.bvh_loader {
+            if !handle.is_finished() {
+                return;
+            }
+            let (map, handle) = self.bvh_loader.take().unwrap();
+            if let Ok(Some(bvh)) = handle.join() {
+                utils::info!("loaded bvh for {map}");
+                self.bvh = Some(bvh);
+                self.current_bvh = map;
             }
         }
+
+        let current_map = self.current_map();
+        if current_map == self.current_bvh {
+            return;
+        }
+
+        // the old map's geometry is wrong for the new one, fall back to spotted state while loading
+        self.bvh = None;
+        let Some(process) = self.process.try_clone() else {
+            return;
+        };
+        let vphys_world = self.offsets.direct.vphys_world;
+        let handle = std::thread::spawn(move || read_map(&process, vphys_world));
+        self.bvh_loader = Some((current_map, handle));
     }
 
     fn check_hotkey(input: &Input, mode: KeyMode, key: KeyCode, active: &mut bool) -> bool {
