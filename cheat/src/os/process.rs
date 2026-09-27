@@ -67,10 +67,6 @@ impl Process {
         ret
     }
 
-    pub fn exe_path(&self) -> Option<PathBuf> {
-        read_link(self.path.join("exe")).ok()
-    }
-
     pub fn is_valid(&self) -> bool {
         self.path.exists() && self.pid > 0
     }

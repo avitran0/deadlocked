@@ -412,10 +412,7 @@ impl CS2 {
     fn check_bvh(&mut self) {
         let current_map = self.current_map();
         if current_map != self.current_bvh {
-            let game_version = cache::game_version(&self.process);
-            if let Some(version) = &game_version
-                && let Some(bvh) = cache::load(&current_map, version)
-            {
+            if let Some(bvh) = cache::load(&self.process, &current_map) {
                 utils::info!("loaded bvh for {current_map} from cache");
                 self.bvh = Some(bvh);
                 self.current_bvh = current_map;
@@ -423,12 +420,9 @@ impl CS2 {
             }
 
             self.bvh = read_map(self);
-            if let Some(bvh) = self.bvh.take() {
+            if let Some(bvh) = &self.bvh {
                 utils::info!("built bvh for {current_map}");
-                self.bvh = Some(match &game_version {
-                    Some(version) => cache::save(&current_map, version, bvh),
-                    None => bvh,
-                });
+                cache::save(&self.process, &current_map, bvh);
                 self.current_bvh = current_map;
             }
         }

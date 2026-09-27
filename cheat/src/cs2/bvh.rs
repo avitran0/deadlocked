@@ -152,7 +152,9 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     let edges: Vec<HalfEdge> =
         cs2.process
             .read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
-    let faces: Vec<u8> = cs2.process.read_typed_vec(faces.data, 1, faces.count as usize);
+    let faces: Vec<u8> = cs2
+        .process
+        .read_typed_vec(faces.data, 1, faces.count as usize);
     if vertices.is_empty() || edges.is_empty() {
         return;
     }

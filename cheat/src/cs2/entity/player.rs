@@ -485,20 +485,9 @@ impl Player {
     }
 
     pub fn visible(&self, cs2: &CS2, local_player: &Player) -> bool {
-        let Some(bvh) = &cs2.bvh else {
-            return (self.spotted_mask(cs2) & (1 << cs2.target.local_pawn_index)) != 0;
-        };
-
-        let eye_position = local_player.eye_position(cs2);
-        let bone_data = self.bone_data(cs2);
-        VISIBILITY_BONES.iter().any(|bone| {
-            let position = if bone_data == 0 {
-                Vec3::ZERO
-            } else {
-                cs2.process.read(bone_data + bone.u64() as usize * 32)
-            };
-            bvh.has_line_of_sight(eye_position, position)
-        })
+        VISIBILITY_BONES
+            .iter()
+            .any(|bone| self.bone_visible(cs2, local_player, bone.u64()))
     }
 
     /// same result as `visible`, but reuses the visibility already computed for the skeleton
