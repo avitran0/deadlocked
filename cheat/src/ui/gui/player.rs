@@ -2,6 +2,7 @@ use egui::{DragValue, Ui};
 
 use crate::ui::{
     app::AppState,
+    audio::{audio_display_name, audio_options},
     gui::helpers::{
         checkbox, checkbox_hover, collapsing_open, color_picker, combo_box, drag, keybind, scroll,
         text_settings_button,
@@ -59,6 +60,8 @@ impl AppState {
                     self.send_config_game();
                 }
             });
+
+            self.render_audio_popups(ui);
         });
     }
 
@@ -209,6 +212,40 @@ impl AppState {
                 }
                 text_settings_button(ui, &mut self.text_popup, "player_tags");
             });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.hit_sound.enabled, "Hit Sound")
+                    .changed()
+                {
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
+                    self.send_config_game();
+                }
+
+                if ui.button("⚙").clicked() {
+                    self.hit_audio_popup = !self.hit_audio_popup;
+                }
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.kill_sound.enabled, "Kill Sound")
+                    .changed()
+                {
+                    self.audio_player.update(
+                        &self.config.player.hit_sound,
+                        &self.config.player.kill_sound,
+                    );
+                    self.send_config_game();
+                }
+
+                if ui.button("⚙").clicked() {
+                    self.kill_audio_popup = !self.kill_audio_popup;
+                }
+            });
         });
 
         ui.collapsing("Sound ESP", |ui| {
@@ -299,4 +336,100 @@ impl AppState {
             });
         });
     }
+
+    fn render_audio_popups(&mut self, ui: &mut Ui) {
+        let (hit_changed, test_hit) = audio_settings_popup(
+            ui,
+            "hit_audio",
+            &mut self.hit_audio_popup,
+            &mut self.config.player.hit_sound.path,
+            &mut self.config.player.hit_sound.volume,
+        );
+        let (kill_changed, test_kill) = audio_settings_popup(
+            ui,
+            "kill_audio",
+            &mut self.kill_audio_popup,
+            &mut self.config.player.kill_sound.path,
+            &mut self.config.player.kill_sound.volume,
+        );
+
+        if hit_changed || kill_changed || test_hit || test_kill {
+            self.audio_player.update(
+                &self.config.player.hit_sound,
+                &self.config.player.kill_sound,
+            );
+            if hit_changed || kill_changed {
+                self.send_config_game();
+            }
+            if test_hit {
+                self.audio_player.play_hit();
+            }
+            if test_kill {
+                self.audio_player.play_kill();
+            }
+        }
+    }
+}
+
+fn audio_settings_popup(
+    ui: &mut Ui,
+    id: &str,
+    open: &mut bool,
+    path: &mut String,
+    volume: &mut f32,
+) -> (bool, bool) {
+    const AUDIO_MENU_WIDTH: f32 = 360.0;
+
+    if !*open {
+        return (false, false);
+    }
+
+    let mut changed = false;
+    let mut test_clicked = false;
+    let mut options = audio_options().collect::<Vec<_>>();
+    options.sort_unstable();
+
+    egui::Window::new("Audio settings")
+        .id(egui::Id::new(id))
+        .open(open)
+        .collapsible(false)
+        .resizable(false)
+        .show(ui.ctx(), |ui| {
+            ui.set_width(AUDIO_MENU_WIDTH);
+            ui.label("Audio Volume");
+            changed |= ui
+                .scope(|ui| {
+                    ui.spacing_mut().slider_width = ui.available_width();
+                    //Users have the right of becoming deaf or using low quality audio if they want,
+                    //so we don't limit the volume to 1.0
+                    ui.add(egui::Slider::new(volume, 0.0..=3.0).show_value(false)) 
+                })
+                .inner
+                .changed();
+            ui.label(format!("{:.0}%", *volume * 100.0));
+
+            ui.add_space(8.0);
+            egui::ComboBox::new(id, "Audio")
+                .selected_text(if options.contains(&path.as_str()) {
+                    audio_display_name(path)
+                } else {
+                    "Select audio"
+                })
+                .show_ui(ui, |ui| {
+                    for option in &options {
+                        changed |= ui
+                            .selectable_value(
+                                path,
+                                (*option).to_owned(),
+                                audio_display_name(option),
+                            )
+                            .changed();
+                    }
+                });
+
+            ui.add_space(8.0);
+            test_clicked = ui.button("Test").clicked();
+        });
+
+    (changed, test_clicked)
 }

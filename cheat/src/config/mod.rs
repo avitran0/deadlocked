@@ -93,7 +93,7 @@ pub fn parse_config(path: &Path) -> Config {
         return Config::default();
     };
 
-    let config = toml::from_str(&config_string);
+    let config = toml::from_str::<Config>(&config_string);
     if config.is_err() {
         utils::warn!("config file invalid");
     } else if let Some(file_name) = path.file_name() {

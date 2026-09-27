@@ -58,6 +58,10 @@ impl AppState {
         collapsing_open(ui, "Config", |ui| {
             if ui.button("Reset").clicked() {
                 self.config = Config::default();
+                self.audio_player.update(
+                    &self.config.player.hit_sound,
+                    &self.config.player.kill_sound,
+                );
                 self.send_config_game();
                 utils::info!("loaded default config");
             }
@@ -121,6 +125,10 @@ impl AppState {
 
         if let Some(config_path) = clicked_config {
             self.config = parse_config(&config_path);
+            self.audio_player.update(
+                &self.config.player.hit_sound,
+                &self.config.player.kill_sound,
+            );
             self.current_config = config_path;
             self.app_config.config_name = self
                 .current_config

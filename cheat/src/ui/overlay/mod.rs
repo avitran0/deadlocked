@@ -37,6 +37,7 @@ impl AppState {
 
         self.update_trails();
         self.update_player_sounds();
+        self.update_player_audio();
         let data = &self.data.lock();
 
         if self.model_renderer.is_none() {
