@@ -1,7 +1,4 @@
-use std::{
-    thread::JoinHandle,
-    time::{Duration, Instant},
-};
+use std::time::{Duration, Instant};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
 use shared::{Bones, Data, EntityInfo, PlayerData, Weapon, WeaponInfo};
@@ -51,7 +48,6 @@ pub struct CS2 {
     input: Input,
     bvh: Option<Bvh>,
     current_bvh: String,
-    bvh_loader: Option<(String, JoinHandle<Option<Bvh>>)>,
     target: Target,
     players: Vec<Player>,
     dead_players: Vec<Player>,
@@ -326,7 +322,6 @@ impl CS2 {
             input: Input::new(),
             bvh: None,
             current_bvh: String::new(),
-            bvh_loader: None,
             target: Target::default(),
             players: Vec::with_capacity(64),
             dead_players: Vec::with_capacity(12),
@@ -415,32 +410,14 @@ impl CS2 {
     }
 
     fn check_bvh(&mut self) {
-        // map parsing and bvh building take seconds, so they run on a separate thread
-        if let Some((_, handle)) = &self.bvh_loader {
-            if !handle.is_finished() {
-                return;
-            }
-            let (map, handle) = self.bvh_loader.take().unwrap();
-            if let Ok(Some(bvh)) = handle.join() {
-                utils::info!("loaded bvh for {map}");
-                self.bvh = Some(bvh);
-                self.current_bvh = map;
-            }
-        }
-
         let current_map = self.current_map();
-        if current_map == self.current_bvh {
-            return;
+        if current_map != self.current_bvh {
+            self.bvh = read_map(self);
+            if self.bvh.is_some() {
+                utils::info!("loaded bvh for {current_map}");
+                self.current_bvh = current_map;
+            }
         }
-
-        // the old map's geometry is wrong for the new one, fall back to spotted state while loading
-        self.bvh = None;
-        let Some(process) = self.process.try_clone() else {
-            return;
-        };
-        let vphys_world = self.offsets.direct.vphys_world;
-        let handle = std::thread::spawn(move || read_map(&process, vphys_world));
-        self.bvh_loader = Some((current_map, handle));
     }
 
     fn check_hotkey(input: &Input, mode: KeyMode, key: KeyCode, active: &mut bool) -> bool {

@@ -67,15 +67,6 @@ impl Process {
         ret
     }
 
-    pub fn try_clone(&self) -> Option<Self> {
-        Some(Self {
-            pid: self.pid,
-            file: self.file.try_clone().ok()?,
-            path: self.path.clone(),
-            data_range: self.data_range.clone(),
-        })
-    }
-
     pub fn is_valid(&self) -> bool {
         self.path.exists() && self.pid > 0
     }
