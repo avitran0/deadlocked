@@ -66,6 +66,9 @@ macro_rules! field_stmt {
     ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, schema_sub ($class:literal, $field_name:literal, $sub:literal)) => {{
         $off.$field.$fdef = $client.get($class, $field_name)? - $sub;
     }};
+    ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, schema_add ($class:literal, $field_name:literal, $add:literal)) => {{
+        $off.$field.$fdef = $client.get($class, $field_name)? + $add;
+    }};
     ($proc:ident, $off:ident, $client:ident, $physics:ident, $field:ident, $fdef:ident, deref ($src:ident, $off_lit:literal, $add_lit:literal)) => {{
         $off.$field.$fdef = $proc.read::<usize>($off.$field.$src + $off_lit) + $add_lit;
     }};
@@ -179,6 +182,7 @@ schema! {
         sdl_window: module_export(sdl, "SDL_GetKeyboardFocus", rel(0x02, 0x06, 0x03, 0x07)),
         global_vars: scan("48 8D 05 ? ? ? ? 45 31 E4 48 8B 00 44 8B 40 10", client, rel(0x03, 0x07)),
         vphys_world: scan_ptr("4c 8d 35 ? ? ? ? 49 8b 3e e8 ? ? ? ? 48 89 c2", client, rel(3, 7)),
+        surface_properties: scan_ptr("48 8B 1D ? ? ? ? 48 85 DB 74 33 81 7B 34 ? ? ? ? 48 8D 05", client, rel(3, 7)),
         build_date: scan("4c 89 e6 e8 ? ? ? ? 48 8d 35 ? ? ? ? 48 8d 3d", engine, rel(11, 15)),
     }
 
@@ -205,6 +209,7 @@ schema! {
             action_tracking_services: schema("CCSPlayerController", "m_pActionTrackingServices"),
         }
         entity: EntityOffsets {
+            subclass_vdata: schema_add("C_BaseEntity", "m_nSubclassID", 0x08),
             health: schema("C_BaseEntity", "m_iHealth"),
             max_health: schema("C_BaseEntity", "m_iMaxHealth"),
             team: schema("C_BaseEntity", "m_iTeamNum"),
@@ -296,6 +301,18 @@ schema! {
         }
         econ_item_view: EconItemViewOffsets {
             item_definition_index: schema("C_EconItemView", "m_iItemDefinitionIndex"),
+        }
+        model_data: ModelDataOffsets {
+            model: schema("CModelState", "m_hModel"),
+            hitbox_set: schema("CSkeletonInstance", "m_nHitboxSet"),
+        }
+        weapon_vdata: WeaponVDataOffsets {
+            damage: schema("CCSWeaponBaseVData", "m_nDamage"),
+            headshot_multiplier: schema("CCSWeaponBaseVData", "m_flHeadshotMultiplier"),
+            armor_ratio: schema("CCSWeaponBaseVData", "m_flArmorRatio"),
+            penetration: schema("CCSWeaponBaseVData", "m_flPenetration"),
+            range: schema("CCSWeaponBaseVData", "m_flRange"),
+            range_modifier: schema("CCSWeaponBaseVData", "m_flRangeModifier"),
         }
         weapon: WeaponOffsets {
             attribute_manager: schema("C_EconEntity", "m_AttributeManager"),

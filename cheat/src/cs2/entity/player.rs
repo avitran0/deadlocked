@@ -4,10 +4,23 @@ use glam::{Vec2, Vec3, vec2};
 use shared::{BoneTransform, Bones, SoundType, Weapon, WeaponClass};
 use strum::IntoEnumIterator;
 
-use crate::cs2::{
-    CS2,
-    entity::{base_entity::BaseEntity, weapon::weapon_from_handle},
+use crate::{
+    constants::cs2::MESH_SKELETON_BONE_COUNT,
+    cs2::{
+        CS2,
+        entity::{
+            base_entity::BaseEntity,
+            player_hitbox_data::{hitbox_set_index, read_model_hitboxes},
+            weapon::{WeaponEntity, weapon_from_handle},
+        },
+    },
 };
+
+#[derive(Clone, Copy, Debug)]
+pub struct PlayerHitboxHit {
+    pub distance: f32,
+    pub group_id: u8,
+}
 
 #[derive(Clone, Copy, PartialEq)]
 pub struct Player {
@@ -179,6 +192,155 @@ impl Player {
         Player::get_client_entity(cs2, index)
     }
 
+    pub fn weapon_entity(&self, cs2: &CS2) -> Option<WeaponEntity> {
+        self.weapon_address(cs2).map(WeaponEntity::new)
+    }
+
+    pub fn ray_hitbox(&self, cs2: &CS2, origin: Vec3, direction: Vec3) -> Option<PlayerHitboxHit> {
+        let scene_node = self.game_scene_node(cs2);
+        if scene_node == 0 {
+            return None;
+        }
+        let model_state = scene_node + cs2.offsets.game_scene_node.model_state;
+        let model_handle: usize = cs2.process.read(model_state + cs2.offsets.model_data.model);
+        if model_handle == 0 {
+            return None;
+        }
+        let model: usize = cs2.process.read(model_handle);
+        let hitboxes = read_model_hitboxes(&cs2.process, model, hitbox_set_index(cs2, scene_node))?;
+        let skeleton = self.hitbox_skeleton(cs2);
+        hitboxes
+            .iter()
+            .filter_map(|hitbox| {
+                let bone = skeleton.get(hitbox.bone_index)?;
+                let distance = match hitbox.shape {
+                    0 => {
+                        let inverse = bone.matrix.inverse();
+                        let local_origin = inverse.transform_point3(origin);
+                        let local_direction = inverse.transform_vector3(direction);
+                        Self::ray_box_distance(
+                            local_origin,
+                            local_direction,
+                            hitbox.min,
+                            hitbox.max,
+                        )
+                    }
+                    1 => Self::ray_sphere_distance(
+                        origin,
+                        direction,
+                        bone.matrix.transform_point3(hitbox.min),
+                        hitbox.radius,
+                    ),
+                    2 => Self::ray_capsule_distance(
+                        origin,
+                        direction,
+                        bone.matrix.transform_point3(hitbox.min),
+                        bone.matrix.transform_point3(hitbox.max),
+                        hitbox.radius,
+                    ),
+                    _ => None,
+                }?;
+                Some(PlayerHitboxHit {
+                    distance,
+                    group_id: hitbox.group_id,
+                })
+            })
+            .min_by(|a, b| a.distance.total_cmp(&b.distance))
+    }
+
+    fn hitbox_skeleton(&self, cs2: &CS2) -> Vec<BoneTransform> {
+        let scene_node = self.game_scene_node(cs2);
+        if scene_node == 0 {
+            return Vec::new();
+        }
+        let bone_data: usize = cs2.process.read(
+            scene_node
+                + cs2.offsets.game_scene_node.model_state
+                + cs2.offsets.model_state.skeleton_instance,
+        );
+        if bone_data == 0 {
+            return Vec::new();
+        }
+        cs2.process
+            .read_typed_vec::<[f32; 8]>(bone_data, 32, MESH_SKELETON_BONE_COUNT)
+            .into_iter()
+            .map(BoneTransform::from_memory)
+            .collect()
+    }
+
+    fn ray_box_distance(origin: Vec3, direction: Vec3, min: Vec3, max: Vec3) -> Option<f32> {
+        let inverse = Vec3::ONE / direction;
+        let first = (min - origin) * inverse;
+        let second = (max - origin) * inverse;
+        let near = first.min(second);
+        let far = first.max(second);
+        let near = near.x.max(near.y).max(near.z);
+        let far = far.x.min(far.y).min(far.z);
+        (near <= far && far >= 0.0).then_some(near.max(0.0))
+    }
+
+    fn ray_sphere_distance(
+        origin: Vec3,
+        direction: Vec3,
+        center: Vec3,
+        radius: f32,
+    ) -> Option<f32> {
+        let offset = origin - center;
+        let projection = offset.dot(direction);
+        let discriminant = projection * projection - (offset.length_squared() - radius * radius);
+        if discriminant < 0.0 {
+            return None;
+        }
+        let root = discriminant.sqrt();
+        let near = -projection - root;
+        let far = -projection + root;
+        if near >= 0.0 {
+            Some(near)
+        } else if far >= 0.0 {
+            Some(far)
+        } else {
+            None
+        }
+    }
+
+    fn ray_capsule_distance(
+        origin: Vec3,
+        direction: Vec3,
+        start: Vec3,
+        end: Vec3,
+        radius: f32,
+    ) -> Option<f32> {
+        let axis = end - start;
+        let offset = origin - start;
+        let axis_length_squared = axis.length_squared();
+        let axis_direction = axis.dot(direction);
+        let axis_offset = axis.dot(offset);
+        let direction_offset = direction.dot(offset);
+        let offset_length_squared = offset.length_squared();
+        let a = axis_length_squared - axis_direction * axis_direction;
+        let b = axis_length_squared * direction_offset - axis_offset * axis_direction;
+        let c = axis_length_squared * offset_length_squared
+            - axis_offset * axis_offset
+            - radius * radius * axis_length_squared;
+        let discriminant = b * b - a * c;
+        let body_hit = if a > f32::EPSILON && discriminant >= 0.0 {
+            let distance = (-b - discriminant.sqrt()) / a;
+            let along_axis = axis_offset + distance * axis_direction;
+            (distance >= 0.0 && (0.0..=axis_length_squared).contains(&along_axis))
+                .then_some(distance)
+        } else {
+            None
+        };
+        [
+            body_hit,
+            Self::ray_sphere_distance(origin, direction, start, radius),
+            Self::ray_sphere_distance(origin, direction, end, radius),
+        ]
+        .into_iter()
+        .flatten()
+        .min_by(f32::total_cmp)
+    }
+
     pub fn weapon(&self, cs2: &CS2) -> Weapon {
         let Some(weapon_handle) = self.weapon_handle(cs2) else {
             return Weapon::None;
@@ -293,7 +455,7 @@ impl Player {
             return (bones, Vec::new());
         }
 
-        let mut skeleton = (0..crate::constants::cs2::MESH_SKELETON_BONE_COUNT)
+        let mut skeleton = (0..MESH_SKELETON_BONE_COUNT)
             .map(|index| BoneTransform::from_memory(cs2.process.read(bone_data + index * 32)))
             .collect::<Vec<_>>();
         for bone in Bones::iter() {

@@ -122,6 +122,7 @@ pub struct TriggerbotConfig {
     pub velocity_check: bool,
     pub velocity_threshold: f32,
     pub head_only: bool,
+    pub penetration_check: bool,
 }
 
 impl Default for TriggerbotConfig {
@@ -137,6 +138,7 @@ impl Default for TriggerbotConfig {
             velocity_check: true,
             velocity_threshold: 100.0,
             head_only: false,
+            penetration_check: false,
         }
     }
 }

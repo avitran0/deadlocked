@@ -17,6 +17,7 @@ pub mod inferno;
 pub mod molotov;
 pub mod planted_c4;
 pub mod player;
+pub mod player_hitbox_data;
 pub mod smoke;
 pub mod weapon;
 

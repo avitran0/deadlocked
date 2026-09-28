@@ -23,9 +23,9 @@ struct BvhCacheRef<'a> {
 }
 
 pub fn read_map(cs2: &CS2) -> Option<Bvh> {
-    let triangles = read_bvh(cs2)?;
+    let (triangles, materials) = read_bvh(cs2)?;
     let mut bvh = Bvh::new();
-    bvh.set(triangles);
+    bvh.set(triangles, materials);
     bvh.build();
     Some(bvh)
 }

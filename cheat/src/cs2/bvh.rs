@@ -2,11 +2,29 @@ use std::collections::HashSet;
 
 use bytemuck::{Pod, Zeroable};
 
-use crate::{cs2::CS2, parser::bvh::Triangle};
+use crate::{
+    cs2::CS2,
+    parser::bvh::{SurfaceMaterial, Triangle},
+};
 
 const MAX_VECTOR_ITEMS: usize = 2_000_000;
+const MAX_MESH_MATERIALS: usize = u8::MAX as usize + 1;
+const MAX_SURFACE_MATERIALS: usize = u16::MAX as usize + 1;
+const SHAPE_DEFAULT_MATERIAL: usize = 0x20;
+const MESH_MATERIAL_COUNT: usize = 0xD0;
+const MESH_MATERIALS: usize = 0xD8;
+const MATERIAL_RECORD_SIZE: usize = 0x30;
+const MATERIAL_RECORD_PROPERTY: usize = 0x28;
+const SURFACE_PROPERTY_INDEX: usize = 0x10;
 
-pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
+pub fn read_bvh(cs2: &CS2) -> Option<(Vec<Triangle>, Vec<SurfaceMaterial>)> {
+    let mut materials = read_surface_materials(cs2);
+    let resolver = MaterialResolver {
+        game_material_count: materials.len(),
+        fallback_material: materials.len(),
+    };
+    materials.push(SurfaceMaterial::default());
+
     let world: usize = cs2.process.read(cs2.offsets.direct.vphys_world);
     if world == 0 {
         return None;
@@ -34,6 +52,13 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
         }
 
         let root: i32 = cs2.process.read(body);
+        if root < 0 {
+            let shape: usize = cs2.process.read(body + 0x28);
+            if shape != 0 && seen_shapes.insert(shape) {
+                process_shape(cs2, shape, resolver, &mut triangles);
+            }
+            continue;
+        }
         let nodes_ptr: usize = cs2.process.read(body + 0x18);
         let count_a: i32 = cs2.process.read(body + 0x08);
         let count_b: i32 = cs2.process.read(body + 0x10);
@@ -41,7 +66,6 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
             || count_a <= 0
             || count_a != count_b
             || count_a as usize > MAX_VECTOR_ITEMS
-            || root < 0
             || root >= count_a
         {
             continue;
@@ -63,7 +87,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
             let node = nodes[index as usize];
             if node.left == -1 && node.right == -1 {
                 if node.shape != 0 && seen_shapes.insert(node.shape) {
-                    process_shape(cs2, node.shape, &mut triangles);
+                    process_shape(cs2, node.shape, resolver, &mut triangles);
                 }
                 continue;
             }
@@ -76,33 +100,92 @@ pub fn read_bvh(cs2: &CS2) -> Option<Vec<Triangle>> {
         }
     }
 
-    (!triangles.is_empty()).then_some(triangles)
+    (!triangles.is_empty()).then_some((triangles, materials))
 }
 
-fn process_shape(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
-    // m_nInteractsAs: retain only world geometry (bit 0). this excludes
-    // clip/trigger-style collision volumes that otherwise occlude visibility.
-    if cs2.process.read::<u64>(shape + 0x50) & 1 == 0 {
+fn read_surface_materials(cs2: &CS2) -> Vec<SurfaceMaterial> {
+    let controller = cs2.offsets.direct.surface_properties;
+    if controller == 0 {
+        return Vec::new();
+    }
+    let entries: UtlVector = cs2.process.read(controller + 0x20);
+    if !valid_vector(entries)
+        || entries.count == 0
+        || entries.count as usize > MAX_SURFACE_MATERIALS
+    {
+        return Vec::new();
+    }
+    let entries: Vec<SurfaceMaterialEntry> = cs2.process.read_typed_vec(
+        entries.data,
+        size_of::<SurfaceMaterialEntry>(),
+        entries.count as usize,
+    );
+    let materials: Vec<_> = entries
+        .into_iter()
+        .map(|entry| SurfaceMaterial {
+            penetration_modifier: entry.penetration_modifier,
+            damage_modifier: entry.damage_modifier,
+            surface_type: entry.surface_type,
+        })
+        .collect();
+    if materials.iter().all(|material| {
+        material.penetration_modifier.is_finite() && material.damage_modifier.is_finite()
+    }) {
+        materials
+    } else {
+        Vec::new()
+    }
+}
+
+fn process_shape(
+    cs2: &CS2,
+    shape: usize,
+    resolver: MaterialResolver,
+    triangles: &mut Vec<Triangle>,
+) {
+    let interacts_as: u64 = cs2.process.read(shape + 0x50);
+    if interacts_as & 0xffff == 0 || interacts_as == 0x40000008 || interacts_as == 0x40000030 {
         return;
     }
+
+    let shape_id = triangles.len();
     match rtti_name(cs2, shape).as_str() {
-        "12CRnMeshShape" => process_mesh(cs2, shape, triangles),
-        "12CRnHullShape" => process_hull(cs2, shape, triangles),
+        "12CRnMeshShape" => process_mesh(cs2, shape, resolver, shape_id, triangles),
+        "12CRnHullShape" => process_hull(cs2, shape, resolver, shape_id, triangles),
         _ => {}
     }
 }
 
-fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
+fn process_mesh(
+    cs2: &CS2,
+    shape: usize,
+    resolver: MaterialResolver,
+    shape_id: usize,
+    triangles: &mut Vec<Triangle>,
+) {
     let mesh: usize = cs2.process.read(shape + 0xC0);
     if mesh == 0 {
         return;
     }
-    let vertices: UtlVector = cs2.process.read(mesh + 0x30);
-    let indices: UtlVector = cs2.process.read(mesh + 0x48);
+
+    let vertices: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.vertices);
+    let indices: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.triangles);
+    let mesh_materials: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.materials);
     if !valid_vector(vertices) || !valid_vector(indices) {
         return;
     }
+    let mesh_materials: Vec<u8> = if valid_vector(mesh_materials) {
+        cs2.process.read_typed_vec(
+            mesh_materials.data,
+            size_of::<u8>(),
+            mesh_materials.count as usize,
+        )
+    } else {
+        Vec::new()
+    };
 
+    let fallback_material = resolver.shape_material(cs2, shape + SHAPE_DEFAULT_MATERIAL);
+    let resolved_materials = resolved_mesh_materials(cs2, shape, resolver.game_material_count);
     let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
         vertices.data,
         size_of::<glam::Vec3>(),
@@ -111,35 +194,54 @@ fn process_mesh(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     let indices: Vec<Tri> =
         cs2.process
             .read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
-    for tri in indices {
-        let [a, b, c] = tri.idx;
+
+    for (triangle_index, triangle) in indices.iter().enumerate() {
+        let [a, b, c] = triangle.idx;
         if a < 0 || b < 0 || c < 0 {
             continue;
         }
         let (a, b, c) = (a as usize, b as usize, c as usize);
-        let (Some(&v0), Some(&v1), Some(&v2)) = (vertices.get(a), vertices.get(b), vertices.get(c))
+        let Some((&v0, &v1, &v2)) = vertices
+            .get(a)
+            .zip(vertices.get(b))
+            .zip(vertices.get(c))
+            .map(|((v0, v1), v2)| (v0, v1, v2))
         else {
             continue;
         };
         if (v1 - v0).cross(v2 - v0).length_squared() <= f32::EPSILON {
             continue;
         }
-        triangles.push(Triangle { v0, v1, v2 });
+
+        let material = resolve_mesh_material(
+            mesh_materials.get(triangle_index).copied(),
+            &resolved_materials,
+            fallback_material,
+        );
+        triangles.push(Triangle::new(v0, v1, v2, material, shape_id));
     }
 }
 
-fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
+fn process_hull(
+    cs2: &CS2,
+    shape: usize,
+    resolver: MaterialResolver,
+    shape_id: usize,
+    triangles: &mut Vec<Triangle>,
+) {
     let hull: usize = cs2.process.read(shape + 0xB8);
     if hull == 0 {
         return;
     }
-    let scale: f32 = cs2.process.read(shape + 0xB4);
-    if !scale.is_finite() {
-        return;
-    }
-    let vertices: UtlVector = cs2.process.read(hull + 0x70);
-    let edges: UtlVector = cs2.process.read(hull + 0xC8);
-    let faces: UtlVector = cs2.process.read(hull + 0xE0);
+    let raw_scale: f32 = cs2.process.read(shape + 0xB4);
+    let scale = if raw_scale.is_finite() && raw_scale > 0.0 {
+        raw_scale
+    } else {
+        1.0
+    };
+    let vertices: UtlVector = cs2.process.read(hull + cs2.offsets.hull.vertices);
+    let edges: UtlVector = cs2.process.read(hull + cs2.offsets.hull.edges);
+    let faces: UtlVector = cs2.process.read(hull + cs2.offsets.hull.faces);
     if !valid_vector(vertices) || !valid_vector(edges) || !valid_vector(faces) {
         return;
     }
@@ -152,15 +254,13 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     let edges: Vec<HalfEdge> =
         cs2.process
             .read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
-    let faces: Vec<u8> = (0..faces.count as usize)
-        .map(|i| cs2.process.read(faces.data + i))
-        .collect();
-    if vertices.is_empty() || edges.is_empty() {
-        return;
-    }
+    let faces: Vec<u8> =
+        cs2.process
+            .read_typed_vec(faces.data, size_of::<u8>(), faces.count as usize);
+    let material = resolver.shape_material(cs2, shape + SHAPE_DEFAULT_MATERIAL);
 
-    for &start in &faces {
-        let start = start as usize;
+    for &face_start in &faces {
+        let start = face_start as usize;
         if start >= edges.len() {
             continue;
         }
@@ -179,23 +279,37 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
             }
             face_vertices.push(vertices[vertex] * scale);
             current = edge.next as usize;
-            if current == start {
-                break;
-            }
-            if visited.len() >= edges.len() {
-                face_vertices.clear();
+            if current == start || visited.len() >= edges.len() {
                 break;
             }
         }
         if current != start || face_vertices.len() < 3 {
             continue;
         }
-        for i in 1..face_vertices.len() - 1 {
-            let (v0, v1, v2) = (face_vertices[0], face_vertices[i], face_vertices[i + 1]);
+        for index in 1..face_vertices.len() - 1 {
+            let (v0, v1, v2) = (
+                face_vertices[0],
+                face_vertices[index],
+                face_vertices[index + 1],
+            );
             if (v1 - v0).cross(v2 - v0).length_squared() > f32::EPSILON {
-                triangles.push(Triangle { v0, v1, v2 });
+                triangles.push(Triangle::new(v0, v1, v2, material, shape_id));
             }
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+struct MaterialResolver {
+    game_material_count: usize,
+    fallback_material: usize,
+}
+
+impl MaterialResolver {
+    fn shape_material(self, cs2: &CS2, record: usize) -> usize {
+        surface_material_index(cs2, record, self.game_material_count)
+            .map(usize::from)
+            .unwrap_or(self.fallback_material)
     }
 }
 
@@ -203,6 +317,39 @@ fn valid_vector(vector: UtlVector) -> bool {
     vector.count >= 0
         && vector.count as usize <= MAX_VECTOR_ITEMS
         && (vector.count == 0 || vector.data != 0)
+}
+
+fn resolved_mesh_materials(cs2: &CS2, shape: usize, material_count: usize) -> Vec<Option<usize>> {
+    let count: u32 = cs2.process.read(shape + MESH_MATERIAL_COUNT);
+    let data: usize = cs2.process.read(shape + MESH_MATERIALS);
+    if count as usize > MAX_MESH_MATERIALS || (count != 0 && data == 0) {
+        return Vec::new();
+    }
+    (0..count as usize)
+        .map(|index| {
+            surface_material_index(cs2, data + index * MATERIAL_RECORD_SIZE, material_count)
+                .map(usize::from)
+        })
+        .collect()
+}
+
+fn surface_material_index(cs2: &CS2, record: usize, material_count: usize) -> Option<u16> {
+    let property: usize = cs2.process.read(record + MATERIAL_RECORD_PROPERTY);
+    if property == 0 {
+        return None;
+    }
+    let index: u16 = cs2.process.read(property + SURFACE_PROPERTY_INDEX);
+    ((index as usize) < material_count).then_some(index)
+}
+
+fn resolve_mesh_material(
+    material: Option<u8>,
+    resolved_materials: &[Option<usize>],
+    fallback_material: usize,
+) -> usize {
+    material
+        .and_then(|index| resolved_materials.get(index as usize).copied().flatten())
+        .unwrap_or(fallback_material)
 }
 
 fn rtti_name(cs2: &CS2, object: usize) -> String {
@@ -227,6 +374,18 @@ struct UtlVector {
     count: i32,
     _pad: i32,
     data: usize,
+}
+
+#[repr(C)]
+#[derive(Default, Clone, Copy, Pod, Zeroable)]
+struct SurfaceMaterialEntry {
+    _pad1: [u8; 8],
+    penetration_modifier: f32,
+    damage_modifier: f32,
+    _unknown_10: [u8; 4],
+    surface_type: u16,
+    _pad_16: u16,
+    _pad2: [u8; 8],
 }
 
 #[repr(C)]

@@ -127,7 +127,7 @@ impl CS2 {
 
         self.esp_toggle(config);
 
-        self.triggerbot(config);
+        self.triggerbot(config, mouse);
 
         self.triggerbot_shoot(mouse);
 

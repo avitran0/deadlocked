@@ -2,6 +2,12 @@ use glam::Vec3;
 use serde::{Deserialize, Serialize};
 
 const MAX_LEAF_COUNT: usize = 8;
+const MAX_PENETRATION_DISTANCE: f32 = 3000.0;
+const MIN_PENETRATION_MODIFIER: f32 = 0.1;
+const DEFAULT_DAMAGE_LOSS_MODIFIER: f32 = 0.16;
+const THIN_GLASS_DAMAGE_LOSS_MODIFIER: f32 = 0.05;
+const THIN_GLASS_MAX_THICKNESS: f32 = 6.0;
+const THICKNESS_LOSS_DIVISOR: f32 = 24.0;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -52,17 +58,46 @@ impl Aabb {
         }
     }
 
-    pub fn ray_intersect(&self, origin: Vec3, inv_dir: Vec3, max_t: f32) -> bool {
-        let t1 = (self.min - origin) * inv_dir;
-        let t2 = (self.max - origin) * inv_dir;
+    pub fn ray_intersect(&self, origin: Vec3, direction: Vec3, max_t: f32) -> bool {
+        let mut near = 0.0f32;
+        let mut far = max_t;
+        for axis in 0..3 {
+            let component = direction[axis];
+            if component == 0.0 {
+                if origin[axis] < self.min[axis] || origin[axis] > self.max[axis] {
+                    return false;
+                }
+                continue;
+            }
 
-        let tmin = t1.min(t2);
-        let tmax = t1.max(t2);
+            let first = (self.min[axis] - origin[axis]) / component;
+            let second = (self.max[axis] - origin[axis]) / component;
+            near = near.max(first.min(second));
+            far = far.min(first.max(second));
+            if near > far {
+                return false;
+            }
+        }
+        far >= 0.0 && near <= max_t
+    }
+}
 
-        let t_min = tmin.x.max(tmin.y).max(tmin.z);
-        let t_max = tmax.x.min(tmax.y).min(tmax.z);
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct SurfaceMaterial {
+    pub penetration_modifier: f32,
+    /// Retained from the surface table for visualization/diagnostics.
+    pub damage_modifier: f32,
+    pub surface_type: u16,
+}
 
-        t_min <= t_max && t_min <= max_t && t_max >= 0.0
+impl Default for SurfaceMaterial {
+    fn default() -> Self {
+        Self {
+            penetration_modifier: 0.0,
+            damage_modifier: 0.0,
+            surface_type: 0,
+        }
     }
 }
 
@@ -72,9 +107,21 @@ pub struct Triangle {
     pub v0: Vec3,
     pub v1: Vec3,
     pub v2: Vec3,
+    pub material: usize,
+    pub shape: usize,
 }
 
 impl Triangle {
+    pub fn new(v0: Vec3, v1: Vec3, v2: Vec3, material: usize, shape: usize) -> Self {
+        Self {
+            v0,
+            v1,
+            v2,
+            material,
+            shape,
+        }
+    }
+
     pub fn aabb(&self) -> Aabb {
         Aabb::from_points(&[self.v0, self.v1, self.v2])
     }
@@ -128,11 +175,28 @@ enum BvhNode {
     },
 }
 
+#[derive(Clone, Copy)]
+struct MaterialHit {
+    distance: f32,
+    material: SurfaceMaterial,
+    shape: usize,
+}
+
+fn append_shape_walls(crossings: &[MaterialHit], walls: &mut Vec<[MaterialHit; 2]>) -> bool {
+    let (pairs, remainder) = crossings.as_chunks::<2>();
+    if !remainder.is_empty() {
+        return false;
+    }
+    walls.extend_from_slice(pairs);
+    true
+}
+
 #[repr(C)]
 #[derive(Serialize, Deserialize)]
 pub struct Bvh {
     nodes: Vec<BvhNode>,
     triangles: Vec<Triangle>,
+    materials: Vec<SurfaceMaterial>,
     root: Option<usize>,
 }
 
@@ -141,12 +205,14 @@ impl Bvh {
         Self {
             nodes: Vec::new(),
             triangles: Vec::new(),
+            materials: Vec::new(),
             root: None,
         }
     }
 
-    pub fn set(&mut self, triangles: Vec<Triangle>) {
+    pub fn set(&mut self, triangles: Vec<Triangle>, materials: Vec<SurfaceMaterial>) {
         self.triangles = triangles;
+        self.materials = materials;
     }
 
     #[allow(unused)]
@@ -240,16 +306,173 @@ impl Bvh {
     }
 
     pub fn has_line_of_sight(&self, start: Vec3, end: Vec3) -> bool {
-        let dir = end - start;
-        let distance = dir.length();
+        let ray = end - start;
+        let distance = ray.length();
+        if !distance.is_finite() || distance <= f32::EPSILON {
+            return true;
+        }
+        let direction = ray / distance;
+        self.root
+            .is_none_or(|root| !self.segment_intersect_node(root, start, direction, distance))
+    }
 
-        let dir_norm = dir / distance;
-        let inv_dir = 1.0 / dir_norm;
+    pub fn estimate_penetration_damage(
+        &self,
+        start: Vec3,
+        end: Vec3,
+        weapon_damage: f32,
+        weapon_penetration: f32,
+        weapon_range: f32,
+        range_modifier: f32,
+    ) -> Option<f32> {
+        let ray = end - start;
+        let distance = ray.length();
+        if !distance.is_finite() || distance <= f32::EPSILON || distance > weapon_range {
+            return None;
+        }
+        let root = self.root?;
+        let direction = ray / distance;
+        let mut hits = Vec::new();
+        self.collect_material_hits(root, start, direction, distance, &mut hits);
+        hits.sort_by(|a, b| {
+            a.shape
+                .cmp(&b.shape)
+                .then_with(|| a.distance.total_cmp(&b.distance))
+        });
 
-        if let Some(root) = self.root {
-            !self.segment_intersect_node(root, start, dir_norm, inv_dir, distance)
-        } else {
-            true
+        let mut walls = Vec::<[MaterialHit; 2]>::new();
+        let mut shape_crossings = Vec::<MaterialHit>::new();
+        let mut current_shape = None;
+        for hit in hits {
+            if current_shape.is_some_and(|shape| shape != hit.shape) {
+                if !append_shape_walls(&shape_crossings, &mut walls) {
+                    return None;
+                }
+                shape_crossings.clear();
+            }
+            current_shape = Some(hit.shape);
+
+            if let Some(last) = shape_crossings.last_mut()
+                && (last.distance - hit.distance).abs() <= 0.05
+            {
+                last.material.penetration_modifier = last
+                    .material
+                    .penetration_modifier
+                    .min(hit.material.penetration_modifier);
+                last.material.damage_modifier = last
+                    .material
+                    .damage_modifier
+                    .max(hit.material.damage_modifier);
+                if last.material.surface_type != hit.material.surface_type {
+                    last.material.surface_type = 0;
+                }
+            } else {
+                shape_crossings.push(hit);
+            }
+        }
+        if !append_shape_walls(&shape_crossings, &mut walls) {
+            return None;
+        }
+        walls.sort_by(|a, b| a[0].distance.total_cmp(&b[0].distance));
+
+        if weapon_damage <= 0.0 || weapon_penetration <= 0.0 || range_modifier <= 0.0 {
+            return None;
+        }
+        if walls.is_empty() && !self.has_line_of_sight(start, end) {
+            return None;
+        }
+
+        let mut damage = weapon_damage;
+        let mut previous_distance = 0.0;
+        for (wall_index, wall) in walls.iter().enumerate() {
+            if wall_index >= 4 {
+                return None;
+            }
+            let entry = wall[0];
+            let exit = wall[1];
+            let thickness = exit.distance - entry.distance;
+            if entry.distance > MAX_PENETRATION_DISTANCE {
+                return None;
+            }
+
+            let surface_type = entry.material.surface_type;
+            let same_surface_type = surface_type == exit.material.surface_type;
+            let mut penetration_modifier = entry
+                .material
+                .penetration_modifier
+                .min(exit.material.penetration_modifier);
+            let mut damage_loss_modifier = DEFAULT_DAMAGE_LOSS_MODIFIER;
+            if same_surface_type {
+                match surface_type as u8 {
+                    b'U' | b'W' => penetration_modifier = 3.0,
+                    b'L' => penetration_modifier = 2.0,
+                    b'G' | b'Y' if thickness < THIN_GLASS_MAX_THICKNESS => {
+                        penetration_modifier = 3.0;
+                        damage_loss_modifier = THIN_GLASS_DAMAGE_LOSS_MODIFIER;
+                    }
+                    _ => {}
+                }
+            }
+            if penetration_modifier < MIN_PENETRATION_MODIFIER || !penetration_modifier.is_finite()
+            {
+                return None;
+            }
+
+            damage *= range_modifier.powf((entry.distance - previous_distance) / 500.0);
+            let inverse_penetration_modifier = 1.0 / penetration_modifier;
+            let penetration_loss =
+                (3.0 / weapon_penetration * 1.25) * (inverse_penetration_modifier * 3.0);
+            let thickness_loss =
+                thickness * thickness * inverse_penetration_modifier / THICKNESS_LOSS_DIVISOR;
+            let damage_loss =
+                (damage * damage_loss_modifier + penetration_loss + thickness_loss).max(0.0);
+            damage -= damage_loss;
+            if damage < 1.0 {
+                return None;
+            }
+            damage *= range_modifier.powf(thickness / 500.0);
+            previous_distance = exit.distance;
+        }
+
+        damage *= range_modifier.powf((distance - previous_distance) / 500.0);
+        (damage > 0.0).then_some(damage)
+    }
+
+    fn collect_material_hits(
+        &self,
+        node_idx: usize,
+        origin: Vec3,
+        direction: Vec3,
+        max_t: f32,
+        hits: &mut Vec<MaterialHit>,
+    ) {
+        let node = &self.nodes[node_idx];
+        if !node.aabb().ray_intersect(origin, direction, max_t) {
+            return;
+        }
+        match node {
+            BvhNode::Leaf { primitives, .. } => {
+                for &index in primitives {
+                    let triangle = &self.triangles[index];
+                    if let Some((distance, _, _)) = triangle.ray_intersect(origin, direction)
+                        && distance <= max_t
+                    {
+                        hits.push(MaterialHit {
+                            distance,
+                            material: self
+                                .materials
+                                .get(triangle.material)
+                                .copied()
+                                .unwrap_or_default(),
+                            shape: triangle.shape,
+                        });
+                    }
+                }
+            }
+            BvhNode::Branch { left, right, .. } => {
+                self.collect_material_hits(*left, origin, direction, max_t, hits);
+                self.collect_material_hits(*right, origin, direction, max_t, hits);
+            }
         }
     }
 
@@ -258,15 +481,12 @@ impl Bvh {
         node_idx: usize,
         origin: Vec3,
         direction: Vec3,
-        inv_dir: Vec3,
         max_t: f32,
     ) -> bool {
         let node = &self.nodes[node_idx];
-
-        if !node.aabb().ray_intersect(origin, inv_dir, max_t) {
+        if !node.aabb().ray_intersect(origin, direction, max_t) {
             return false;
         }
-
         match node {
             BvhNode::Leaf { primitives, .. } => {
                 for &idx in primitives {
@@ -280,8 +500,8 @@ impl Bvh {
                 false
             }
             BvhNode::Branch { left, right, .. } => {
-                self.segment_intersect_node(*left, origin, direction, inv_dir, max_t)
-                    || self.segment_intersect_node(*right, origin, direction, inv_dir, max_t)
+                self.segment_intersect_node(*left, origin, direction, max_t)
+                    || self.segment_intersect_node(*right, origin, direction, max_t)
             }
         }
     }

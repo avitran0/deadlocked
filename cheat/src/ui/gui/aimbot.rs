@@ -253,6 +253,14 @@ impl AppState {
                 self.send_config_game();
             }
 
+            if checkbox(
+                ui,
+                "Penetration Check",
+                &mut self.weapon_config().triggerbot.penetration_check,
+            ) {
+                self.send_config_game();
+            }
+
             if drag(
                 ui,
                 "Hold Duration (ms)",
