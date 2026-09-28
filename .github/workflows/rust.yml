@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: install alsa for rodio
+      run: sudo apt-get update && sudo apt-get install --yes libasound2-dev pkg-config
     - name: Check formatting
       run: cargo fmt --all -- --check
     - name: Cargo check
