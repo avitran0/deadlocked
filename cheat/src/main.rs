@@ -9,6 +9,7 @@ use winit::platform::x11::EventLoopBuilderExtX11;
 
 use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
 
+mod audio;
 mod config;
 mod constants;
 mod cs2;

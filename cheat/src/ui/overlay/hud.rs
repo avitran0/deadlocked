@@ -226,6 +226,63 @@ impl AppState {
         self.draw_fov_circle_impl(painter, data, radius, color);
     }
 
+    pub fn draw_hitmarker(&self, painter: &Painter, data: &Data) {
+        let config = &self.config.hud.hitmarker;
+        if !config.enabled || !data.in_game {
+            return;
+        }
+
+        let Some(started) = self.hitmarker_started else {
+            return;
+        };
+        let duration = config.duration.max(0.001);
+        let progress = (started.elapsed().as_secs_f32() / duration).clamp(0.0, 1.0);
+        if progress >= 1.0 {
+            return;
+        }
+
+        let base = if self.hitmarker_kill {
+            config.kill_color
+        } else {
+            config.color
+        };
+        let [r, g, b, _] = base.to_srgba_unmultiplied();
+        let color = Color32::from_rgba_unmultiplied(r, g, b, ((1.0 - progress) * 255.0) as u8);
+        let center = pos2(data.window_size.x / 2.0, data.window_size.y / 2.0);
+        let gap = config.gap.max(0.0);
+        let length = config.line_length.max(0.0);
+        let stroke = Stroke::new(config.line_width.max(0.1), color);
+
+        painter.line_segment(
+            [
+                center + vec2(-gap, -gap),
+                center + vec2(-gap - length, -gap - length),
+            ],
+            stroke,
+        );
+        painter.line_segment(
+            [
+                center + vec2(gap, -gap),
+                center + vec2(gap + length, -gap - length),
+            ],
+            stroke,
+        );
+        painter.line_segment(
+            [
+                center + vec2(-gap, gap),
+                center + vec2(-gap - length, gap + length),
+            ],
+            stroke,
+        );
+        painter.line_segment(
+            [
+                center + vec2(gap, gap),
+                center + vec2(gap + length, gap + length),
+            ],
+            stroke,
+        );
+    }
+
     pub fn draw_sniper_crosshair(&self, painter: &Painter, data: &Data) {
         if !self.config.hud.sniper_crosshair.enabled
             || data.weapon.weapon_class() != WeaponClass::Sniper

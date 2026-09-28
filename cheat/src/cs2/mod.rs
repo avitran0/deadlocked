@@ -61,6 +61,8 @@ pub struct CS2 {
     weapon: Weapon,
     planted_c4: Option<PlantedC4>,
     last_cache: Instant,
+    previous_hits: Option<i32>,
+    previous_kills: Option<i32>,
 }
 
 impl CS2 {
@@ -138,7 +140,7 @@ impl CS2 {
         self.grenade_align(config, mouse);
     }
 
-    pub fn data(&self, config: &Config, data: &mut Data) {
+    pub fn data(&mut self, config: &Config, data: &mut Data) {
         data.players.clear();
         data.friendlies.clear();
         data.spectators.clear();
@@ -157,16 +159,33 @@ impl CS2 {
         }
 
         let Some(local_player) = Player::local_player(self) else {
+            self.previous_hits = None;
+            self.previous_kills = None;
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
         };
         let local_team = local_player.team(self);
-        if !local_team.is_playing() {
+        if !local_team.is_playing() || local_player.health(self) <= 0 {
+            self.previous_hits = None;
+            self.previous_kills = None;
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
         }
+
+        let current_hits = local_player.total_hits(self);
+        let current_kills = local_player.round_kills(self);
+        Self::update_counter(
+            &mut self.previous_hits,
+            current_hits,
+            &mut data.hit_sequence,
+        );
+        Self::update_counter(
+            &mut self.previous_kills,
+            current_kills,
+            &mut data.kill_sequence,
+        );
         let is_ffa = self.is_ffa();
         let spectator_target = local_player.spectator_target(self);
         let active_pawn = if let Some(target) = spectator_target {
@@ -332,7 +351,23 @@ impl CS2 {
             weapon: Weapon::default(),
             planted_c4: None,
             last_cache: Instant::now(),
+            previous_hits: None,
+            previous_kills: None,
         }
+    }
+
+    fn update_counter(previous: &mut Option<i32>, current: Option<i32>, sequence: &mut u64) {
+        let Some(current) = current else {
+            *previous = None;
+            return;
+        };
+
+        if let Some(previous_value) = *previous
+            && current > previous_value
+        {
+            *sequence = sequence.wrapping_add((current - previous_value) as u64);
+        }
+        *previous = Some(current);
     }
 
     fn aimbot_config<'a>(&self, config: &'a Config) -> &'a AimbotConfig {

@@ -7,7 +7,7 @@ use crate::cs2::{
 use glam::{Mat4, Quat, Vec3};
 use shared::Team;
 
-/// Common handle-backed functionality shared by all client entities.
+/// represents both `C_BaseEntity` and `C_BaseModelEntity`
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BaseEntity {
     handle: usize,

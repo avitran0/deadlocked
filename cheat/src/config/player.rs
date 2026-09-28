@@ -1,10 +1,10 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{Display, EnumIter};
 
 use crate::cs2::key_codes::KeyCode;
 
-#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum DrawMode {
     None,
     Health,
@@ -12,19 +12,7 @@ pub enum DrawMode {
     PlayerColor,
 }
 
-impl std::fmt::Display for DrawMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::None => "None",
-            Self::Health => "Health",
-            Self::Color => "Color",
-            Self::PlayerColor => "Player Color",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum SnaplineMode {
     None,
     Health,
@@ -33,83 +21,29 @@ pub enum SnaplineMode {
     PlayerColor,
 }
 
-impl std::fmt::Display for SnaplineMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::None => "None",
-            Self::Health => "Health",
-            Self::Distance => "Distance",
-            Self::Color => "Color",
-            Self::PlayerColor => "Player Color",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum SnaplineAnchor {
     Center,
     Bottom,
 }
 
-impl std::fmt::Display for SnaplineAnchor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Center => "Center",
-            Self::Bottom => "Bottom",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum BoxMode {
     Gap,
     Full,
 }
 
-impl std::fmt::Display for BoxMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Gap => "Gap",
-            Self::Full => "Full",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum ModelRenderMode {
     Filled,
     Wireframe,
 }
 
-impl std::fmt::Display for ModelRenderMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Filled => "Filled",
-            Self::Wireframe => "Wireframe",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum VisibilityMode {
     All,
     InvisibleOnly,
     VisibleOnly,
-}
-
-impl std::fmt::Display for VisibilityMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::All => "All",
-            Self::InvisibleOnly => "Invisible Only",
-            Self::VisibleOnly => "Visible Only",
-        }
-        .fmt(f)
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

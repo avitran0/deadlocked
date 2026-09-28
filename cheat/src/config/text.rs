@@ -1,10 +1,10 @@
 use egui::{Align2, Color32};
 use serde::{Deserialize, Serialize};
-use strum::EnumIter;
+use strum::{Display, EnumIter};
 
 use crate::ui::color::Colors;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter, Display)]
 pub enum TextPosition {
     TopLeft,
     TopCenter,
@@ -17,24 +17,7 @@ pub enum TextPosition {
     BottomRight,
 }
 
-impl std::fmt::Display for TextPosition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::TopLeft => "Top Left",
-            Self::TopCenter => "Top Center",
-            Self::TopRight => "Top Right",
-            Self::CenterLeft => "Center Left",
-            Self::Center => "Center",
-            Self::CenterRight => "Center Right",
-            Self::BottomLeft => "Bottom Left",
-            Self::BottomCenter => "Bottom Center",
-            Self::BottomRight => "Bottom Right",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, EnumIter, Display)]
 pub enum TextAlign {
     LeftTop,
     LeftCenter,
@@ -45,23 +28,6 @@ pub enum TextAlign {
     RightTop,
     RightCenter,
     RightBottom,
-}
-
-impl std::fmt::Display for TextAlign {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::LeftTop => "Left Top",
-            Self::LeftCenter => "Left Center",
-            Self::LeftBottom => "Left Bottom",
-            Self::CenterTop => "Center Top",
-            Self::CenterCenter => "Center Center",
-            Self::CenterBottom => "Center Bottom",
-            Self::RightTop => "Right Top",
-            Self::RightCenter => "Right Center",
-            Self::RightBottom => "Right Bottom",
-        }
-        .fmt(f)
-    }
 }
 
 impl TextAlign {

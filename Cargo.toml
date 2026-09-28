@@ -2,6 +2,9 @@
 members = ["cheat", "server", "shared"]
 resolver = "3"
 
+[profile.dev]
+overflow-checks = false
+
 [profile.release]
 codegen-units = 1
 lto = true

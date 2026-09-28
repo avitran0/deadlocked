@@ -3,7 +3,7 @@ use std::{collections::HashMap, ops::RangeInclusive};
 use glam::Vec2;
 use serde::{Deserialize, Serialize};
 use shared::{Bones, Weapon};
-use strum::{EnumIter, IntoEnumIterator};
+use strum::{Display, EnumIter, IntoEnumIterator};
 
 use crate::cs2::key_codes::KeyCode;
 
@@ -96,36 +96,17 @@ impl Default for RcsConfig {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, EnumIter)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, EnumIter, Display)]
 pub enum KeyMode {
     Hold,
     Toggle,
 }
 
-impl std::fmt::Display for KeyMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Hold => "Hold",
-            Self::Toggle => "Toggle",
-        }
-        .fmt(f)
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, EnumIter, Display)]
 pub enum TargetingMode {
+    #[strum(to_string = "FOV")]
     Fov,
     Distance,
-}
-
-impl std::fmt::Display for TargetingMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Fov => "FOV",
-            Self::Distance => "Distance",
-        }
-        .fmt(f)
-    }
 }
 
 #[derive(Clone, Serialize, Deserialize)]

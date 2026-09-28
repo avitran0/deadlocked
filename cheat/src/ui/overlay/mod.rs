@@ -37,6 +37,11 @@ impl AppState {
 
         self.update_trails();
         self.update_player_sounds();
+        let (in_game, hit_sequence, kill_sequence) = {
+            let data = self.data.lock();
+            (data.in_game, data.hit_sequence, data.kill_sequence)
+        };
+        self.update_hitmarker(in_game, hit_sequence, kill_sequence);
         let data = &self.data.lock();
 
         if self.model_renderer.is_none() {
@@ -72,6 +77,7 @@ impl AppState {
         self.draw_bomb_timer(&painter, data);
         self.draw_fov_circle(&painter, data);
         self.draw_sniper_crosshair(&painter, data);
+        self.draw_hitmarker(&painter, data);
         self.draw_keybind_list(&painter, data);
         self.draw_spectator_list(&painter, data);
 

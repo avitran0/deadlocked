@@ -1,5 +1,6 @@
 use egui::Color32;
 use serde::{Deserialize, Serialize};
+use strum::{Display, EnumIter};
 
 use super::text::OverlayTextConfig;
 
@@ -7,6 +8,7 @@ use super::text::OverlayTextConfig;
 #[serde(default)]
 pub struct HudConfig {
     pub bomb_timer: bool,
+    pub hitmarker: HitmarkerConfig,
     pub fov_circle: bool,
     pub sniper_crosshair: CrosshairConfig,
     pub dropped_weapons: bool,
@@ -23,6 +25,7 @@ impl Default for HudConfig {
     fn default() -> Self {
         Self {
             bomb_timer: true,
+            hitmarker: HitmarkerConfig::default(),
             fov_circle: false,
             sniper_crosshair: CrosshairConfig::default(),
             dropped_weapons: true,
@@ -35,6 +38,61 @@ impl Default for HudConfig {
             overlay_text: OverlayTextConfig::default(),
         }
     }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct HitmarkerConfig {
+    pub enabled: bool,
+    pub duration: f32,
+    pub line_length: f32,
+    pub line_width: f32,
+    pub gap: f32,
+    pub color: Color32,
+    pub kill_color: Color32,
+    pub sound_enabled: bool,
+    pub sound: HitmarkerSound,
+    pub custom_sound_path: String,
+    pub volume: f32,
+}
+
+impl Default for HitmarkerConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            duration: 0.15,
+            line_length: 7.0,
+            line_width: 2.0,
+            gap: 5.0,
+            color: Color32::WHITE,
+            kill_color: Color32::RED,
+            sound_enabled: true,
+            sound: HitmarkerSound::Beep,
+            custom_sound_path: String::new(),
+            volume: 1.0,
+        }
+    }
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Display, EnumIter)]
+#[serde(rename_all = "PascalCase")]
+pub enum HitmarkerSound {
+    Beep,
+    Bell,
+    #[strum(serialize = "Bullet Casing")]
+    BulletCasing,
+    Click,
+    Clink,
+    #[strum(serialize = "Knife Impact")]
+    KnifeImpact,
+    #[strum(serialize = "Rubber Tire")]
+    RubberTire,
+    Sine,
+    #[default]
+    #[strum(serialize = "Water Drip")]
+    WaterDrip,
+    Wood,
+    Custom,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -15,10 +15,13 @@ use winit::{
 };
 
 use crate::{
+    audio::{Audio, builtin_sound},
     config::{
         CONFIG_PATH, Config, DEFAULT_CONFIG_NAME,
         application::{ApplicationConfig, read_app_config, write_app_config},
-        available_configs, parse_config, write_config,
+        available_configs,
+        hud::HitmarkerSound,
+        parse_config, write_config,
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     os::is_omarchy,
@@ -29,6 +32,7 @@ use crate::{
         trail::Trail,
         window_context::WindowContext,
     },
+    update,
     update::UpdateStatus,
 };
 
@@ -42,6 +46,13 @@ pub struct AppState {
     pub trails: HashMap<usize, Trail>,
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
     pub frame_times: VecDeque<Duration>,
+    pub audio: Audio,
+    pub custom_sound: Option<Vec<u8>>,
+    pub custom_sound_warning: Option<String>,
+    pub last_hit_sequence: u64,
+    pub last_kill_sequence: u64,
+    pub hitmarker_started: Option<Instant>,
+    pub hitmarker_kill: bool,
 
     pub grenades: GrenadeList,
     pub new_grenade: Grenade,
@@ -113,10 +124,11 @@ impl AppState {
         let grenades = read_grenades();
         write_app_config(&app_config);
 
-        let update_status = crate::update::check();
-        let update_popup = matches!(update_status, crate::update::UpdateStatus::Available { .. });
+        let update_status = update::check();
+        let update_popup = matches!(update_status, UpdateStatus::Available { .. });
 
-        Self {
+        let audio = Audio::new();
+        let mut state = Self {
             channel_game,
             channel_radar,
             data,
@@ -130,6 +142,13 @@ impl AppState {
             trails: HashMap::new(),
             player_sounds: HashMap::new(),
             frame_times: VecDeque::with_capacity(500),
+            audio,
+            custom_sound: None,
+            custom_sound_warning: None,
+            last_hit_sequence: 0,
+            last_kill_sequence: 0,
+            hitmarker_started: None,
+            hitmarker_kill: false,
             grenades,
             new_grenade: Grenade::new(),
             current_grenade: None,
@@ -143,6 +162,75 @@ impl AppState {
             overlay_egui: None,
             model_renderer: None,
             radar_status: RadarStatus::Disabled,
+        };
+        state.reload_custom_sound();
+        state
+    }
+
+    pub fn reload_custom_sound(&mut self) {
+        if self.config.hud.hitmarker.sound != HitmarkerSound::Custom {
+            self.custom_sound = None;
+            self.custom_sound_warning = None;
+            return;
+        }
+
+        match std::fs::read(&self.config.hud.hitmarker.custom_sound_path) {
+            Ok(bytes) => match Audio::validate(bytes.clone()) {
+                Ok(()) => {
+                    self.custom_sound = Some(bytes);
+                    self.custom_sound_warning = None;
+                }
+                Err(error) => {
+                    self.custom_sound = None;
+                    self.custom_sound_warning =
+                        Some(format!("Custom sound could not be decoded: {error}"));
+                }
+            },
+            Err(error) => {
+                self.custom_sound = None;
+                self.custom_sound_warning =
+                    Some(format!("Custom sound could not be loaded: {error}"));
+            }
+        }
+    }
+
+    pub fn play_hitmarker_test(&self) {
+        let sound = self
+            .custom_sound
+            .as_deref()
+            .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
+        self.audio.play(sound, self.config.hud.hitmarker.volume);
+    }
+
+    pub fn update_hitmarker(&mut self, in_game: bool, hit_sequence: u64, kill_sequence: u64) {
+        if !in_game {
+            self.last_hit_sequence = hit_sequence;
+            self.last_kill_sequence = kill_sequence;
+            self.hitmarker_started = None;
+            return;
+        }
+
+        let hit_count = hit_sequence.wrapping_sub(self.last_hit_sequence);
+        let kill_count = kill_sequence.wrapping_sub(self.last_kill_sequence);
+        if hit_count == 0 && kill_count == 0 {
+            return;
+        }
+
+        let marker_kill = kill_count > 0;
+        self.last_hit_sequence = hit_sequence;
+        self.last_kill_sequence = kill_sequence;
+        self.hitmarker_started = Some(Instant::now());
+        self.hitmarker_kill = marker_kill;
+
+        if self.config.hud.hitmarker.sound_enabled {
+            let sound = self
+                .custom_sound
+                .as_deref()
+                .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
+            let sound_count = hit_count.max(kill_count);
+            for _ in 0..sound_count {
+                self.audio.play(sound, self.config.hud.hitmarker.volume);
+            }
         }
     }
 }

@@ -1,12 +1,12 @@
-use std::{fmt::Display, sync::Arc};
+use std::sync::Arc;
 
 use egui::{FontData, FontDefinitions, FontFamily};
 use serde::{Deserialize, Serialize};
-use strum::{EnumIter, IntoEnumIterator};
+use strum::{Display, EnumIter, IntoEnumIterator};
 
-const ICONS: &[u8] = include_bytes!("../assets/Icons.ttf");
+const ICONS: &[u8] = include_bytes!("../assets/fonts/Icons.ttf");
 
-#[derive(Debug, Clone, Default, PartialEq, EnumIter, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum Font {
     DMSans,
     #[default]
@@ -20,12 +20,12 @@ pub enum Font {
 impl Font {
     pub fn data(&self) -> &'static [u8] {
         match self {
-            Self::DMSans => include_bytes!("../assets/DMSans.ttf"),
-            Self::FiraSans => include_bytes!("../assets/FiraSans.ttf"),
-            Self::Inter => include_bytes!("../assets/Inter.ttf"),
-            Self::Nunito => include_bytes!("../assets/Nunito.ttf"),
-            Self::Ubuntu => include_bytes!("../assets/Ubuntu.ttf"),
-            Self::JetBrainsMono => include_bytes!("../assets/JetBrainsMono.ttf"),
+            Self::DMSans => include_bytes!("../assets/fonts/DMSans.ttf"),
+            Self::FiraSans => include_bytes!("../assets/fonts/FiraSans.ttf"),
+            Self::Inter => include_bytes!("../assets/fonts/Inter.ttf"),
+            Self::Nunito => include_bytes!("../assets/fonts/Nunito.ttf"),
+            Self::Ubuntu => include_bytes!("../assets/fonts/Ubuntu.ttf"),
+            Self::JetBrainsMono => include_bytes!("../assets/fonts/JetBrainsMono.ttf"),
         }
     }
 
@@ -67,22 +67,5 @@ impl Font {
 
     pub fn set(&self, ctx: &egui::Context) {
         Self::register(ctx, self.id());
-    }
-}
-
-impl Display for Font {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        writeln!(
-            f,
-            "{}",
-            match self {
-                Self::DMSans => "DM Sans",
-                Self::FiraSans => "Fira Sans",
-                Self::Inter => "Inter",
-                Self::Nunito => "Nunito",
-                Self::Ubuntu => "Ubuntu",
-                Self::JetBrainsMono => "JetBrainsMono",
-            }
-        )
     }
 }

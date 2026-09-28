@@ -46,6 +46,10 @@ pub struct Data {
     pub grenade_align_active: bool,
     #[serde(skip)]
     pub esp_active: bool,
+    #[serde(skip)]
+    pub hit_sequence: u64,
+    #[serde(skip)]
+    pub kill_sequence: u64,
 }
 
 #[derive(Default, Serialize, Deserialize)]
