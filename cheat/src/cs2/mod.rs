@@ -27,7 +27,7 @@ use crate::{
     },
     math::{angles_from_vector, vec2_clamp},
     os::{mouse::Mouse, process::Process},
-    parser::{bvh::Bvh, read_map},
+    parser::{bvh::Bvh, load_map, read_map, save_map},
     ui::grenades::GrenadeList,
 };
 
@@ -444,9 +444,23 @@ impl CS2 {
     fn check_bvh(&mut self) {
         let current_map = self.current_map();
         if current_map != self.current_bvh {
-            self.bvh = read_map(self);
+            let build_date = self.process.read_string(self.offsets.direct.build_date);
+            self.bvh = load_map(&current_map, &build_date);
+            let loaded_from_cache = self.bvh.is_some();
+
+            if self.bvh.is_none()
+                && let Some(bvh) = read_map(self)
+            {
+                save_map(&current_map, &build_date, &bvh);
+                self.bvh = Some(bvh);
+            }
+
             if self.bvh.is_some() {
-                utils::info!("loaded bvh for {current_map}");
+                if loaded_from_cache {
+                    utils::info!("loaded cached bvh for {current_map}");
+                } else {
+                    utils::info!("built bvh for {current_map}");
+                }
                 self.current_bvh = current_map;
             }
         }

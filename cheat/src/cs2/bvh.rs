@@ -133,7 +133,7 @@ fn process_hull(cs2: &CS2, shape: usize, triangles: &mut Vec<Triangle>) {
     if hull == 0 {
         return;
     }
-    let scale: f32 = cs2.process.read(shape + 0xB0);
+    let scale: f32 = cs2.process.read(shape + 0xB4);
     if !scale.is_finite() {
         return;
     }
