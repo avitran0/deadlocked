@@ -165,14 +165,19 @@ impl CS2 {
             data.in_game = false;
             return;
         };
-        let local_team = local_player.team(self);
-        if !local_team.is_playing() || local_player.health(self) <= 0 {
+        let spectator_target = local_player.spectator_target(self);
+        if spectator_target.is_none()
+            && (!local_player.team(self).is_playing() || local_player.health(self) <= 0)
+        {
             self.previous_hits = None;
             self.previous_kills = None;
             data.weapon = Weapon::default();
             data.in_game = false;
+            data.esp_active = false;
             return;
         }
+        let observer = spectator_target.as_ref().unwrap_or(&local_player);
+        let local_team = observer.team(self);
 
         let current_hits = local_player.total_hits(self);
         let current_kills = local_player.round_kills(self);
@@ -187,19 +192,14 @@ impl CS2 {
             &mut data.kill_sequence,
         );
         let is_ffa = self.is_ffa();
-        let spectator_target = local_player.spectator_target(self);
-        let active_pawn = if let Some(target) = spectator_target {
-            target.pawn
-        } else {
-            local_player.pawn
-        };
+        let active_pawn = observer.pawn;
 
         for player in &self.players {
             if spectator_target.is_some() && player.pawn == active_pawn {
                 continue;
             }
 
-            let (bones, skeleton) = player.skeleton_and_bones_with_visibility(self, &local_player);
+            let (bones, skeleton) = player.skeleton_and_bones_with_visibility(self, observer);
             let player_data = PlayerData {
                 steam_id: player.steam_id(self),
                 money: player.money(self),
@@ -218,7 +218,7 @@ impl CS2 {
                 has_defuser: player.has_defuser(self),
                 has_helmet: player.has_helmet(self),
                 has_bomb: player.has_bomb(self),
-                visible: player.visible(self, &local_player),
+                visible: player.visible(self, observer),
                 color: player.color(self),
                 rotation: player.rotation(self),
                 sound: player.is_making_sound(self),
@@ -247,11 +247,11 @@ impl CS2 {
         data.local_player = PlayerData {
             steam_id: local_player.steam_id(self),
             money: local_player.money(self),
-            team: local_player.team(self),
+            team: local_team,
             health: local_player.health(self),
             max_health: local_player.max_health(self),
             armor: local_player.armor(self),
-            position: local_player.position(self),
+            position: observer.position(self),
             head: local_player.bone_position(self, Bones::Head.u64()),
             name: local_player.name(self),
             model_name: local_player.model_name(self),
