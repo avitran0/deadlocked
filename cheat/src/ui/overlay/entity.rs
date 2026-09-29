@@ -82,10 +82,6 @@ impl AppState {
             cat.font_size,
         );
 
-        if !self.config.hud.grenade_trails.enabled {
-            return;
-        }
-
         let stroke = Stroke::new(self.config.hud.line_width, trail_color);
         let Some(trail) = self.trails.get(&info.entity) else {
             return;
