@@ -262,7 +262,7 @@ impl AppState {
                 
                 self.text_sized(
                     painter,
-                    "\u{e01f}",
+                    "\u{e03f}",
                     anchor,
                     cat.align.to_align2(),
                     Self::alpha(color, alpha),
