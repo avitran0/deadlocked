@@ -25,7 +25,7 @@ impl Audio {
         };
         self.sink
             .mixer()
-            .add(source.amplify(volume.clamp(0.0, 1.0)));
+            .add(source.amplify(volume.clamp(0.0, 10.0)));
     }
 
     pub fn validate(bytes: Vec<u8>) -> Result<(), String> {
