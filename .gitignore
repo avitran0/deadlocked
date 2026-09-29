@@ -3,3 +3,4 @@
 .direnv
 
 /target
+/package

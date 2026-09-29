@@ -71,3 +71,10 @@ fn bvh_cache_path(map_name: &str) -> PathBuf {
     };
     maps_dir.join(bvh_name)
 }
+
+pub fn clear_cache() {
+    let maps_dir = BASE_PATH.join("bvh");
+    if maps_dir.exists() {
+        std::fs::remove_dir_all(maps_dir).expect("failed to clear BVH cache");
+    }
+}

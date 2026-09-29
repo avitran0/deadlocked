@@ -7,7 +7,7 @@ use utils::{
 };
 use winit::platform::x11::EventLoopBuilderExtX11;
 
-use crate::{config::BASE_PATH, os::mouse::check_uinput, ui::app::App};
+use crate::{config::BASE_PATH, os::mouse::check_uinput, parser::clear_cache, ui::app::App};
 
 mod audio;
 mod config;
@@ -42,6 +42,10 @@ fn main() {
         },
     )
     .expect("failed to initialize logger");
+
+    if std::env::args().any(|arg| arg == "--clear-cache") {
+        clear_cache();
+    }
 
     if !check_uinput() {
         return;
