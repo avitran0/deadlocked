@@ -8,7 +8,6 @@ shared.workspace = true
 utils.workspace = true
 
 glam.workspace = true
-gltf = { version = "1.4", features = ["extras"] }
 postcard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -23,6 +22,7 @@ egui-winit = { version = "0.36", default-features = false, features = [
     "links",
     "x11",
 ] }
+gltf = { version = "1.4", features = ["extras"] }
 glutin = { version = "0.32", default-features = false, features = [
     "x11",
     "egl",
