@@ -246,7 +246,6 @@ impl AppState {
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
 
             if player.has_helmet {
-                
                 self.text_sized(
                     painter,
                     "\u{e017}",
@@ -255,11 +254,7 @@ impl AppState {
                     Self::alpha(color, alpha),
                     fs,
                 );
-
-            }
-
-            else if player.armor > 0 {
-                
+            } else if player.armor > 0 {
                 self.text_sized(
                     painter,
                     "\u{e03f}",
