@@ -85,7 +85,8 @@ impl TextCategory {
 pub struct OverlayTextConfig {
     pub status_text: TextCategory,
     pub player_name: TextCategory,
-    pub player_tags: TextCategory,
+    pub player_armor_tags: TextCategory,
+    pub player_tool_tags: TextCategory,
     pub weapon_icon: TextCategory,
     pub ammo_text: TextCategory,
     pub weapon_name: TextCategory,
@@ -111,7 +112,13 @@ impl Default for OverlayTextConfig {
                 TextPosition::TopRight,
                 TextAlign::LeftTop,
             ),
-            player_tags: TextCategory::new(
+            player_armor_tags: TextCategory::new(
+                20.0,
+                Colors::TEXT,
+                TextPosition::TopRight,
+                TextAlign::LeftTop,
+            ),
+            player_tool_tags: TextCategory::new(
                 20.0,
                 Colors::TEXT,
                 TextPosition::TopRight,

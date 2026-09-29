@@ -235,10 +235,17 @@ impl AppState {
         );
         changed |= text_settings_popup(
             ui,
-            "Player Tags",
-            &mut text.player_tags,
+            "Player Armor Tags",
+            &mut text.player_armor_tags,
             &mut self.text_popup,
-            "player_tags",
+            "player_armor_tags",
+        );
+        changed |= text_settings_popup(
+            ui,
+            "Player Tool Tags",
+            &mut text.player_tool_tags,
+            &mut self.text_popup,
+            "player_tool_tags",
         );
         changed |= text_settings_popup(
             ui,

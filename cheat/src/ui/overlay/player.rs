@@ -267,7 +267,7 @@ impl AppState {
                 );
                 offset += fs;
             }
-            if player.has_armor {
+            else if player.armor > 0 {
                 let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
                 self.text_sized(
                     painter,
@@ -278,6 +278,7 @@ impl AppState {
                     fs,
                 );
             }
+
         }
 
         if self.config.player.weapon_icon {
