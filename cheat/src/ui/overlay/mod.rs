@@ -167,9 +167,10 @@ impl AppState {
                 _ => {}
             }
 
-            let sound = self.player_sounds.get(&player.steam_id);
+            let sound_event = self.player_sounds.get(&player.steam_id);
             let sound_alpha = if self.config.player.sound.enabled {
-                self.player_sound_alpha(player, sound, data).unwrap_or(1.0)
+                self.player_sound_alpha(player, sound_event, data)
+                    .unwrap_or(1.0)
             } else {
                 1.0
             };
