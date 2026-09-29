@@ -200,8 +200,8 @@ impl AppState {
             offset += fs;
         }
 
-        if self.config.player.tags {
-            let cat = &self.config.hud.overlay_text.player_tags;
+        if self.config.player.tool_tags {
+            let cat = &self.config.hud.overlay_text.player_tool_tags;
             let fs = cat.font_size * esp_scale;
             let color = if cat.use_player_color {
                 Self::player_color(player.color)
@@ -237,6 +237,41 @@ impl AppState {
                 self.text_sized(
                     painter,
                     "\u{e01e}",
+                    anchor,
+                    cat.align.to_align2(),
+                    Self::alpha(color, alpha),
+                    fs,
+                );
+            }
+        }
+
+        if self.config.player.armor_tags {
+            let cat = &self.config.hud.overlay_text.player_armor_tags;
+            let fs = cat.font_size * esp_scale;
+            let color = if cat.use_player_color {
+                Self::player_color(player.color)
+            } else {
+                cat.color
+            };
+            let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+
+            if player.has_helmet {
+                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                self.text_sized(
+                    painter,
+                    "\u{e017}",
+                    anchor,
+                    cat.align.to_align2(),
+                    Self::alpha(color, alpha),
+                    fs,
+                );
+                offset += fs;
+            }
+            if player.has_armor {
+                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                self.text_sized(
+                    painter,
+                    "\u{e01f}",
                     anchor,
                     cat.align.to_align2(),
                     Self::alpha(color, alpha),

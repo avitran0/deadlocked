@@ -202,12 +202,22 @@ impl AppState {
 
             ui.horizontal(|ui| {
                 if ui
-                    .checkbox(&mut self.config.player.tags, "Show Tags")
+                    .checkbox(&mut self.config.player.tool_tags, "Show Tools")
                     .changed()
                 {
                     self.send_config_game();
                 }
-                text_settings_button(ui, &mut self.text_popup, "player_tags");
+                text_settings_button(ui, &mut self.text_popup, "player_tools");
+            });
+
+            ui.horizontal(|ui| {
+                if ui
+                    .checkbox(&mut self.config.player.armor_tags, "Show Armor")
+                    .changed()
+                {
+                    self.send_config_game();
+                }
+                text_settings_button(ui, &mut self.text_popup, "player_armor");
             });
         });
 
