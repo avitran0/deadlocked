@@ -313,7 +313,7 @@ impl AppState {
     ) {
         let mode = &self.config.player.snaplines;
 
-        let alpha_col = alpha.unwrap_or(255.0) as u8;
+        let alpha_col = (alpha.unwrap_or(1.0) * 255.0) as u8;
 
         let color: Color32 = match mode {
             SnaplineMode::None => return,
