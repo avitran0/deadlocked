@@ -129,7 +129,11 @@ pub fn text_settings_popup(
 
             if matches!(
                 popup_id,
-                "player_name" | "player_tags" | "weapon_icon" | "ammo_text"
+                "player_name"
+                    | "player_tool_tags"
+                    | "player_armor_tags"
+                    | "weapon_icon"
+                    | "ammo_text"
             ) {
                 changed |= ui
                     .checkbox(&mut category.use_player_color, "Use Player Color")

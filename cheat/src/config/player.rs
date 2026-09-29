@@ -71,7 +71,8 @@ pub struct PlayerConfig {
     pub armor_bar: bool,
     pub player_name: bool,
     pub weapon_icon: bool,
-    pub tags: bool,
+    pub tool_tags: bool,
+    pub armor_tags: bool,
     pub visibility: VisibilityMode,
     pub sound: SoundConfig,
 }
@@ -101,7 +102,8 @@ impl Default for PlayerConfig {
             armor_bar: true,
             player_name: true,
             weapon_icon: true,
-            tags: true,
+            tool_tags: true,
+            armor_tags: true,
             visibility: VisibilityMode::All,
             sound: SoundConfig::default(),
         }
