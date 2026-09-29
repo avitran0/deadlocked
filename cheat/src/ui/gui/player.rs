@@ -207,7 +207,7 @@ impl AppState {
                 {
                     self.send_config_game();
                 }
-                text_settings_button(ui, &mut self.text_popup, "player_tools");
+                text_settings_button(ui, &mut self.text_popup, "player_tool_tags");
             });
 
             ui.horizontal(|ui| {
@@ -217,7 +217,7 @@ impl AppState {
                 {
                     self.send_config_game();
                 }
-                text_settings_button(ui, &mut self.text_popup, "player_armor");
+                text_settings_button(ui, &mut self.text_popup, "player_armor_tags");
             });
         });
 

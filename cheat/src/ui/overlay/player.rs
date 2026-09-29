@@ -220,18 +220,6 @@ impl AppState {
                 );
                 offset += fs;
             }
-            if player.has_helmet {
-                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
-                self.text_sized(
-                    painter,
-                    "\u{e017}",
-                    anchor,
-                    cat.align.to_align2(),
-                    Self::alpha(color, alpha),
-                    fs,
-                );
-                offset += fs;
-            }
             if player.has_bomb {
                 let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
                 self.text_sized(
@@ -242,6 +230,7 @@ impl AppState {
                     Self::alpha(color, alpha),
                     fs,
                 );
+                offset += fs;
             }
         }
 
@@ -253,10 +242,11 @@ impl AppState {
             } else {
                 cat.color
             };
+
             let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
 
             if player.has_helmet {
-                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                
                 self.text_sized(
                     painter,
                     "\u{e017}",
@@ -265,10 +255,11 @@ impl AppState {
                     Self::alpha(color, alpha),
                     fs,
                 );
-                offset += fs;
+
             }
+
             else if player.armor > 0 {
-                let anchor = self.box_anchor(tl, tr, bl, br, cat.position, pad, offset);
+                
                 self.text_sized(
                     painter,
                     "\u{e01f}",
@@ -278,7 +269,6 @@ impl AppState {
                     fs,
                 );
             }
-
         }
 
         if self.config.player.weapon_icon {
