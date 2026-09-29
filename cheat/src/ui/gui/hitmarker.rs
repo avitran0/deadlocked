@@ -126,7 +126,7 @@ impl AppState {
                 ui,
                 "Volume",
                 DragValue::new(&mut self.config.hud.hitmarker.volume)
-                    .range(0.0..=1.0)
+                    .range(0.0..=10.0)
                     .speed(0.01)
                     .max_decimals(2),
             ) {
