@@ -168,7 +168,7 @@ impl AppState {
     }
 
     pub fn reload_custom_sound(&mut self) {
-        if self.config.hud.hitmarker.sound != HitmarkerSound::Custom {
+        if self.config.hud.hitmarker.hit_sound != HitmarkerSound::Custom {
             self.custom_sound = None;
             self.custom_sound_warning = None;
             return;
@@ -194,12 +194,20 @@ impl AppState {
         }
     }
 
-    pub fn play_hitmarker_test(&self) {
+    pub fn play_hitmarker_test(&self, kill: bool) {
         let sound = self
             .custom_sound
             .as_deref()
-            .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
-        self.audio.play(sound, self.config.hud.hitmarker.volume);
+            .unwrap_or_else(|| builtin_sound(if kill {
+                self.config.hud.hitmarker.kill_sound
+            } else {
+                self.config.hud.hitmarker.hit_sound
+            }));
+        self.audio.play(sound, if kill {
+            self.config.hud.hitmarker.kill_volume
+        } else {
+            self.config.hud.hitmarker.hit_volume
+        });
     }
 
     pub fn update_hitmarker(&mut self, in_game: bool, hit_sequence: u64, kill_sequence: u64) {
@@ -222,14 +230,40 @@ impl AppState {
         self.hitmarker_started = Some(Instant::now());
         self.hitmarker_kill = marker_kill;
 
-        if self.config.hud.hitmarker.sound_enabled {
+        if self.config.hud.hitmarker.hit_sound_enabled && self.config.hud.hitmarker.kill_sound_enabled {
             let sound = self
                 .custom_sound
                 .as_deref()
-                .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
+                .unwrap_or_else(|| builtin_sound(if marker_kill {
+                    self.config.hud.hitmarker.kill_sound
+                } else {
+                    self.config.hud.hitmarker.hit_sound
+                }));
             let sound_count = hit_count.max(kill_count);
             for _ in 0..sound_count {
-                self.audio.play(sound, self.config.hud.hitmarker.volume);
+                self.audio.play(sound, if marker_kill {
+                    self.config.hud.hitmarker.kill_volume
+                } else {
+                    self.config.hud.hitmarker.hit_volume
+                });
+            }
+        }
+        else if self.config.hud.hitmarker.hit_sound_enabled {
+            let sound = self
+                .custom_sound
+                .as_deref()
+                .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
+            for _ in 0..hit_count {
+                self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
+            }
+        }
+        else if self.config.hud.hitmarker.kill_sound_enabled {
+            let sound = self
+                .custom_sound
+                .as_deref()
+                .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.kill_sound));
+            for _ in 0..kill_count {
+                self.audio.play(sound, self.config.hud.hitmarker.kill_volume);
             }
         }
     }

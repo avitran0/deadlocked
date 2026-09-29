@@ -50,10 +50,13 @@ pub struct HitmarkerConfig {
     pub gap: f32,
     pub color: Color32,
     pub kill_color: Color32,
-    pub sound_enabled: bool,
-    pub sound: HitmarkerSound,
+    pub hit_sound_enabled: bool,
+    pub kill_sound_enabled: bool,
+    pub hit_sound: HitmarkerSound,
+    pub kill_sound: HitmarkerSound,
     pub custom_sound_path: String,
-    pub volume: f32,
+    pub hit_volume: f32,
+    pub kill_volume: f32,
 }
 
 impl Default for HitmarkerConfig {
@@ -66,10 +69,13 @@ impl Default for HitmarkerConfig {
             gap: 5.0,
             color: Color32::WHITE,
             kill_color: Color32::RED,
-            sound_enabled: true,
-            sound: HitmarkerSound::Beep,
+            hit_sound_enabled: true,
+            kill_sound_enabled: true,
+            hit_sound: HitmarkerSound::Beep,
+            kill_sound: HitmarkerSound::RubberTire,
             custom_sound_path: String::new(),
-            volume: 1.0,
+            hit_volume: 1.0,
+            kill_volume: 1.0,
         }
     }
 }
