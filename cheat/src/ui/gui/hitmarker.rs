@@ -121,8 +121,7 @@ impl AppState {
                 self.send_config_game();
             }
 
-            if self.config.hud.hitmarker.hit_sound == HitmarkerSound::Custom
-            {
+            if self.config.hud.hitmarker.hit_sound == HitmarkerSound::Custom {
                 ui.horizontal(|ui| {
                     ui.label("Custom Path");
                     ui.text_edit_singleline(&mut self.config.hud.hitmarker.hit_custom_sound_path);
@@ -136,8 +135,7 @@ impl AppState {
                 }
             }
 
-            if self.config.hud.hitmarker.kill_sound == HitmarkerSound::Custom
-            {
+            if self.config.hud.hitmarker.kill_sound == HitmarkerSound::Custom {
                 ui.horizontal(|ui| {
                     ui.label("Custom Path");
                     ui.text_edit_singleline(&mut self.config.hud.hitmarker.kill_custom_sound_path);
