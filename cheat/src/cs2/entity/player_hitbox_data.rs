@@ -77,10 +77,11 @@ fn extract_model_hitboxes(process: &Process, model: usize) -> Option<Vec<HitboxD
             object = process.read::<usize>(object + offset) & !0xF;
         }
 
-        if valid_path && is_model_pointer(object) {
-            if let Some(hitboxes) = read_hitbox_set(process, object) {
-                return Some(hitboxes);
-            }
+        if valid_path
+            && is_model_pointer(object)
+            && let Some(hitboxes) = read_hitbox_set(process, object)
+        {
+            return Some(hitboxes);
         }
     }
 

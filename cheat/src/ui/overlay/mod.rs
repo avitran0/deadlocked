@@ -55,9 +55,9 @@ impl AppState {
             }
         }
 
-        self.overlay_debug(&painter, &data);
-        self.draw_bvh_visualizer(&painter, &data, glow);
-        self.draw_player_models(&painter, &data);
+        self.overlay_debug(&painter, data);
+        self.draw_bvh_visualizer(&painter, data, glow);
+        self.draw_player_models(&painter, data);
 
         for player in &data.players {
             if data.esp_active {
