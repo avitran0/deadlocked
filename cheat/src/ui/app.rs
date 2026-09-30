@@ -270,6 +270,9 @@ impl AppState {
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
             for _ in 0..hit_count {
+                if kill_count > 0 {
+                    continue;
+                }
                 self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
             }
         }
