@@ -120,6 +120,12 @@ impl BvhRenderer {
         }
 
         unsafe {
+            let blend_was_enabled = glow.is_enabled(glow::BLEND);
+            let blend_source_rgb = glow.get_parameter_i32(glow::BLEND_SRC_RGB) as u32;
+            let blend_destination_rgb = glow.get_parameter_i32(glow::BLEND_DST_RGB) as u32;
+            let blend_source_alpha = glow.get_parameter_i32(glow::BLEND_SRC_ALPHA) as u32;
+            let blend_destination_alpha = glow.get_parameter_i32(glow::BLEND_DST_ALPHA) as u32;
+
             let BvhRenderParams {
                 viewport,
                 view,
@@ -146,6 +152,8 @@ impl BvhRenderer {
             glow.bind_vertex_array(Some(self.vao));
             glow.bind_buffer(glow::ARRAY_BUFFER, Some(self.vbo));
             glow.disable(glow::CULL_FACE);
+            glow.enable(glow::BLEND);
+            glow.blend_func(glow::SRC_ALPHA, glow::ONE_MINUS_SRC_ALPHA);
 
             if visible_only {
                 glow.clear(glow::DEPTH_BUFFER_BIT);
@@ -175,6 +183,17 @@ impl BvhRenderer {
             glow.bind_buffer(glow::ARRAY_BUFFER, None);
             glow.bind_vertex_array(None);
             glow.use_program(None);
+            glow.blend_func_separate(
+                blend_source_rgb,
+                blend_destination_rgb,
+                blend_source_alpha,
+                blend_destination_alpha,
+            );
+            if blend_was_enabled {
+                glow.enable(glow::BLEND);
+            } else {
+                glow.disable(glow::BLEND);
+            }
         }
     }
 }

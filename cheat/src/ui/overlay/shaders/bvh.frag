@@ -6,9 +6,13 @@ uniform vec3 u_view_pos;
 uniform float u_depth_threshold;
 
 void main() {
-    if (length(u_view_pos - v_pos) > u_depth_threshold) {
+    float distance_to_view = length(u_view_pos - v_pos);
+    if (distance_to_view >= u_depth_threshold) {
         discard;
     }
 
-    color = vec4(v_color, 1.0);
+    float fade_width = max(u_depth_threshold * 0.25, 1.0);
+    float fade_start = max(u_depth_threshold - fade_width, 0.0);
+    float alpha = 1.0 - smoothstep(fade_start, u_depth_threshold, distance_to_view);
+    color = vec4(v_color, alpha);
 }
