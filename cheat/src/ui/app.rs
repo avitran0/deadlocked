@@ -279,11 +279,11 @@ impl AppState {
                 let sound = self
                     .hit_custom_sound
                     .as_deref()
-                    .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
+                    .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
                 const MAX_SOUNDS_PER_FRAME: u64 = 4;
                 let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
                 for _ in 0..sound_count {
-                    self.audio.play(sound, self.config.hud.hitmarker.volume);
+                    self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
                 }
             }
         }
@@ -295,7 +295,8 @@ impl AppState {
             const MAX_SOUNDS_PER_FRAME: u64 = 4;
             let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
             for _ in 0..sound_count {
-                self.audio.play(sound, self.config.hud.hitmarker.volume);
+                self.audio
+                    .play(sound, self.config.hud.hitmarker.kill_volume);
             }
         }
     }
