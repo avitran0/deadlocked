@@ -409,7 +409,7 @@ impl CS2 {
 
     fn entity_has_owner(&self, entity: usize) -> bool {
         self.process
-            .read::<i32>(entity + self.offsets.controller.owner_entity)
+            .read::<i32>(entity + self.offsets.entity.owner_entity)
             != -1
     }
 

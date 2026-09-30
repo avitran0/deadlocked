@@ -224,11 +224,10 @@ impl AppState {
             return;
         }
 
-        let marker_kill = kill_count > 0;
         self.last_hit_sequence = hit_sequence;
         self.last_kill_sequence = kill_sequence;
         self.hitmarker_started = Some(Instant::now());
-        self.hitmarker_kill = marker_kill;
+        self.hitmarker_kill = kill_count > 0;
 
         if self.config.hud.hitmarker.hit_sound_enabled && self.config.hud.hitmarker.kill_sound_enabled {
             let sound = self
