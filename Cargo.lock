@@ -598,7 +598,7 @@ checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
 
 [[package]]
 name = "deadlocked"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "bytemuck",
  "egui",
@@ -2776,7 +2776,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "axum",
  "postcard",
@@ -2800,7 +2800,7 @@ dependencies = [
 
 [[package]]
 name = "shared"
-version = "1.4.0"
+version = "1.4.1"
 dependencies = [
  "glam",
  "serde",
