@@ -203,13 +203,13 @@ schema! {
             name: schema("CBasePlayerController", "m_iszPlayerName"),
             pawn: schema("CBasePlayerController", "m_hPawn"),
             desired_fov: schema("CBasePlayerController", "m_iDesiredFOV"),
-            owner_entity: schema("C_BaseEntity", "m_hOwnerEntity"),
             rank: schema("CCSPlayerController", "m_iCompetitiveRanking"),
             rank_type: schema("CCSPlayerController", "m_iCompetitiveRankType"),
             action_tracking_services: schema("CCSPlayerController", "m_pActionTrackingServices"),
         }
         entity: EntityOffsets {
             subclass_vdata: schema_add("C_BaseEntity", "m_nSubclassID", 0x08),
+            owner_entity: schema("C_BaseEntity", "m_hOwnerEntity"),
             health: schema("C_BaseEntity", "m_iHealth"),
             max_health: schema("C_BaseEntity", "m_iMaxHealth"),
             team: schema("C_BaseEntity", "m_iTeamNum"),

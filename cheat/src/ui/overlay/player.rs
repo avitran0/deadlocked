@@ -25,9 +25,9 @@ impl AppState {
             _ => {}
         }
 
-        let sound = self.player_sounds.get(&player.steam_id);
+        let sound_event = self.player_sounds.get(&player.steam_id);
         let sound_alpha = if self.config.player.sound.enabled {
-            self.player_sound_alpha(player, sound, data)
+            self.player_sound_alpha(player, sound_event, data)
         } else {
             None
         };
@@ -40,19 +40,19 @@ impl AppState {
     pub fn player_sound_alpha(
         &self,
         player: &PlayerData,
-        sound: Option<&(Instant, SoundType)>,
+        sound_event: Option<&(Instant, SoundType)>,
         data: &Data,
     ) -> Option<f32> {
         if self.config.player.sound.show_visible && player.visible {
             return Some(1.0);
         }
 
-        let Some((time, sound)) = sound else {
+        let Some((time, sound_type)) = sound_event else {
             return Some(0.0);
         };
 
         let local_player = &data.local_player;
-        let max_distance = match sound {
+        let max_distance = match sound_type {
             SoundType::Footstep => self.config.player.sound.footstep_diameter,
             SoundType::Gunshot => self.config.player.sound.gunshot_diameter,
             SoundType::Weapon => self.config.player.sound.weapon_diameter,
@@ -313,7 +313,7 @@ impl AppState {
     ) {
         let mode = &self.config.player.snaplines;
 
-        let alpha_col = alpha.unwrap_or(255.0) as u8;
+        let alpha_col = (alpha.unwrap_or(1.0) * 255.0) as u8;
 
         let color: Color32 = match mode {
             SnaplineMode::None => return,
