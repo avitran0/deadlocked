@@ -73,6 +73,7 @@ pub struct AppState {
     pub update_status: UpdateStatus,
 
     pub text_popup: Option<String>,
+    pub debug_popup: bool,
     pub update_popup: bool,
     pub omarchy_popup: bool,
     pub overlay_egui: Option<egui::Context>,
@@ -162,6 +163,7 @@ impl AppState {
             aimbot_weapon: Weapon::AK47,
             update_status,
             text_popup: None,
+            debug_popup: cfg!(debug_assertions),
             update_popup,
             omarchy_popup: is_omarchy(),
             overlay_egui: None,
@@ -429,5 +431,19 @@ impl ApplicationHandler for App {
             }
             _ => {}
         }
+    }
+
+    fn exiting(&mut self, _event_loop: &winit::event_loop::ActiveEventLoop) {
+        let (Some(overlay), Some(renderer)) =
+            (self.overlay.as_ref(), self.state.model_renderer.as_ref())
+        else {
+            return;
+        };
+
+        if let Err(error) = overlay.make_current() {
+            utils::warn!("could not make overlay context current for model cleanup: {error}");
+            return;
+        }
+        renderer.destroy();
     }
 }

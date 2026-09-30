@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet, VecDeque},
+    collections::HashMap,
     sync::{Mutex, OnceLock},
 };
 
@@ -7,9 +7,11 @@ use glam::Vec3;
 
 use crate::{cs2::CS2, os::process::Process};
 
-const MODEL_OBJECT_BYTES: usize = 0x100;
-const MODEL_GRAPH_DEPTH: usize = 6;
-const MAX_MODEL_OBJECTS: usize = 12_000;
+const MIN_MODEL_POINTER: usize = 0x1_0000;
+const MAX_MODEL_POINTER: usize = 1 << 47;
+// Fixed paths for the two player-model resource layouts observed in-game.
+const MODEL_HITBOX_SET_PATHS: &[&[usize]] =
+    &[&[0x08, 0xb8, 0x78], &[0xd0, 0x10, 0xe8, 0xc0, 0xf0, 0x98]];
 const MAX_HITBOXES: usize = 64;
 const HITBOX_SET_DATA_OFFSET: usize = 0x60;
 const HITBOX_SET_COUNT_OFFSET: usize = 0x68;
@@ -59,42 +61,34 @@ pub fn read_model_hitboxes(
 }
 
 fn extract_model_hitboxes(process: &Process, model: usize) -> Option<Vec<HitboxDefinition>> {
-    if model == 0 {
+    if !is_model_pointer(model) {
         return None;
     }
 
-    let mut pending = VecDeque::from([(model, 0usize)]);
-    let mut visited = HashSet::new();
+    for path in MODEL_HITBOX_SET_PATHS {
+        let mut object = model & !0xF;
+        let mut valid_path = true;
 
-    while let Some((object, depth)) = pending.pop_front() {
-        let object = object & !0xF;
-        if depth > MODEL_GRAPH_DEPTH || !visited.insert(object) {
-            continue;
-        }
-        if visited.len() > MAX_MODEL_OBJECTS {
-            break;
-        }
-
-        if let Some(hitboxes) = read_hitbox_set(process, object) {
-            return Some(hitboxes);
+        for &offset in *path {
+            if !is_model_pointer(object) {
+                valid_path = false;
+                break;
+            }
+            object = process.read::<usize>(object + offset) & !0xF;
         }
 
-        if depth == MODEL_GRAPH_DEPTH {
-            continue;
-        }
-        for pointer in process.read_typed_vec::<usize>(
-            object,
-            size_of::<usize>(),
-            MODEL_OBJECT_BYTES / size_of::<usize>(),
-        ) {
-            let pointer = pointer & !0xF;
-            if pointer != 0 && !visited.contains(&pointer) {
-                pending.push_back((pointer, depth + 1));
+        if valid_path && is_model_pointer(object) {
+            if let Some(hitboxes) = read_hitbox_set(process, object) {
+                return Some(hitboxes);
             }
         }
     }
 
     None
+}
+
+fn is_model_pointer(pointer: usize) -> bool {
+    (MIN_MODEL_POINTER..MAX_MODEL_POINTER).contains(&pointer)
 }
 
 fn read_hitbox_set(process: &Process, object: usize) -> Option<Vec<HitboxDefinition>> {
