@@ -47,8 +47,10 @@ pub struct AppState {
     pub player_sounds: HashMap<u64, (Instant, SoundType)>,
     pub frame_times: VecDeque<Duration>,
     pub audio: Audio,
-    pub custom_sound: Option<Vec<u8>>,
-    pub custom_sound_warning: Option<String>,
+    pub hit_custom_sound: Option<Vec<u8>>,
+    pub hit_custom_sound_warning: Option<String>,
+    pub kill_custom_sound: Option<Vec<u8>>,
+    pub kill_custom_sound_warning: Option<String>,
     pub last_hit_sequence: u64,
     pub last_kill_sequence: u64,
     pub hitmarker_started: Option<Instant>,
@@ -143,8 +145,10 @@ impl AppState {
             player_sounds: HashMap::new(),
             frame_times: VecDeque::with_capacity(500),
             audio,
-            custom_sound: None,
-            custom_sound_warning: None,
+            hit_custom_sound: None,
+            hit_custom_sound_warning: None,
+            kill_custom_sound: None,
+            kill_custom_sound_warning: None,
             last_hit_sequence: 0,
             last_kill_sequence: 0,
             hitmarker_started: None,
@@ -169,45 +173,76 @@ impl AppState {
 
     pub fn reload_custom_sound(&mut self) {
         if self.config.hud.hitmarker.hit_sound != HitmarkerSound::Custom {
-            self.custom_sound = None;
-            self.custom_sound_warning = None;
-            return;
+            self.hit_custom_sound = None;
+            self.hit_custom_sound_warning = None;
+        } else {
+            match std::fs::read(&self.config.hud.hitmarker.hit_custom_sound_path) {
+                Ok(bytes) => match Audio::validate(bytes.clone()) {
+                    Ok(()) => {
+                        self.hit_custom_sound = Some(bytes);
+                        self.hit_custom_sound_warning = None;
+                    }
+                    Err(error) => {
+                        self.hit_custom_sound = None;
+                        self.hit_custom_sound_warning =
+                            Some(format!("Custom sound could not be decoded: {error}"));
+                    }
+                },
+                Err(error) => {
+                    self.hit_custom_sound = None;
+                    self.hit_custom_sound_warning =
+                        Some(format!("Custom sound could not be loaded: {error}"));
+                }
+            }
         }
 
-        match std::fs::read(&self.config.hud.hitmarker.custom_sound_path) {
-            Ok(bytes) => match Audio::validate(bytes.clone()) {
-                Ok(()) => {
-                    self.custom_sound = Some(bytes);
-                    self.custom_sound_warning = None;
-                }
+        if self.config.hud.hitmarker.kill_sound != HitmarkerSound::Custom {
+            self.kill_custom_sound = None;
+            self.kill_custom_sound_warning = None;
+        } else {
+            match std::fs::read(&self.config.hud.hitmarker.kill_custom_sound_path) {
+                Ok(bytes) => match Audio::validate(bytes.clone()) {
+                    Ok(()) => {
+                        self.kill_custom_sound = Some(bytes);
+                        self.kill_custom_sound_warning = None;
+                    }
+                    Err(error) => {
+                        self.kill_custom_sound = None;
+                        self.kill_custom_sound_warning =
+                            Some(format!("Custom sound could not be decoded: {error}"));
+                    }
+                },
                 Err(error) => {
-                    self.custom_sound = None;
-                    self.custom_sound_warning =
-                        Some(format!("Custom sound could not be decoded: {error}"));
+                    self.kill_custom_sound = None;
+                    self.kill_custom_sound_warning =
+                        Some(format!("Custom sound could not be loaded: {error}"));
                 }
-            },
-            Err(error) => {
-                self.custom_sound = None;
-                self.custom_sound_warning =
-                    Some(format!("Custom sound could not be loaded: {error}"));
             }
         }
     }
 
     pub fn play_hitmarker_test(&self, kill: bool) {
-        let sound = self
-            .custom_sound
-            .as_deref()
-            .unwrap_or_else(|| builtin_sound(if kill {
+        let sound = (if kill {
+            &self.kill_custom_sound
+        } else {
+            &self.hit_custom_sound
+        })
+        .as_deref()
+        .unwrap_or_else(|| {
+            builtin_sound(if kill {
                 self.config.hud.hitmarker.kill_sound
             } else {
                 self.config.hud.hitmarker.hit_sound
-            }));
-        self.audio.play(sound, if kill {
-            self.config.hud.hitmarker.kill_volume
-        } else {
-            self.config.hud.hitmarker.hit_volume
+            })
         });
+        self.audio.play(
+            sound,
+            if kill {
+                self.config.hud.hitmarker.kill_volume
+            } else {
+                self.config.hud.hitmarker.hit_volume
+            },
+        );
     }
 
     pub fn update_hitmarker(&mut self, in_game: bool, hit_sequence: u64, kill_sequence: u64) {
@@ -230,40 +265,23 @@ impl AppState {
         self.hitmarker_started = Some(Instant::now());
         self.hitmarker_kill = marker_kill;
 
-        if self.config.hud.hitmarker.hit_sound_enabled && self.config.hud.hitmarker.kill_sound_enabled {
+        if self.config.hud.hitmarker.hit_sound_enabled {
             let sound = self
-                .custom_sound
-                .as_deref()
-                .unwrap_or_else(|| builtin_sound(if marker_kill {
-                    self.config.hud.hitmarker.kill_sound
-                } else {
-                    self.config.hud.hitmarker.hit_sound
-                }));
-            let sound_count = hit_count.max(kill_count);
-            for _ in 0..sound_count {
-                self.audio.play(sound, if marker_kill {
-                    self.config.hud.hitmarker.kill_volume
-                } else {
-                    self.config.hud.hitmarker.hit_volume
-                });
-            }
-        }
-        else if self.config.hud.hitmarker.hit_sound_enabled {
-            let sound = self
-                .custom_sound
+                .hit_custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
             for _ in 0..hit_count {
                 self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
             }
         }
-        else if self.config.hud.hitmarker.kill_sound_enabled {
+        if self.config.hud.hitmarker.kill_sound_enabled {
             let sound = self
-                .custom_sound
+                .kill_custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.kill_sound));
             for _ in 0..kill_count {
-                self.audio.play(sound, self.config.hud.hitmarker.kill_volume);
+                self.audio
+                    .play(sound, self.config.hud.hitmarker.kill_volume);
             }
         }
     }

@@ -54,7 +54,8 @@ pub struct HitmarkerConfig {
     pub kill_sound_enabled: bool,
     pub hit_sound: HitmarkerSound,
     pub kill_sound: HitmarkerSound,
-    pub custom_sound_path: String,
+    pub hit_custom_sound_path: String,
+    pub kill_custom_sound_path: String,
     pub hit_volume: f32,
     pub kill_volume: f32,
 }
@@ -73,7 +74,8 @@ impl Default for HitmarkerConfig {
             kill_sound_enabled: true,
             hit_sound: HitmarkerSound::Beep,
             kill_sound: HitmarkerSound::RubberTire,
-            custom_sound_path: String::new(),
+            hit_custom_sound_path: String::new(),
+            kill_custom_sound_path: String::new(),
             hit_volume: 1.0,
             kill_volume: 1.0,
         }

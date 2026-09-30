@@ -121,17 +121,33 @@ impl AppState {
                 self.send_config_game();
             }
 
-            if self.config.hud.hitmarker.hit_sound == HitmarkerSound::Custom {
+            if self.config.hud.hitmarker.hit_sound == HitmarkerSound::Custom
+            {
                 ui.horizontal(|ui| {
                     ui.label("Custom Path");
-                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.custom_sound_path);
+                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.hit_custom_sound_path);
                 });
                 if ui.button("Load").clicked() {
                     self.reload_custom_sound();
                     self.send_config_game();
                 }
-                if let Some(warning) = &self.custom_sound_warning {
-                    ui.label(RichText::new(warning).color(Colors::YELLOW));
+                if let Some(warning) = &self.hit_custom_sound_warning {
+                    ui.label(RichText::new(format!("Hit sound: {warning}")).color(Colors::YELLOW));
+                }
+            }
+
+            if self.config.hud.hitmarker.kill_sound == HitmarkerSound::Custom
+            {
+                ui.horizontal(|ui| {
+                    ui.label("Custom Path");
+                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.kill_custom_sound_path);
+                });
+                if ui.button("Load").clicked() {
+                    self.reload_custom_sound();
+                    self.send_config_game();
+                }
+                if let Some(warning) = &self.kill_custom_sound_warning {
+                    ui.label(RichText::new(format!("Kill sound: {warning}")).color(Colors::YELLOW));
                 }
             }
 
