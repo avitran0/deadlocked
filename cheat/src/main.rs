@@ -44,6 +44,7 @@ fn main() {
     .expect("failed to initialize logger");
 
     if std::env::args().any(|arg| arg == "--clear-cache") {
+        utils::info!("clearing bvh cache");
         clear_cache();
     }
 

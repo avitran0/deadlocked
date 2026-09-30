@@ -25,6 +25,7 @@ use crate::{
     },
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     os::is_omarchy,
+    parser::bvh::Bvh,
     ui::{
         grenades::{Grenade, GrenadeList, read_grenades},
         gui::{Tab, aimbot::AimbotTab},
@@ -76,6 +77,10 @@ pub struct AppState {
     pub omarchy_popup: bool,
     pub overlay_egui: Option<egui::Context>,
     pub model_renderer: Option<Arc<ModelRenderer>>,
+    pub bvh: Option<Bvh>,
+    pub bvh_map: String,
+    pub bvh_build_date: String,
+    pub last_bvh_load: Option<Instant>,
 
     pub radar_status: RadarStatus,
 }
@@ -161,6 +166,10 @@ impl AppState {
             omarchy_popup: is_omarchy(),
             overlay_egui: None,
             model_renderer: None,
+            bvh: None,
+            bvh_map: String::new(),
+            bvh_build_date: String::new(),
+            last_bvh_load: None,
             radar_status: RadarStatus::Disabled,
         };
         state.reload_custom_sound();
@@ -210,14 +219,13 @@ impl AppState {
             return;
         }
 
-        let hit_count = hit_sequence.wrapping_sub(self.last_hit_sequence);
-        let kill_count = kill_sequence.wrapping_sub(self.last_kill_sequence);
+        let hit_count = hit_sequence.saturating_sub(self.last_hit_sequence);
+        let kill_count = kill_sequence.saturating_sub(self.last_kill_sequence);
+        self.last_hit_sequence = hit_sequence;
+        self.last_kill_sequence = kill_sequence;
         if hit_count == 0 && kill_count == 0 {
             return;
         }
-
-        self.last_hit_sequence = hit_sequence;
-        self.last_kill_sequence = kill_sequence;
         self.hitmarker_started = Some(Instant::now());
         self.hitmarker_kill = kill_count > 0;
 
@@ -226,7 +234,8 @@ impl AppState {
                 .custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.sound));
-            let sound_count = hit_count.max(kill_count);
+            const MAX_SOUNDS_PER_FRAME: u64 = 4;
+            let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
             for _ in 0..sound_count {
                 self.audio.play(sound, self.config.hud.hitmarker.volume);
             }

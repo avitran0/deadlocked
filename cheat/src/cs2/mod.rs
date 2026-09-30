@@ -145,6 +145,8 @@ impl CS2 {
         data.friendlies.clear();
         data.spectators.clear();
         data.entities.clear();
+        data.map_build_date.clear();
+        data.bvh_available = false;
 
         let sdl_window: usize = self.process.read(self.offsets.direct.sdl_window);
         if sdl_window == 0 {
@@ -303,6 +305,8 @@ impl CS2 {
         data.in_game = true;
         data.is_ffa = is_ffa;
         data.map_name = self.current_map();
+        data.map_build_date = self.process.read_string(self.offsets.direct.build_date);
+        data.bvh_available = self.bvh.is_some() && self.current_bvh == data.map_name;
         data.aimbot_active = if self.aimbot_config(config).mode == KeyMode::Toggle {
             self.aim.active
         } else {
@@ -361,11 +365,16 @@ impl CS2 {
             *previous = None;
             return;
         };
+        if current < 0 {
+            *previous = None;
+            return;
+        }
 
         if let Some(previous_value) = *previous
             && current > previous_value
         {
-            *sequence = sequence.wrapping_add((current - previous_value) as u64);
+            let increment = (i64::from(current) - i64::from(previous_value)) as u64;
+            *sequence = sequence.saturating_add(increment);
         }
         *previous = Some(current);
     }
