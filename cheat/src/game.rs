@@ -86,12 +86,6 @@ impl GameManager {
                 let elapsed = start.elapsed();
                 if elapsed < self.loop_duration() {
                     sleep(self.loop_duration() - elapsed);
-                } else {
-                    utils::debug!(
-                        "game loop took {} ms (max {} ms)",
-                        elapsed.as_millis(),
-                        self.loop_duration().as_millis()
-                    );
                 }
                 self.send_message(UiMessage::FrameTime(elapsed));
             } else {

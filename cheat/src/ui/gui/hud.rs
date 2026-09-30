@@ -218,6 +218,26 @@ impl AppState {
                 self.send_config_game();
             }
 
+            if checkbox(ui, "BVH Debug", &mut self.config.hud.bvh_debug.enabled) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "BVH Range",
+                DragValue::new(&mut self.config.hud.bvh_debug.range).range(0.0..=8000.0),
+            ) {
+                self.send_config_game();
+            }
+
+            if checkbox(
+                ui,
+                "BVH Visible Only",
+                &mut self.config.hud.bvh_debug.visible_only,
+            ) {
+                self.send_config_game();
+            }
+
             if drag(
                 ui,
                 "FPS",

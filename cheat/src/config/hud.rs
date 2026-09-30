@@ -18,6 +18,7 @@ pub struct HudConfig {
     pub text_outline: bool,
     pub line_width: f32,
     pub debug: bool,
+    pub bvh_debug: BvhDebugConfig,
     pub overlay_text: OverlayTextConfig,
 }
 
@@ -35,7 +36,26 @@ impl Default for HudConfig {
             text_outline: true,
             line_width: 2.0,
             debug: false,
+            bvh_debug: BvhDebugConfig::default(),
             overlay_text: OverlayTextConfig::default(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BvhDebugConfig {
+    pub enabled: bool,
+    pub visible_only: bool,
+    pub range: f32,
+}
+
+impl Default for BvhDebugConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            visible_only: true,
+            range: 500.0,
         }
     }
 }
@@ -64,7 +84,7 @@ impl Default for HitmarkerConfig {
     fn default() -> Self {
         Self {
             enabled: true,
-            duration: 0.15,
+            duration: 0.5,
             line_length: 7.0,
             line_width: 2.0,
             gap: 5.0,

@@ -162,6 +162,26 @@ impl AppState {
             }
         }
 
+        if self.debug_popup {
+            let mut close = false;
+            egui::Window::new("Debug Mode Warning")
+                .id(egui::Id::new("debug_mode_warning_popup"))
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(ui.ctx(), |ui| {
+                    ui.label(egui::RichText::new("Debug mode is enabled").color(Colors::YELLOW));
+                    ui.label("You should run it in release mode instead.");
+                    ui.separator();
+                    if ui.button("Continue").clicked() {
+                        close = true;
+                    }
+                });
+            if close {
+                self.debug_popup = false;
+            }
+        }
+
         if self.omarchy_popup {
             let mut close = false;
             egui::Window::new("Omarchy Warning")

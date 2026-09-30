@@ -221,7 +221,9 @@ impl WindowContext {
 
 impl Drop for WindowContext {
     fn drop(&mut self) {
-        self.egui_glow.destroy();
+        if self.make_current().is_ok() {
+            self.egui_glow.destroy();
+        }
     }
 }
 

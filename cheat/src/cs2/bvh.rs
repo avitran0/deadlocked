@@ -38,64 +38,54 @@ pub fn read_bvh(cs2: &CS2) -> Option<(Vec<Triangle>, Vec<SurfaceMaterial>)> {
         return None;
     }
     let body_count: i32 = cs2.process.read(bodies + 0x268);
-    if body_count <= 0 || body_count as usize > MAX_VECTOR_ITEMS {
+    if body_count <= 0 {
         return None;
     }
 
     let mut triangles = Vec::new();
     let mut seen_shapes = HashSet::new();
 
-    for body_index in 0..body_count as usize {
-        let body = bodies + body_index * 88;
+    for body_index in 0..body_count {
+        let body = bodies + body_index as usize * 88;
         if cs2.process.read::<u32>(body + 0x40) != 2 {
             continue;
         }
 
         let root: i32 = cs2.process.read(body);
-        if root < 0 {
-            let shape: usize = cs2.process.read(body + 0x28);
-            if shape != 0 && seen_shapes.insert(shape) {
-                process_shape(cs2, shape, resolver, &mut triangles);
-            }
-            continue;
-        }
         let nodes_ptr: usize = cs2.process.read(body + 0x18);
         let count_a: i32 = cs2.process.read(body + 0x08);
         let count_b: i32 = cs2.process.read(body + 0x10);
-        if nodes_ptr == 0
-            || count_a <= 0
-            || count_a != count_b
-            || count_a as usize > MAX_VECTOR_ITEMS
-            || root >= count_a
-        {
+        let node_count = count_a.max(count_b);
+        if nodes_ptr == 0 || node_count <= 0 || node_count > 0x100000 || root >= node_count {
             continue;
         }
 
         let nodes: Vec<OuterNode> =
             cs2.process
-                .read_typed_vec(nodes_ptr, size_of::<OuterNode>(), count_a as usize);
-        if nodes.len() != count_a as usize {
-            continue;
-        }
+                .read_typed_vec(nodes_ptr, size_of::<OuterNode>(), node_count as usize);
+        let mut leaves = Vec::with_capacity(256);
+        let mut stack = Vec::with_capacity(128);
+        stack.push(root);
 
-        let mut stack = vec![root];
-        let mut visited = HashSet::new();
         while let Some(index) = stack.pop() {
-            if index < 0 || index >= count_a || !visited.insert(index) {
+            if index < 0 || index >= node_count {
                 continue;
             }
             let node = nodes[index as usize];
             if node.left == -1 && node.right == -1 {
-                if node.shape != 0 && seen_shapes.insert(node.shape) {
-                    process_shape(cs2, node.shape, resolver, &mut triangles);
-                }
-                continue;
+                leaves.push(node.shape);
             }
-            if node.left >= 0 {
+            if node.left != -1 {
                 stack.push(node.left);
             }
-            if node.right >= 0 {
+            if node.right != -1 {
                 stack.push(node.right);
+            }
+        }
+
+        for shape in leaves {
+            if seen_shapes.insert(shape) {
+                process_shape(cs2, shape, resolver, &mut triangles);
             }
         }
     }
@@ -170,10 +160,16 @@ fn process_mesh(
 
     let vertices: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.vertices);
     let indices: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.triangles);
+    let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
+        vertices.data,
+        size_of::<glam::Vec3>(),
+        vertices.count as usize,
+    );
+    let indices: Vec<Tri> =
+        cs2.process
+            .read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
+
     let mesh_materials: UtlVector = cs2.process.read(mesh + cs2.offsets.mesh.materials);
-    if !valid_vector(vertices) || !valid_vector(indices) {
-        return;
-    }
     let mesh_materials: Vec<u8> = if valid_vector(mesh_materials) {
         cs2.process.read_typed_vec(
             mesh_materials.data,
@@ -183,17 +179,8 @@ fn process_mesh(
     } else {
         Vec::new()
     };
-
     let fallback_material = resolver.shape_material(cs2, shape + SHAPE_DEFAULT_MATERIAL);
     let resolved_materials = resolved_mesh_materials(cs2, shape, resolver.game_material_count);
-    let vertices: Vec<glam::Vec3> = cs2.process.read_typed_vec(
-        vertices.data,
-        size_of::<glam::Vec3>(),
-        vertices.count as usize,
-    );
-    let indices: Vec<Tri> =
-        cs2.process
-            .read_typed_vec(indices.data, size_of::<Tri>(), indices.count as usize);
 
     for (triangle_index, triangle) in indices.iter().enumerate() {
         let [a, b, c] = triangle.idx;
@@ -242,7 +229,7 @@ fn process_hull(
     let vertices: UtlVector = cs2.process.read(hull + cs2.offsets.hull.vertices);
     let edges: UtlVector = cs2.process.read(hull + cs2.offsets.hull.edges);
     let faces: UtlVector = cs2.process.read(hull + cs2.offsets.hull.faces);
-    if !valid_vector(vertices) || !valid_vector(edges) || !valid_vector(faces) {
+    if vertices.data == 0 || edges.data == 0 || faces.data == 0 {
         return;
     }
 
@@ -254,21 +241,19 @@ fn process_hull(
     let edges: Vec<HalfEdge> =
         cs2.process
             .read_typed_vec(edges.data, size_of::<HalfEdge>(), edges.count as usize);
-    let faces: Vec<u8> =
-        cs2.process
-            .read_typed_vec(faces.data, size_of::<u8>(), faces.count as usize);
+    let faces: Vec<u8> = (0..faces.count)
+        .map(|index| cs2.process.read(faces.data + index as usize))
+        .collect();
     let material = resolver.shape_material(cs2, shape + SHAPE_DEFAULT_MATERIAL);
 
     for &face_start in &faces {
         let start = face_start as usize;
-        if start >= edges.len() {
-            continue;
-        }
         let mut current = start;
         let mut face_vertices = Vec::new();
-        let mut visited = HashSet::new();
-        loop {
-            if current >= edges.len() || !visited.insert(current) {
+        let mut closed = false;
+
+        for _ in 0..edges.len().min(64) {
+            if current >= edges.len() {
                 break;
             }
             let edge = edges[current];
@@ -279,11 +264,12 @@ fn process_hull(
             }
             face_vertices.push(vertices[vertex] * scale);
             current = edge.next as usize;
-            if current == start || visited.len() >= edges.len() {
+            if current == start {
+                closed = true;
                 break;
             }
         }
-        if current != start || face_vertices.len() < 3 {
+        if !closed || face_vertices.len() < 3 {
             continue;
         }
         for index in 1..face_vertices.len() - 1 {

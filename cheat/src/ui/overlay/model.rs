@@ -1,4 +1,10 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 use bytemuck::cast_slice;
 use egui_glow::glow::{self, HasContext as _};
@@ -42,6 +48,7 @@ pub struct ModelRenderer {
     program: glow::Program,
     meshes: HashMap<String, ModelMesh>,
     uniforms: ModelUniforms,
+    destroyed: AtomicBool,
 }
 
 struct ModelUniforms {
@@ -86,10 +93,33 @@ impl ModelRenderer {
             program,
             meshes,
             uniforms,
+            destroyed: AtomicBool::new(false),
         })
     }
 
+    pub fn destroy(&self) {
+        if self.destroyed.swap(true, Ordering::AcqRel) {
+            return;
+        }
+
+        unsafe {
+            for model in self.meshes.values() {
+                for primitive in &model.primitives {
+                    self.glow.delete_buffer(primitive.vbo);
+                    self.glow.delete_buffer(primitive.joint_vbo);
+                    self.glow.delete_buffer(primitive.weight_vbo);
+                    self.glow.delete_buffer(primitive.ebo);
+                    self.glow.delete_vertex_array(primitive.vao);
+                }
+            }
+            self.glow.delete_program(self.program);
+        }
+    }
+
     pub fn render(&self, glow: &glow::Context, params: ModelRenderParams<'_>) {
+        if self.destroyed.load(Ordering::Acquire) {
+            return;
+        }
         let model_key = params
             .model_name
             .rsplit('/')
@@ -157,23 +187,6 @@ impl ModelRenderer {
             glow.disable(glow::BLEND);
             glow.bind_vertex_array(None);
             glow.use_program(None);
-        }
-    }
-}
-
-impl Drop for ModelRenderer {
-    fn drop(&mut self) {
-        unsafe {
-            for model in self.meshes.values() {
-                for primitive in &model.primitives {
-                    self.glow.delete_buffer(primitive.vbo);
-                    self.glow.delete_buffer(primitive.joint_vbo);
-                    self.glow.delete_buffer(primitive.weight_vbo);
-                    self.glow.delete_buffer(primitive.ebo);
-                    self.glow.delete_vertex_array(primitive.vao);
-                }
-            }
-            self.glow.delete_program(self.program);
         }
     }
 }

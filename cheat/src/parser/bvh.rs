@@ -215,6 +215,18 @@ impl Bvh {
         self.materials = materials;
     }
 
+    pub fn all_triangles(&self) -> &[Triangle] {
+        &self.triangles
+    }
+
+    pub fn surface_materials(&self) -> &[SurfaceMaterial] {
+        &self.materials
+    }
+
+    pub fn material(&self, triangle: &Triangle) -> Option<&SurfaceMaterial> {
+        self.materials.get(triangle.material)
+    }
+
     #[allow(unused)]
     pub fn triangles(&self, position: &Vec3) -> Vec<&Triangle> {
         self.triangles

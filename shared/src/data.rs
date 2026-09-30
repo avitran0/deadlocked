@@ -31,6 +31,10 @@ pub struct Data {
     pub bomb: BombData,
     pub map_name: String,
     #[serde(skip)]
+    pub map_build_date: String,
+    #[serde(skip)]
+    pub bvh_available: bool,
+    #[serde(skip)]
     pub view_matrix: Mat4,
     #[serde(skip)]
     pub view_angles: Vec2,

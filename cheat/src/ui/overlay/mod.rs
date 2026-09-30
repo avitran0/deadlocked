@@ -14,6 +14,7 @@ use crate::{
     ui::{app::AppState, grenades::Grenade},
 };
 
+mod bvh;
 mod entity;
 mod hud;
 pub mod model;
@@ -42,7 +43,10 @@ impl AppState {
             (data.in_game, data.hit_sequence, data.kill_sequence)
         };
         self.update_hitmarker(in_game, hit_sequence, kill_sequence);
-        let data = &self.data.lock();
+        let data_arc = self.data.clone();
+        let data_guard = data_arc.lock();
+        let data = &*data_guard;
+        self.handle_bvh(data);
 
         if self.model_renderer.is_none() {
             match model::ModelRenderer::new(glow.clone()) {
@@ -52,6 +56,7 @@ impl AppState {
         }
 
         self.overlay_debug(&painter, data);
+        self.draw_bvh_visualizer(&painter, data, glow);
         self.draw_player_models(&painter, data);
 
         for player in &data.players {
