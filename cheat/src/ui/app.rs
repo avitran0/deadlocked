@@ -298,7 +298,6 @@ impl AppState {
                 self.audio.play(sound, self.config.hud.hitmarker.volume);
             }
         }
-
     }
 }
 
