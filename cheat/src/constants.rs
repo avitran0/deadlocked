@@ -15,6 +15,8 @@ pub mod cs2 {
     ];
 
     pub const DEFAULT_FOV: u32 = 90;
+    pub const FOV_MIN: u32 = 5;
+    pub const FOV_MAX: u32 = 120;
 
     pub const MESH_SKELETON_BONE_COUNT: usize = 96;
 

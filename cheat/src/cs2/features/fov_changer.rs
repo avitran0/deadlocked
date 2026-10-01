@@ -1,5 +1,6 @@
 use crate::{
     config::Config,
+    constants::cs2::{FOV_MAX, FOV_MIN},
     cs2::{CS2, entity::player::Player},
 };
 
@@ -9,7 +10,7 @@ impl CS2 {
             return;
         };
 
-        let value = config.misc.desired_fov.clamp(1, 179);
+        let value = config.misc.desired_fov.clamp(FOV_MIN, FOV_MAX);
         if config.misc.fov_changer {
             if self.original_desired_fov.is_none() {
                 self.original_desired_fov = Some(local_player.desired_fov(self));

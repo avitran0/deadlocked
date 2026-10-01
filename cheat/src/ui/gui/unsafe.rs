@@ -89,7 +89,7 @@ impl AppState {
                     .add(
                         DragValue::new(&mut self.config.misc.desired_fov)
                             .speed(0.1)
-                            .range(1..=179),
+                            .range(crate::constants::cs2::FOV_MIN..=crate::constants::cs2::FOV_MAX),
                     )
                     .changed()
                 {
