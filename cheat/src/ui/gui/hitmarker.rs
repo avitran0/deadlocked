@@ -84,48 +84,100 @@ impl AppState {
         collapsing_open(ui, "Sound", |ui| {
             if checkbox(
                 ui,
-                "Enable Sound",
-                &mut self.config.hud.hitmarker.sound_enabled,
+                "Enable Hit Sound",
+                &mut self.config.hud.hitmarker.hit_sound_enabled,
+            ) {
+                self.send_config_game();
+            }
+            if checkbox(
+                ui,
+                "Enable Kill Sound",
+                &mut self.config.hud.hitmarker.kill_sound_enabled,
             ) {
                 self.send_config_game();
             }
 
-            let sound_changed = combo_box(
+            let hit_sound_changed = combo_box(
                 ui,
-                "hitmarker_sound",
-                "Sound",
-                &mut self.config.hud.hitmarker.sound,
+                "hit_hitmarker_sound",
+                "Hit Sound",
+                &mut self.config.hud.hitmarker.hit_sound,
             );
-            if sound_changed {
+
+            if hit_sound_changed {
                 self.reload_custom_sound();
                 self.send_config_game();
             }
 
-            if self.config.hud.hitmarker.sound == HitmarkerSound::Custom {
+            let kill_sound_changed = combo_box(
+                ui,
+                "kill_hitmarker_sound",
+                "Kill Sound",
+                &mut self.config.hud.hitmarker.kill_sound,
+            );
+
+            if kill_sound_changed {
+                self.reload_custom_sound();
+                self.send_config_game();
+            }
+
+            if self.config.hud.hitmarker.hit_sound == HitmarkerSound::Custom {
                 ui.horizontal(|ui| {
-                    ui.label("Custom Path");
-                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.custom_sound_path);
+                    ui.label("Custom Hit Sound Path");
+                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.hit_custom_sound_path);
                 });
                 if ui.button("Load").clicked() {
                     self.reload_custom_sound();
                     self.send_config_game();
                 }
-                if let Some(warning) = &self.custom_sound_warning {
-                    ui.label(RichText::new(warning).color(Colors::YELLOW));
+                if let Some(warning) = &self.hit_custom_sound_warning {
+                    ui.label(RichText::new(format!("Hit sound: {warning}")).color(Colors::YELLOW));
+                }
+            }
+
+            if self.config.hud.hitmarker.kill_sound == HitmarkerSound::Custom {
+                ui.horizontal(|ui| {
+                    ui.label("Custom Kill Sound Path");
+                    ui.text_edit_singleline(&mut self.config.hud.hitmarker.kill_custom_sound_path);
+                });
+                if ui.button("Load").clicked() {
+                    self.reload_custom_sound();
+                    self.send_config_game();
+                }
+                if let Some(warning) = &self.kill_custom_sound_warning {
+                    ui.label(RichText::new(format!("Kill sound: {warning}")).color(Colors::YELLOW));
                 }
             }
 
             ui.horizontal(|ui| {
-                if ui.button("Test Sound").clicked() {
-                    self.play_hitmarker_test();
+                if ui.button("Test Hit Sound").clicked() {
+                    self.play_hitmarker_test(false);
+                }
+                ui.label("Preview selected sound");
+            });
+
+            ui.horizontal(|ui| {
+                if ui.button("Test Kill Sound").clicked() {
+                    self.play_hitmarker_test(true);
                 }
                 ui.label("Preview selected sound");
             });
 
             if drag(
                 ui,
-                "Volume",
-                DragValue::new(&mut self.config.hud.hitmarker.volume)
+                "Hit Volume",
+                DragValue::new(&mut self.config.hud.hitmarker.hit_volume)
+                    .range(0.0..=10.0)
+                    .speed(0.01)
+                    .max_decimals(2),
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Kill Volume",
+                DragValue::new(&mut self.config.hud.hitmarker.kill_volume)
                     .range(0.0..=10.0)
                     .speed(0.01)
                     .max_decimals(2),
