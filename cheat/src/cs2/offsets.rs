@@ -269,6 +269,7 @@ schema! {
         }
         camera_services: CameraServicesOffsets {
             fov: schema("CCSPlayerBase_CameraServices", "m_iFOV"),
+            fov_start: schema("CCSPlayerBase_CameraServices", "m_iFOVStart"),
         }
         item_services: ItemServicesOffsets {
             has_defuser: schema("CCSPlayer_ItemServices", "m_bHasDefuser"),

@@ -63,6 +63,7 @@ pub struct CS2 {
     last_cache: Instant,
     previous_hits: Option<i32>,
     previous_kills: Option<i32>,
+    original_desired_fov: Option<u32>,
 }
 
 impl CS2 {
@@ -357,6 +358,7 @@ impl CS2 {
             last_cache: Instant::now(),
             previous_hits: None,
             previous_kills: None,
+            original_desired_fov: None,
         }
     }
 

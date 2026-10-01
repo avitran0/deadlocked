@@ -723,6 +723,20 @@ impl Player {
         }
     }
 
+    pub fn desired_fov(&self, cs2: &CS2) -> u32 {
+        cs2
+            .process
+            .read(self.controller + cs2.offsets.controller.desired_fov)
+    }
+
+    pub fn set_desired_fov(&self, cs2: &CS2, value: u32) {
+        let address = self.controller + cs2.offsets.controller.desired_fov;
+        let current: u32 = cs2.process.read(address);
+        if current != value {
+            cs2.process.write(address, value);
+        }
+    }
+
     pub fn set_fov(&self, cs2: &CS2, value: u32) {
         let camera_service = cs2
             .process
@@ -730,13 +744,17 @@ impl Player {
         if camera_service == 0 {
             return;
         }
-        let current: u32 = cs2
-            .process
-            .read(camera_service + cs2.offsets.camera_services.fov);
-        if current != 0 && current != value {
-            cs2.process
-                .write(camera_service + cs2.offsets.camera_services.fov, value);
+        let address = camera_service + cs2.offsets.camera_services.fov;
+        let current: u32 = cs2.process.read(address);
+        if current != value {
+            cs2.process.write(address, value);
         }
+        let address = camera_service + cs2.offsets.camera_services.fov_start;
+        let start: u32 = cs2.process.read(address);
+        if start != value {
+            cs2.process.write(address, value);
+        }
+        self.set_desired_fov(cs2, value);
     }
 }
 
