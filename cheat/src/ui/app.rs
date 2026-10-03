@@ -274,17 +274,15 @@ impl AppState {
         self.hitmarker_started = Some(Instant::now());
         self.hitmarker_kill = kill_count > 0;
 
-        if self.config.hud.hitmarker.hit_sound_enabled {
-            if !self.hitmarker_kill {
-                let sound = self
-                    .hit_custom_sound
-                    .as_deref()
-                    .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
-                const MAX_SOUNDS_PER_FRAME: u64 = 4;
-                let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
-                for _ in 0..sound_count {
-                    self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
-                }
+        if self.config.hud.hitmarker.hit_sound_enabled && !self.hitmarker_kill {
+            let sound = self
+                .hit_custom_sound
+                .as_deref()
+                .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
+            const MAX_SOUNDS_PER_FRAME: u64 = 4;
+            let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
+            for _ in 0..sound_count {
+                self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
             }
         }
         if self.config.hud.hitmarker.kill_sound_enabled {

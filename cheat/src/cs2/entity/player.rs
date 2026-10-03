@@ -206,8 +206,9 @@ impl Player {
         if model_handle == 0 {
             return None;
         }
-        let model: usize = cs2.process.read(model_handle);
-        let hitboxes = read_model_hitboxes(&cs2.process, model, hitbox_set_index(cs2, scene_node))?;
+        let cmodel: usize = cs2.process.read(model_handle);
+        let hitboxes =
+            read_model_hitboxes(&cs2.process, cmodel, hitbox_set_index(cs2, scene_node))?;
         let skeleton = self.hitbox_skeleton(cs2);
         hitboxes
             .iter()
