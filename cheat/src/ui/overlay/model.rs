@@ -25,6 +25,7 @@ pub struct ModelRenderParams<'a> {
     pub model: &'a [f32; 16],
     pub visible_color: [f32; 4],
     pub invisible_color: [f32; 4],
+    pub visible_only: bool,
     pub mode: ModelRenderMode,
 }
 
@@ -56,6 +57,7 @@ struct ModelUniforms {
     model: glow::UniformLocation,
     visible_color: glow::UniformLocation,
     invisible_color: glow::UniformLocation,
+    visible_only: glow::UniformLocation,
     bone_visibility: glow::UniformLocation,
     bones: glow::UniformLocation,
 }
@@ -80,6 +82,7 @@ impl ModelRenderer {
             model: opengl::uniform_location(glow.as_ref(), program, "u_model")?,
             visible_color: opengl::uniform_location(glow.as_ref(), program, "u_visible_color")?,
             invisible_color: opengl::uniform_location(glow.as_ref(), program, "u_invisible_color")?,
+            visible_only: opengl::uniform_location(glow.as_ref(), program, "u_visible_only")?,
             bone_visibility: opengl::uniform_location(
                 glow.as_ref(),
                 program,
@@ -157,6 +160,10 @@ impl ModelRenderer {
                 params.invisible_color[1],
                 params.invisible_color[2],
                 params.invisible_color[3],
+            );
+            glow.uniform_1_i32(
+                Some(&self.uniforms.visible_only),
+                params.visible_only as i32,
             );
             let visibility: Vec<f32> = params.skeleton.iter().map(|bone| bone.visibility).collect();
             glow.uniform_1_f32_slice(Some(&self.uniforms.bone_visibility), &visibility);

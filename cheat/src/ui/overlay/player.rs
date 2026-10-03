@@ -19,9 +19,6 @@ impl AppState {
             VisibilityMode::InvisibleOnly if player.visible => {
                 return;
             }
-            VisibilityMode::VisibleOnly if !player.visible => {
-                return;
-            }
             _ => {}
         }
 
@@ -32,8 +29,11 @@ impl AppState {
             None
         };
 
-        self.player_box(painter, player, data, sound_alpha);
-        self.player_tracers(painter, player, data, sound_alpha);
+        let visible_only = self.config.player.visibility == VisibilityMode::VisibleOnly;
+        if !visible_only || player.visible {
+            self.player_box(painter, player, data, sound_alpha);
+            self.player_tracers(painter, player, data, sound_alpha);
+        }
         self.skeleton(painter, player, data, sound_alpha);
     }
 
@@ -498,7 +498,21 @@ impl AppState {
         }
         let stroke = Stroke::new(self.config.hud.line_width * esp_scale, color);
 
+        let visible_only = self.config.player.visibility == VisibilityMode::VisibleOnly;
         for (a, b) in &Bones::CONNECTIONS {
+            if visible_only
+                && (!player
+                    .skeleton
+                    .get(a.u64() as usize)
+                    .is_some_and(|bone| bone.visibility >= 0.5)
+                    || !player
+                        .skeleton
+                        .get(b.u64() as usize)
+                        .is_some_and(|bone| bone.visibility >= 0.5))
+            {
+                continue;
+            }
+
             let Some(a) = player.bones.get(a) else {
                 continue;
             };
@@ -518,6 +532,18 @@ impl AppState {
 
         // head circle
         if !self.config.player.head_circle {
+            return;
+        }
+        if visible_only
+            && ![Bones::Neck, Bones::Spine3, Bones::Head]
+                .iter()
+                .all(|bone| {
+                    player
+                        .skeleton
+                        .get(bone.u64() as usize)
+                        .is_some_and(|bone| bone.visibility >= 0.5)
+                })
+        {
             return;
         }
         let Some(neck) = player.bones.get(&Bones::Neck) else {
