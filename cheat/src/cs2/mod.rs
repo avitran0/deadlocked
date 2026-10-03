@@ -17,8 +17,8 @@ use crate::{
             weapon::{weapon_clip_ammo, weapon_reserve_ammo},
         },
         features::{
-            aimbot::Aimbot, esp_toggle::EspToggle, grenade_align::GrenadeAlign, rcs::Recoil,
-            triggerbot::Triggerbot,
+            aimbot::Aimbot, esp_toggle::EspToggle, fov_writer::FovWriter,
+            grenade_align::GrenadeAlign, rcs::Recoil, triggerbot::Triggerbot,
         },
         input::Input,
         key_codes::KeyCode,
@@ -64,6 +64,7 @@ pub struct CS2 {
     previous_hits: Option<i32>,
     previous_kills: Option<i32>,
     original_desired_fov: Option<u32>,
+    fov_writer: FovWriter,
 }
 
 impl CS2 {
@@ -92,6 +93,9 @@ impl CS2 {
             }
         };
         utils::info!("offsets found");
+
+        self.fov_writer
+            .publish(self.process.clone(), self.offsets.clone());
 
         self.is_valid = true;
     }
@@ -359,6 +363,7 @@ impl CS2 {
             previous_hits: None,
             previous_kills: None,
             original_desired_fov: None,
+            fov_writer: FovWriter::new(),
         }
     }
 

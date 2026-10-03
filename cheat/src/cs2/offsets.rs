@@ -100,7 +100,7 @@ macro_rules! schema {
     (@struct) => {};
 
     (@sdef $name:ident $($fdef:ident : $kind:ident $args:tt ,)*) => {
-        #[derive(Default)]
+        #[derive(Default, Clone)]
         pub struct $name {
             $(pub $fdef: usize,)*
         }
@@ -113,7 +113,7 @@ macro_rules! schema {
         schema!(@offsets_acc { $($fields)* } $($inner)* $($rest)*);
     };
     (@offsets_acc { $($fields:tt)* }) => {
-        #[derive(Default)]
+        #[derive(Default, Clone)]
         pub struct Offsets {
             $($fields)*
         }
@@ -270,6 +270,10 @@ schema! {
         camera_services: CameraServicesOffsets {
             fov: schema("CCSPlayerBase_CameraServices", "m_iFOV"),
             fov_start: schema("CCSPlayerBase_CameraServices", "m_iFOVStart"),
+            fov_time: schema("CCSPlayerBase_CameraServices", "m_flFOVTime"),
+            fov_rate: schema("CCSPlayerBase_CameraServices", "m_flFOVRate"),
+            zoom_owner: schema("CCSPlayerBase_CameraServices", "m_hZoomOwner"),
+            last_shot_fov: schema("CCSPlayerBase_CameraServices", "m_flLastShotFOV"),
         }
         item_services: ItemServicesOffsets {
             has_defuser: schema("CCSPlayer_ItemServices", "m_bHasDefuser"),

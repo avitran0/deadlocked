@@ -18,6 +18,19 @@ pub struct Process {
     pub data_range: RangeInclusive<usize>,
 }
 
+impl Clone for Process {
+    fn clone(&self) -> Self {
+        Self {
+            pid: self.pid,
+            file: self.file.try_clone().unwrap_or_else(|_| {
+                OpenOptions::new().read(true).open("/dev/null").unwrap()
+            }),
+            path: self.path.clone(),
+            data_range: self.data_range.clone(),
+        }
+    }
+}
+
 impl Process {
     pub fn new(pid: i32) -> Self {
         if pid == -1 {

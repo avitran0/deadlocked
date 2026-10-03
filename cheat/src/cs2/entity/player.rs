@@ -744,16 +744,13 @@ impl Player {
         if camera_service == 0 {
             return;
         }
-        let address = camera_service + cs2.offsets.camera_services.fov;
-        let current: u32 = cs2.process.read(address);
-        if current != value {
-            cs2.process.write(address, value);
-        }
-        let address = camera_service + cs2.offsets.camera_services.fov_start;
-        let start: u32 = cs2.process.read(address);
-        if start != value {
-            cs2.process.write(address, value);
-        }
+        let off = &cs2.offsets.camera_services;
+        cs2.process.write(camera_service + off.fov, value);
+        cs2.process.write(camera_service + off.fov_start, value);
+        cs2.process.write(camera_service + off.fov_time, 0.0_f32);
+        cs2.process.write(camera_service + off.fov_rate, 0.0_f32);
+        cs2.process.write(camera_service + off.zoom_owner, 0xFFFF_FFFF_u32);
+        cs2.process.write(camera_service + off.last_shot_fov, value as f32);
         self.set_desired_fov(cs2, value);
     }
 }
