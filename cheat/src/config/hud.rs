@@ -7,7 +7,7 @@ use super::text::OverlayTextConfig;
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HudConfig {
-    pub bomb_timer: bool,
+    pub bomb_options: BombTimerConfig,
     pub hitmarker: HitmarkerConfig,
     pub fov_circle: bool,
     pub sniper_crosshair: CrosshairConfig,
@@ -25,7 +25,7 @@ pub struct HudConfig {
 impl Default for HudConfig {
     fn default() -> Self {
         Self {
-            bomb_timer: true,
+            bomb_options: BombTimerConfig::default(),
             hitmarker: HitmarkerConfig::default(),
             fov_circle: false,
             sniper_crosshair: CrosshairConfig::default(),
@@ -56,6 +56,41 @@ impl Default for BvhDebugConfig {
             enabled: false,
             visible_only: true,
             range: 500.0,
+        }
+    }
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Display, EnumIter)]
+#[serde(rename_all = "PascalCase")]
+pub enum BombRenderMode {
+    #[default]
+    Default,
+    Gradient,
+    #[strum(serialize = "Custom Colors")]
+    CustomColors,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct BombTimerConfig {
+    pub enabled: bool,
+    pub render_mode: BombRenderMode,
+    pub not_defusable_color: Color32,
+    pub defusable_with_kit_color: Color32,
+    pub defusable_without_kit_color: Color32,
+    pub successfully_defused_color: Color32,
+    pub defuse_failed_color: Color32,
+}
+impl Default for BombTimerConfig {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            render_mode: BombRenderMode::Default,
+            not_defusable_color: Color32::RED,
+            defusable_with_kit_color: Color32::YELLOW,
+            defusable_without_kit_color: Color32::ORANGE,
+            successfully_defused_color: Color32::GREEN,
+            defuse_failed_color: Color32::RED,
         }
     }
 }

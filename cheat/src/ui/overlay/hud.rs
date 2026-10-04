@@ -20,7 +20,7 @@ impl AppState {
     }
 
     pub fn draw_bomb_timer(&self, painter: &Painter, data: &Data) {
-        if !self.config.hud.bomb_timer || !data.bomb.planted {
+        if !self.config.hud.bomb_options.enabled || !data.bomb.planted {
             return;
         }
 
