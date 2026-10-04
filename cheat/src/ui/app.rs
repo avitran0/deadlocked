@@ -275,14 +275,14 @@ impl AppState {
         }
         self.hitmarker_started = Some(Instant::now());
         self.hitmarker_kill = kill_count > 0;
-        
+
         if self.config.hud.hitmarker.hit_sound_enabled {
             if !self.hitmarker_kill {
                 let sound = self
                     .hit_custom_sound
                     .as_deref()
                     .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
-                
+
                 let sound_count = hit_count.min(MAX_SOUNDS_PER_FRAME);
                 for _ in 0..sound_count {
                     self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
@@ -294,7 +294,7 @@ impl AppState {
                 .kill_custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.kill_sound));
-            
+
             let sound_count = kill_count.min(MAX_SOUNDS_PER_FRAME);
             for _ in 0..sound_count {
                 self.audio
