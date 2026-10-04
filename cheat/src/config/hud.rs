@@ -115,7 +115,6 @@ pub enum HitmarkerSound {
     KnifeImpact,
     #[strum(serialize = "Rubber Tire")]
     RubberTire,
-    Sine,
     #[default]
     #[strum(serialize = "Water Drip")]
     WaterDrip,
