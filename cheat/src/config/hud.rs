@@ -88,7 +88,7 @@ impl Default for BombTimerConfig {
             render_mode: BombRenderMode::Default,
             not_defusable_color: Color32::RED,
             defusable_with_kit_color: Color32::YELLOW,
-            defusable_without_kit_color: Color32::ORANGE,
+            defusable_without_kit_color: Color32::CYAN,
             successfully_defused_color: Color32::GREEN,
             defuse_failed_color: Color32::RED,
         }
@@ -198,11 +198,11 @@ impl Default for TrailConfig {
         Self {
             enabled: true,
             inferno_poly: true,
-            smoke: Color32::LIGHT_GRAY,
-            molotov: Color32::RED,
-            incendiary: Color32::ORANGE,
-            flash: Color32::WHITE,
-            he: Color32::DARK_GRAY,
+            smoke: Color32::GREEN,
+            molotov: Color32::LIGHT_RED,
+            incendiary: Color32::LIGHT_RED,
+            flash: Color32::CYAN,
+            he: Color32::RED,
             decoy: Color32::PURPLE,
         }
     }
