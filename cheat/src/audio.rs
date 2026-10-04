@@ -41,11 +41,11 @@ pub fn builtin_sound(sound: HitmarkerSound) -> &'static [u8] {
         HitmarkerSound::Bell => include_bytes!("../assets/audio/bell.wav"),
         HitmarkerSound::BulletCasing => include_bytes!("../assets/audio/bullet_casing.wav"),
         HitmarkerSound::Click => include_bytes!("../assets/audio/click.wav"),
-        HitmarkerSound::Clink => include_bytes!("../assets/audio/clink.wav"),
+        HitmarkerSound::Clink => include_bytes!("../assets/audio/clink.mp3"),
         HitmarkerSound::KnifeImpact => include_bytes!("../assets/audio/knife_impact.wav"),
         HitmarkerSound::RubberTire => include_bytes!("../assets/audio/rubber_tire.wav"),
         HitmarkerSound::WaterDrip => include_bytes!("../assets/audio/water_drip.wav"),
-        HitmarkerSound::Wood => include_bytes!("../assets/audio/wood.wav"),
+        HitmarkerSound::Wood => include_bytes!("../assets/audio/wood.mp3"),
         HitmarkerSound::Custom => include_bytes!("../assets/audio/water_drip.wav"),
     }
 }
