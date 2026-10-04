@@ -9,13 +9,19 @@ use crate::{cs2::CS2, os::process::Process};
 
 const MIN_MODEL_POINTER: usize = 0x1_0000;
 const MAX_MODEL_POINTER: usize = 1 << 47;
-// Fixed paths for the two player-model resource layouts observed in-game.
-const MODEL_HITBOX_SET_PATHS: &[&[usize]] =
-    &[&[0x08, 0xb8, 0x78], &[0xd0, 0x10, 0xe8, 0xc0, 0xf0, 0x98]];
-const MAX_HITBOXES: usize = 64;
-const HITBOX_SET_DATA_OFFSET: usize = 0x60;
-const HITBOX_SET_COUNT_OFFSET: usize = 0x68;
-const HITBOX_RECORD_SIZE: usize = 0x70;
+
+// CModel and render-mesh fields (these aren't in the client schema).
+const CMODEL_MESHES: usize = 0x78;
+const MESH_HITBOX_DATA: usize = 0x168;
+const HITBOX_COUNT: usize = 0x28;
+const HITBOX_ARRAY: usize = 0x30;
+const REMAP_COUNT: usize = 0x220;
+const REMAP_TABLE: usize = 0x228;
+const MESH_A: usize = 0x240;
+const MESH_B: usize = 0x2f0;
+const HITBOX_STRIDE: usize = 0x70;
+const MAX_HITBOXES: usize = 20;
+const MAX_BONE_REMAPS: usize = 512;
 
 #[derive(Clone, Copy)]
 pub struct HitboxDefinition {
@@ -29,8 +35,8 @@ pub struct HitboxDefinition {
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq)]
 struct HitboxCacheKey {
-    model_address: usize,
-    hitbox_set_index: usize,
+    cmodel: usize,
+    hitbox_set: usize,
 }
 
 type HitboxCache = HashMap<HitboxCacheKey, Vec<HitboxDefinition>>;
@@ -39,79 +45,79 @@ static HITBOX_CACHE: OnceLock<Mutex<HitboxCache>> = OnceLock::new();
 
 pub fn read_model_hitboxes(
     process: &Process,
-    model: usize,
+    cmodel: usize,
     hitbox_set: usize,
 ) -> Option<Vec<HitboxDefinition>> {
-    if hitbox_set != 0 {
+    if hitbox_set != 0 || !is_model_pointer(cmodel) {
         return None;
     }
 
     let cache = HITBOX_CACHE.get_or_init(|| Mutex::new(HashMap::new()));
-    let key = HitboxCacheKey {
-        model_address: model,
-        hitbox_set_index: hitbox_set,
-    };
+    let key = HitboxCacheKey { cmodel, hitbox_set };
     if let Some(hitboxes) = cache.lock().ok()?.get(&key) {
         return Some(hitboxes.clone());
     }
 
-    let hitboxes = extract_model_hitboxes(process, model)?;
+    let hitboxes = extract_model_hitboxes(process, cmodel)?;
     cache.lock().ok()?.insert(key, hitboxes.clone());
     Some(hitboxes)
 }
 
-fn extract_model_hitboxes(process: &Process, model: usize) -> Option<Vec<HitboxDefinition>> {
-    if !is_model_pointer(model) {
+fn extract_model_hitboxes(process: &Process, cmodel: usize) -> Option<Vec<HitboxDefinition>> {
+    let render_mesh_list: usize = process.read(cmodel + CMODEL_MESHES);
+    if !is_model_pointer(render_mesh_list) {
+        return None;
+    }
+    let render_meshes: usize = process.read(render_mesh_list);
+    if !is_model_pointer(render_meshes) {
+        return None;
+    }
+    let hitbox_data: usize = process.read(render_meshes + MESH_HITBOX_DATA);
+    if !is_model_pointer(hitbox_data) {
         return None;
     }
 
-    for path in MODEL_HITBOX_SET_PATHS {
-        let mut object = model & !0xF;
-        let mut valid_path = true;
-
-        for &offset in *path {
-            if !is_model_pointer(object) {
-                valid_path = false;
-                break;
-            }
-            object = process.read::<usize>(object + offset) & !0xF;
-        }
-
-        if valid_path
-            && is_model_pointer(object)
-            && let Some(hitboxes) = read_hitbox_set(process, object)
-        {
-            return Some(hitboxes);
-        }
+    let count = process.read::<i32>(hitbox_data + HITBOX_COUNT);
+    if !(1..=MAX_HITBOXES as i32).contains(&count) {
+        return None;
     }
-
-    None
-}
-
-fn is_model_pointer(pointer: usize) -> bool {
-    (MIN_MODEL_POINTER..MAX_MODEL_POINTER).contains(&pointer)
-}
-
-fn read_hitbox_set(process: &Process, object: usize) -> Option<Vec<HitboxDefinition>> {
-    let data = process.read::<usize>(object + HITBOX_SET_DATA_OFFSET);
-    let count = process.read::<u32>(object + HITBOX_SET_COUNT_OFFSET) as usize;
-    if !(10..=MAX_HITBOXES).contains(&count) || data == 0 {
+    let records: usize = process.read(hitbox_data + HITBOX_ARRAY);
+    if !is_model_pointer(records) {
         return None;
     }
 
-    let mut hitboxes = Vec::with_capacity(count);
-    for index in 0..count {
-        let record = data + index * HITBOX_RECORD_SIZE;
-        let _name = read_name(process, process.read(record))?;
-        let _surface = read_name(process, process.read(record + 0x08))?;
-        let bone_name = read_name(process, process.read(record + 0x10))?;
+    let remap_count = process.read::<i32>(cmodel + REMAP_COUNT);
+    if !(1..=MAX_BONE_REMAPS as i32).contains(&remap_count) {
+        return None;
+    }
+    let remap_table: usize = process.read(cmodel + REMAP_TABLE);
+    let mesh_a: usize = process.read(cmodel + MESH_A);
+    let mesh_b: usize = process.read(cmodel + MESH_B);
+    if !is_model_pointer(remap_table) || !is_model_pointer(mesh_a) || !is_model_pointer(mesh_b) {
+        return None;
+    }
+
+    let offset_a = process.read::<u16>(mesh_a) as usize;
+    let offset_b = process.read::<u16>(mesh_b) as usize;
+    let remap = process.read_typed_vec::<i16>(remap_table, size_of::<i16>(), remap_count as usize);
+
+    let mut hitboxes = Vec::with_capacity(count as usize);
+    for index in 0..count as usize {
+        let record = records + index * HITBOX_STRIDE;
+        let hitbox_remap_index = process.read::<u16>(record + 0x48) as usize;
+        let remap_index = hitbox_remap_index + offset_a + offset_b;
+        let Some(&bone_index) = remap.get(remap_index) else {
+            continue;
+        };
+        if !(0..96).contains(&bone_index) {
+            continue;
+        }
+
         let min: Vec3 = process.read(record + 0x18);
         let max: Vec3 = process.read(record + 0x24);
-        let radius: f32 = process.read(record + 0x30);
+        let radius = process.read::<f32>(record + 0x30);
         let group_id = process.read::<u32>(record + 0x38);
-        let shape = process.read::<u32>(record + 0x3C);
-        let bone_index = bone_index(&bone_name)?;
-
+        let shape = process.read::<u32>(record + 0x3c);
         if !min.is_finite()
             || !max.is_finite()
             || !radius.is_finite()
@@ -119,11 +125,11 @@ fn read_hitbox_set(process: &Process, object: usize) -> Option<Vec<HitboxDefinit
             || group_id > u8::MAX as u32
             || shape > 2
         {
-            return None;
+            continue;
         }
 
         hitboxes.push(HitboxDefinition {
-            bone_index,
+            bone_index: bone_index as usize,
             min,
             max,
             radius,
@@ -138,47 +144,8 @@ fn read_hitbox_set(process: &Process, object: usize) -> Option<Vec<HitboxDefinit
         .then_some(hitboxes)
 }
 
-fn read_name(process: &Process, pointer: usize) -> Option<String> {
-    if pointer == 0 {
-        return None;
-    }
-    let name = process.read_string(pointer);
-    valid_name(&name).then_some(name)
-}
-
-fn valid_name(name: &str) -> bool {
-    !name.is_empty()
-        && name.len() <= 80
-        && name
-            .bytes()
-            .all(|byte| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'.')
-}
-
-fn bone_index(name: &str) -> Option<usize> {
-    Some(match name {
-        "pelvis" => 1,
-        "spine_0" => 2,
-        "spine_1" => 3,
-        "spine_2" => 4,
-        "spine_3" => 5,
-        "neck_0" => 6,
-        "head_0" => 7,
-        "clavicle_l" => 8,
-        "arm_upper_l" => 9,
-        "arm_lower_l" => 10,
-        "hand_l" => 11,
-        "clavicle_r" => 12,
-        "arm_upper_r" => 13,
-        "arm_lower_r" => 14,
-        "hand_r" => 15,
-        "leg_upper_l" => 17,
-        "leg_lower_l" => 18,
-        "ankle_l" => 19,
-        "leg_upper_r" => 20,
-        "leg_lower_r" => 21,
-        "ankle_r" => 22,
-        _ => return None,
-    })
+fn is_model_pointer(pointer: usize) -> bool {
+    (MIN_MODEL_POINTER..MAX_MODEL_POINTER).contains(&pointer)
 }
 
 pub fn hitbox_set_index(cs2: &CS2, scene_node: usize) -> usize {

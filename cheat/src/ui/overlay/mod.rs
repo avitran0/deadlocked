@@ -166,7 +166,9 @@ impl AppState {
                 VisibilityMode::InvisibleOnly if player.visible => {
                     continue;
                 }
-                VisibilityMode::VisibleOnly if !player.visible => {
+                VisibilityMode::VisibleOnly
+                    if !player.skeleton.iter().any(|bone| bone.visibility >= 0.5) =>
+                {
                     continue;
                 }
                 _ => {}
@@ -232,6 +234,7 @@ impl AppState {
             let visible = alpha_color(visible, sound_alpha);
             let invisible = alpha_color(invisible, sound_alpha);
             let mode = self.config.player.model_mode;
+            let visible_only = self.config.player.visibility == VisibilityMode::VisibleOnly;
             let callback = CallbackFn::new(move |info, painter| {
                 let viewport = info.viewport_in_pixels();
                 renderer.render(
@@ -249,6 +252,7 @@ impl AppState {
                         model: &model::model_matrix(),
                         visible_color: visible.to_normalized_gamma_f32(),
                         invisible_color: invisible.to_normalized_gamma_f32(),
+                        visible_only,
                         mode,
                     },
                 );
