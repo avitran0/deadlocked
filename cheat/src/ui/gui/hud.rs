@@ -27,36 +27,36 @@ impl AppState {
                 }
                 if color_picker(
                     ui,
-                    "Not Defusable",
-                    &mut self.config.hud.bomb_options.not_defusable_color,
+                    "(Bomb)Not Defusable",
+                    &mut self.config.hud.bomb.not_defusable_color,
                 ) {
                     self.send_config_game();
                 }
                 if color_picker(
                     ui,
-                    "Defusable with Kit Color",
-                    &mut self.config.hud.bomb_options.defusable_with_kit_color,
+                    "(Bomb) Defusable with Kit",
+                    &mut self.config.hud.bomb.defusable_with_kit_color,
                 ) {
                     self.send_config_game();
                 }
                 if color_picker(
                     ui,
-                    "Defusable without Kit Color",
-                    &mut self.config.hud.bomb_options.defusable_without_kit_color,
+                    "(Bomb) Defusable without Kit",
+                    &mut self.config.hud.bomb.defusable_without_kit_color,
                 ) {
                     self.send_config_game();
                 }
                 if color_picker(
                     ui,
-                    "Successfully Defused Color",
-                    &mut self.config.hud.bomb_options.successfully_defused_color,
+                    "(Kit) Successfully Defused",
+                    &mut self.config.hud.bomb.successfully_defused_color,
                 ) {
                     self.send_config_game();
                 }
                 if color_picker(
                     ui,
-                    "Defuse Failed Color",
-                    &mut self.config.hud.bomb_options.defuse_failed_color,
+                    "(Kit) Defuse Failed",
+                    &mut self.config.hud.bomb.defuse_failed_color,
                 ) {
                     self.send_config_game();
                 }
@@ -133,7 +133,7 @@ impl AppState {
     fn hud_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "HUD", |ui| {
             ui.horizontal(|ui| {
-                if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb_options.enabled) {
+                if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb.enabled) {
                     self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "bomb_timer");
@@ -143,7 +143,7 @@ impl AppState {
                 ui,
                 "bomb_render_mode",
                 "Bomb Render Mode",
-                &mut self.config.hud.bomb_options.render_mode,
+                &mut self.config.hud.bomb.render_mode,
             ) {
                 self.send_config_game();
             }

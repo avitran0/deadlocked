@@ -7,7 +7,7 @@ use super::text::OverlayTextConfig;
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct HudConfig {
-    pub bomb_options: BombTimerConfig,
+    pub bomb: BombConfig,
     pub hitmarker: HitmarkerConfig,
     pub fov_circle: bool,
     pub sniper_crosshair: CrosshairConfig,
@@ -25,7 +25,7 @@ pub struct HudConfig {
 impl Default for HudConfig {
     fn default() -> Self {
         Self {
-            bomb_options: BombTimerConfig::default(),
+            bomb: BombConfig::default(),
             hitmarker: HitmarkerConfig::default(),
             fov_circle: false,
             sniper_crosshair: CrosshairConfig::default(),
@@ -61,7 +61,6 @@ impl Default for BvhDebugConfig {
 }
 
 #[derive(Default, Clone, Copy, PartialEq, Serialize, Deserialize, Display, EnumIter)]
-#[serde(rename_all = "PascalCase")]
 pub enum BombRenderMode {
     #[default]
     Default,
@@ -72,7 +71,7 @@ pub enum BombRenderMode {
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
-pub struct BombTimerConfig {
+pub struct BombConfig {
     pub enabled: bool,
     pub render_mode: BombRenderMode,
     pub not_defusable_color: Color32,
@@ -81,7 +80,7 @@ pub struct BombTimerConfig {
     pub successfully_defused_color: Color32,
     pub defuse_failed_color: Color32,
 }
-impl Default for BombTimerConfig {
+impl Default for BombConfig {
     fn default() -> Self {
         Self {
             enabled: true,

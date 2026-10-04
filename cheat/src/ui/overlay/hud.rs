@@ -20,7 +20,7 @@ impl AppState {
     }
 
     pub fn draw_bomb_timer(&self, painter: &Painter, data: &Data) {
-        if !self.config.hud.bomb_options.enabled || !data.bomb.planted {
+        if !self.config.hud.bomb.enabled || !data.bomb.planted {
             return;
         }
 
@@ -29,7 +29,7 @@ impl AppState {
             let anchor = point_anchor(pos, cat.position, cat.font_size * 0.3);
             let time = data.bomb.timer.clamp(0.0, 40.0);
 
-            let color = match self.config.hud.bomb_options.render_mode {
+            let color = match self.config.hud.bomb.render_mode {
                 crate::config::hud::BombRenderMode::Default => cat.color,
 
                 crate::config::hud::BombRenderMode::Gradient => {
@@ -38,11 +38,11 @@ impl AppState {
 
                 crate::config::hud::BombRenderMode::CustomColors => {
                     if time >= 10.0 {
-                        self.config.hud.bomb_options.defusable_without_kit_color
+                        self.config.hud.bomb.defusable_without_kit_color
                     } else if time >= 5.0 {
-                        self.config.hud.bomb_options.defusable_with_kit_color
+                        self.config.hud.bomb.defusable_with_kit_color
                     } else {
-                        self.config.hud.bomb_options.not_defusable_color
+                        self.config.hud.bomb.not_defusable_color
                     }
                 }
             };
@@ -58,9 +58,9 @@ impl AppState {
 
             if data.bomb.being_defused {
                 let defuse_color = if data.bomb.defuse_remain_time <= data.bomb.timer {
-                    self.config.hud.bomb_options.successfully_defused_color
+                    self.config.hud.bomb.successfully_defused_color
                 } else {
-                    self.config.hud.bomb_options.defuse_failed_color
+                    self.config.hud.bomb.defuse_failed_color
                 };
 
                 self.text_sized(
