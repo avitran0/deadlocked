@@ -27,7 +27,7 @@ impl AppState {
                 }
                 if color_picker(
                     ui,
-                    "(Bomb)Not Defusable",
+                    "(Bomb) Not Defusable",
                     &mut self.config.hud.bomb.not_defusable_color,
                 ) {
                     self.send_config_game();
