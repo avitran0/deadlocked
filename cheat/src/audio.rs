@@ -44,7 +44,6 @@ pub fn builtin_sound(sound: HitmarkerSound) -> &'static [u8] {
         HitmarkerSound::Clink => include_bytes!("../assets/audio/clink.mp3"),
         HitmarkerSound::KnifeImpact => include_bytes!("../assets/audio/knife_impact.wav"),
         HitmarkerSound::RubberTire => include_bytes!("../assets/audio/rubber_tire.wav"),
-        HitmarkerSound::Sine => include_bytes!("../assets/audio/sine.wav"),
         HitmarkerSound::WaterDrip => include_bytes!("../assets/audio/water_drip.wav"),
         HitmarkerSound::Wood => include_bytes!("../assets/audio/wood.mp3"),
         HitmarkerSound::Custom => include_bytes!("../assets/audio/water_drip.wav"),

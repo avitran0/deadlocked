@@ -261,9 +261,11 @@ impl AppState {
             self.last_hit_sequence = hit_sequence;
             self.last_kill_sequence = kill_sequence;
             self.hitmarker_started = None;
+            self.hitmarker_kill = false;
             return;
         }
 
+        const MAX_SOUNDS_PER_FRAME: u64 = 4;
         let hit_count = hit_sequence.saturating_sub(self.last_hit_sequence);
         let kill_count = kill_sequence.saturating_sub(self.last_kill_sequence);
         self.last_hit_sequence = hit_sequence;
@@ -279,19 +281,20 @@ impl AppState {
                 .hit_custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.hit_sound));
-            const MAX_SOUNDS_PER_FRAME: u64 = 4;
-            let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
+
+            let sound_count = hit_count.min(MAX_SOUNDS_PER_FRAME);
             for _ in 0..sound_count {
                 self.audio.play(sound, self.config.hud.hitmarker.hit_volume);
             }
         }
+
         if self.config.hud.hitmarker.kill_sound_enabled {
             let sound = self
                 .kill_custom_sound
                 .as_deref()
                 .unwrap_or_else(|| builtin_sound(self.config.hud.hitmarker.kill_sound));
-            const MAX_SOUNDS_PER_FRAME: u64 = 4;
-            let sound_count = hit_count.max(kill_count).min(MAX_SOUNDS_PER_FRAME);
+
+            let sound_count = kill_count.min(MAX_SOUNDS_PER_FRAME);
             for _ in 0..sound_count {
                 self.audio
                     .play(sound, self.config.hud.hitmarker.kill_volume);
