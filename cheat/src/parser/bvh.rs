@@ -2,12 +2,14 @@ use glam::Vec3;
 use serde::{Deserialize, Serialize};
 
 const MAX_LEAF_COUNT: usize = 8;
-const MAX_PENETRATION_DISTANCE: f32 = 3000.0;
+const MAX_PENETRATION_DISTANCE: f32 = 90.0;
 const MIN_PENETRATION_MODIFIER: f32 = 0.1;
-const DEFAULT_DAMAGE_LOSS_MODIFIER: f32 = 0.16;
+const MIN_DAMAGE_LOSS_MODIFIER: f32 = 0.16;
 const THIN_GLASS_DAMAGE_LOSS_MODIFIER: f32 = 0.05;
 const THIN_GLASS_MAX_THICKNESS: f32 = 6.0;
 const THICKNESS_LOSS_DIVISOR: f32 = 24.0;
+const THIN_SURFACE_THICKNESS: f32 = 3.0;
+const HIT_MERGE_EPSILON: f32 = 0.1;
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -181,14 +183,6 @@ struct MaterialHit {
     shape: usize,
 }
 
-fn append_shape_walls(crossings: &[MaterialHit], walls: &mut Vec<[MaterialHit; 2]>) -> bool {
-    let (pairs, remainder) = crossings.as_chunks::<2>();
-    if !remainder.is_empty() {
-        return false;
-    }
-    walls.extend_from_slice(pairs);
-    true
-}
 
 #[repr(C)]
 #[derive(Serialize, Deserialize)]
@@ -345,26 +339,13 @@ impl Bvh {
         let direction = ray / distance;
         let mut hits = Vec::new();
         self.collect_material_hits(root, start, direction, distance, &mut hits);
-        hits.sort_by(|a, b| {
-            a.shape
-                .cmp(&b.shape)
-                .then_with(|| a.distance.total_cmp(&b.distance))
-        });
 
-        let mut walls = Vec::<[MaterialHit; 2]>::new();
-        let mut shape_crossings = Vec::<MaterialHit>::new();
-        let mut current_shape = None;
+        hits.sort_by(|a, b| a.distance.total_cmp(&b.distance));
+
+        let mut deduped: Vec<MaterialHit> = Vec::with_capacity(hits.len());
         for hit in hits {
-            if current_shape.is_some_and(|shape| shape != hit.shape) {
-                if !append_shape_walls(&shape_crossings, &mut walls) {
-                    return None;
-                }
-                shape_crossings.clear();
-            }
-            current_shape = Some(hit.shape);
-
-            if let Some(last) = shape_crossings.last_mut()
-                && (last.distance - hit.distance).abs() <= 0.05
+            if let Some(last) = deduped.last_mut()
+                && (last.distance - hit.distance).abs() <= HIT_MERGE_EPSILON
             {
                 last.material.penetration_modifier = last
                     .material
@@ -378,13 +359,24 @@ impl Bvh {
                     last.material.surface_type = 0;
                 }
             } else {
-                shape_crossings.push(hit);
+                deduped.push(hit);
             }
         }
-        if !append_shape_walls(&shape_crossings, &mut walls) {
-            return None;
+
+        let mut walls: Vec<[MaterialHit; 2]> = Vec::new();
+        let mut iter = deduped.into_iter();
+        while let Some(entry) = iter.next() {
+            let exit = if let Some(candidate) = iter.next() {
+                candidate
+            } else {
+                MaterialHit {
+                    distance: entry.distance + THIN_SURFACE_THICKNESS,
+                    material: entry.material,
+                    shape: entry.shape,
+                }
+            };
+            walls.push([entry, exit]);
         }
-        walls.sort_by(|a, b| a[0].distance.total_cmp(&b[0].distance));
 
         if weapon_damage <= 0.0 || weapon_penetration <= 0.0 || range_modifier <= 0.0 {
             return None;
@@ -401,8 +393,9 @@ impl Bvh {
             }
             let entry = wall[0];
             let exit = wall[1];
-            let thickness = exit.distance - entry.distance;
-            if entry.distance > MAX_PENETRATION_DISTANCE {
+            let thickness = (exit.distance - entry.distance).max(0.0);
+
+            if thickness > MAX_PENETRATION_DISTANCE {
                 return None;
             }
 
@@ -412,7 +405,11 @@ impl Bvh {
                 .material
                 .penetration_modifier
                 .min(exit.material.penetration_modifier);
-            let mut damage_loss_modifier = DEFAULT_DAMAGE_LOSS_MODIFIER;
+            let mut damage_loss_modifier = entry
+                .material
+                .damage_modifier
+                .min(exit.material.damage_modifier)
+                .max(MIN_DAMAGE_LOSS_MODIFIER);
             if same_surface_type {
                 match surface_type as u8 {
                     b'U' | b'W' => penetration_modifier = 3.0,
