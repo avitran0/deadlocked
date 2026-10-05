@@ -179,6 +179,7 @@ impl CS2 {
 
         for (distance, hit, target) in candidates {
             let hit_position = origin + direction * distance;
+            // todo: actual hit group modifiers? idk
             let hitgroup_modifier = if hit.group_id == 1 {
                 vdata.headshot_multiplier
             } else {
@@ -193,7 +194,9 @@ impl CS2 {
                     vdata.range,
                     vdata.range_modifier,
                 )
-                .is_some_and(|damage| damage * hitgroup_modifier > 0.0)
+                .is_some_and(|damage| {
+                    damage * hitgroup_modifier > settings.minimum_penetration_damage as f32
+                })
             {
                 return Some(target);
             }

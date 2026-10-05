@@ -263,6 +263,16 @@ impl AppState {
 
             if drag(
                 ui,
+                "Minumum Damage",
+                DragValue::new(&mut self.weapon_config().triggerbot.minimum_penetration_damage)
+                    .range(0..=200)
+                    .speed(0.2),
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
                 "Hold Duration (ms)",
                 DragValue::new(&mut self.weapon_config().triggerbot.shot_duration)
                     .range(0..=2000)

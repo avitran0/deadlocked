@@ -86,7 +86,6 @@ impl Aabb {
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct SurfaceMaterial {
     pub penetration_modifier: f32,
-    /// Retained from the surface table for visualization/diagnostics.
     pub damage_modifier: f32,
     pub surface_type: u16,
 }
