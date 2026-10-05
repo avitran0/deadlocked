@@ -20,35 +20,64 @@ impl AppState {
     }
 
     pub fn draw_bomb_timer(&self, painter: &Painter, data: &Data) {
-        if !self.config.hud.bomb_timer || !data.bomb.planted {
+        if !self.config.hud.bomb.enabled || !data.bomb.planted {
             return;
         }
 
         if let Some(pos) = world_to_screen(&data.bomb.position, data) {
             let cat = &self.config.hud.overlay_text.bomb_timer;
             let anchor = point_anchor(pos, cat.position, cat.font_size * 0.3);
+            let time = data.bomb.timer.clamp(0.0, 40.0);
+
+            let color = match self.config.hud.bomb.render_mode {
+                crate::config::hud::BombRenderMode::Default => cat.color,
+
+                crate::config::hud::BombRenderMode::Gradient => {
+                    self.health_color((time * 100.0 / 40.0) as i32, 100, 255)
+                }
+
+                crate::config::hud::BombRenderMode::CustomColors => {
+                    if time >= 10.0 {
+                        self.config.hud.bomb.defusable_without_kit_color
+                    } else if time >= 5.0 {
+                        self.config.hud.bomb.defusable_with_kit_color
+                    } else {
+                        self.config.hud.bomb.not_defusable_color
+                    }
+                }
+            };
+
             self.text_sized(
                 painter,
                 format!("{:.3}", data.bomb.timer),
                 anchor,
                 cat.align.to_align2(),
-                cat.color,
+                color,
                 cat.font_size,
             );
+
             if data.bomb.being_defused {
+                let defuse_color = if data.bomb.defuse_remain_time <= data.bomb.timer {
+                    self.config.hud.bomb.successfully_defused_color
+                } else {
+                    self.config.hud.bomb.defuse_failed_color
+                };
+
                 self.text_sized(
                     painter,
                     format!("defusing {:.3}", data.bomb.defuse_remain_time),
                     anchor + vec2(0.0, cat.font_size),
                     cat.align.to_align2(),
-                    cat.color,
+                    defuse_color,
                     cat.font_size,
                 );
             }
         }
 
         let fraction = (data.bomb.timer / 40.0).clamp(0.0, 1.0);
+
         let color = self.health_color((fraction * 100.0) as i32, 100, 255);
+
         painter.line(
             vec![
                 pos2(0.0, data.window_size.y),

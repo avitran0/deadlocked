@@ -25,6 +25,41 @@ impl AppState {
                 ) {
                     self.send_config_game();
                 }
+                if color_picker(
+                    ui,
+                    "(Bomb) Not Defusable",
+                    &mut self.config.hud.bomb.not_defusable_color,
+                ) {
+                    self.send_config_game();
+                }
+                if color_picker(
+                    ui,
+                    "(Bomb) Defusable with Kit",
+                    &mut self.config.hud.bomb.defusable_with_kit_color,
+                ) {
+                    self.send_config_game();
+                }
+                if color_picker(
+                    ui,
+                    "(Bomb) Defusable without Kit",
+                    &mut self.config.hud.bomb.defusable_without_kit_color,
+                ) {
+                    self.send_config_game();
+                }
+                if color_picker(
+                    ui,
+                    "(Kit) Successfully Defused",
+                    &mut self.config.hud.bomb.successfully_defused_color,
+                ) {
+                    self.send_config_game();
+                }
+                if color_picker(
+                    ui,
+                    "(Kit) Defuse Failed",
+                    &mut self.config.hud.bomb.defuse_failed_color,
+                ) {
+                    self.send_config_game();
+                }
             });
 
             ui.collapsing("Grenade Trails", |ui| {
@@ -98,11 +133,20 @@ impl AppState {
     fn hud_left(&mut self, ui: &mut Ui) {
         collapsing_open(ui, "HUD", |ui| {
             ui.horizontal(|ui| {
-                if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb_timer) {
+                if checkbox(ui, "Bomb Timer", &mut self.config.hud.bomb.enabled) {
                     self.send_config_game();
                 }
                 text_settings_button(ui, &mut self.text_popup, "bomb_timer");
             });
+
+            if combo_box(
+                ui,
+                "bomb_render_mode",
+                "Bomb Render Mode",
+                &mut self.config.hud.bomb.render_mode,
+            ) {
+                self.send_config_game();
+            }
 
             if checkbox(ui, "FOV Circle", &mut self.config.hud.fov_circle) {
                 self.send_config_game();
