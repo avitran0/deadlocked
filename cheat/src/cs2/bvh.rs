@@ -96,6 +96,7 @@ pub fn read_bvh(cs2: &CS2) -> Option<(Vec<Triangle>, Vec<SurfaceMaterial>)> {
 fn read_surface_materials(cs2: &CS2) -> Vec<SurfaceMaterial> {
     let controller = cs2.offsets.direct.surface_properties;
     if controller == 0 {
+        utils::warn!("empty surface properties");
         return Vec::new();
     }
     let entries: UtlVector = cs2.process.read(controller + 0x20);
@@ -103,6 +104,7 @@ fn read_surface_materials(cs2: &CS2) -> Vec<SurfaceMaterial> {
         || entries.count == 0
         || entries.count as usize > MAX_SURFACE_MATERIALS
     {
+        utils::warn!("invalid surface properties vector");
         return Vec::new();
     }
     let entries: Vec<SurfaceMaterialEntry> = cs2.process.read_typed_vec(
@@ -112,19 +114,21 @@ fn read_surface_materials(cs2: &CS2) -> Vec<SurfaceMaterial> {
     );
     let materials: Vec<_> = entries
         .into_iter()
-        .map(|entry| SurfaceMaterial {
-            penetration_modifier: entry.penetration_modifier,
-            damage_modifier: entry.damage_modifier,
-            surface_type: entry.surface_type,
+        .filter_map(|entry| {
+            if entry.penetration_modifier.is_finite() && entry.damage_modifier.is_finite() {
+                Some(SurfaceMaterial {
+                    penetration_modifier: entry.penetration_modifier,
+                    damage_modifier: entry.damage_modifier,
+                    surface_type: entry.surface_type,
+                })
+            } else {
+                None
+            }
         })
         .collect();
-    if materials.iter().all(|material| {
-        material.penetration_modifier.is_finite() && material.damage_modifier.is_finite()
-    }) {
-        materials
-    } else {
-        Vec::new()
-    }
+
+    utils::info!("parsed {} surface properties", materials.len());
+    materials
 }
 
 fn process_shape(
