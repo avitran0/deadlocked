@@ -183,7 +183,6 @@ struct MaterialHit {
     shape: usize,
 }
 
-
 #[repr(C)]
 #[derive(Serialize, Deserialize)]
 pub struct Bvh {

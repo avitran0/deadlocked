@@ -84,8 +84,7 @@ impl CS2 {
                     self.bvh
                         .as_ref()
                         .and_then(|bvh| {
-                            let vdata =
-                                local_player.weapon_entity(self)?.vdata(self)?;
+                            let vdata = local_player.weapon_entity(self)?.vdata(self)?;
                             bvh.estimate_penetration_damage(
                                 eye_position,
                                 bone_position,
@@ -119,9 +118,7 @@ impl CS2 {
 
                 let should_select = match aimbot_config.targeting_mode {
                     TargetingMode::Fov => best.as_ref().is_none_or(|best| fov < best.2),
-                    TargetingMode::Distance => {
-                        best.as_ref().is_none_or(|best| distance < best.4)
-                    }
+                    TargetingMode::Distance => best.as_ref().is_none_or(|best| distance < best.4),
                 };
 
                 if should_select {
