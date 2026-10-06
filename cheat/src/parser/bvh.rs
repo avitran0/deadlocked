@@ -394,19 +394,19 @@ impl Bvh {
         const WALL_MERGE_GAP: f32 = 4.0;
         let mut merged_walls = Vec::<[MaterialHit; 2]>::new();
         for wall in walls {
-            if let Some(last) = merged_walls.last_mut() {
-                if wall[0].distance <= last[1].distance + WALL_MERGE_GAP {
-                    if wall[1].distance > last[1].distance {
-                        last[1] = wall[1];
-                    }
-                    if wall[0].material.penetration_modifier < MIN_PENETRATION_MODIFIER
-                        || wall[1].material.penetration_modifier < MIN_PENETRATION_MODIFIER
-                    {
-                        last[0].material.penetration_modifier = 0.0;
-                        last[1].material.penetration_modifier = 0.0;
-                    }
-                    continue;
+            if let Some(last) = merged_walls.last_mut()
+                && wall[0].distance <= last[1].distance + WALL_MERGE_GAP
+            {
+                if wall[1].distance > last[1].distance {
+                    last[1] = wall[1];
                 }
+                if wall[0].material.penetration_modifier < MIN_PENETRATION_MODIFIER
+                    || wall[1].material.penetration_modifier < MIN_PENETRATION_MODIFIER
+                {
+                    last[0].material.penetration_modifier = 0.0;
+                    last[1].material.penetration_modifier = 0.0;
+                }
+                continue;
             }
             merged_walls.push(wall);
         }
@@ -463,8 +463,7 @@ impl Bvh {
             let inverse_penetration_modifier = 1.0 / penetration_modifier;
             let penetration_loss =
                 (3.0 / weapon_penetration * 1.25) * (inverse_penetration_modifier * 3.0);
-            let thickness_loss =
-                thickness * inverse_penetration_modifier * THICKNESS_LOSS_FACTOR;
+            let thickness_loss = thickness * inverse_penetration_modifier * THICKNESS_LOSS_FACTOR;
             let damage_loss =
                 (damage * damage_loss_modifier + penetration_loss + thickness_loss).max(0.0);
             damage -= damage_loss;
@@ -742,9 +741,9 @@ mod tests {
     #[test]
     fn test_three_wall_penetration() {
         let mut bvh = Bvh::new();
-        let mut tris = create_slab_shape(10.0, 22.01, 0, 0); // Concrete 30.5cm (12.01 units)
-        tris.extend(create_slab_shape(30.0, 36.02, 0, 1));   // Concrete 15.3cm (6.02 units)
-        tris.extend(create_slab_shape(50.0, 58.78, 1, 2));   // Metalvehicle 22.3cm (8.78 units)
+        let mut tris = create_slab_shape(10.0, 22.01, 0, 0); // concrete 12.01 units
+        tris.extend(create_slab_shape(30.0, 36.02, 0, 1)); // concrete 6.02 units
+        tris.extend(create_slab_shape(50.0, 58.78, 1, 2)); // metalvehicle 8.78 units
         let mats = vec![
             SurfaceMaterial {
                 penetration_modifier: 0.4,
@@ -775,7 +774,6 @@ mod tests {
     #[test]
     fn test_touching_split_hulls_merged() {
         let mut bvh = Bvh::new();
-        // A single door split into 2 touching slabs (like Source 2 multi-hull props)
         let mut tris = create_slab_shape(10.0, 14.0, 0, 0);
         tris.extend(create_slab_shape(14.0, 18.0, 0, 1));
         let mats = vec![SurfaceMaterial {
