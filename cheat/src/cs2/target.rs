@@ -61,6 +61,8 @@ impl CS2 {
         let view_angles = local_player.view_angles(self);
         let eye_position = local_player.eye_position(self);
         let ffa = self.is_ffa();
+        let penetration_check = aimbot_config.penetration_check;
+        let minimum_penetration_damage = aimbot_config.minimum_penetration_damage as f32;
         let mut best: Option<(Player, Vec2, f32, u64, f32, f32)> = None;
 
         for player in &self.players {
@@ -75,9 +77,29 @@ impl CS2 {
                 let bone_position = player.bone_position(self, bone.u64())
                     + velocity * aimbot_config.prediction_time.clamp(0.0, 0.25);
 
-                if aimbot_config.visibility_check
-                    && !player.bone_visible(self, &local_player, bone.u64())
-                {
+                let bone_visible = !aimbot_config.visibility_check
+                    || player.bone_visible(self, &local_player, bone.u64());
+
+                let penetrable = if !bone_visible && penetration_check {
+                    self.bvh
+                        .as_ref()
+                        .and_then(|bvh| {
+                            let vdata = local_player.weapon_entity(self)?.vdata(self)?;
+                            bvh.estimate_penetration_damage(
+                                eye_position,
+                                bone_position,
+                                vdata.damage as f32,
+                                vdata.penetration,
+                                vdata.range,
+                                vdata.range_modifier,
+                            )
+                        })
+                        .is_some_and(|dmg| dmg >= minimum_penetration_damage)
+                } else {
+                    false
+                };
+
+                if !bone_visible && !penetrable {
                     continue;
                 }
 

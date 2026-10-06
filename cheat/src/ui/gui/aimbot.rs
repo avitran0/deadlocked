@@ -173,6 +173,24 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if checkbox(
+                ui,
+                "Penetration Check",
+                &mut self.weapon_config().aimbot.penetration_check,
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Minimum Damage",
+                DragValue::new(&mut self.weapon_config().aimbot.minimum_penetration_damage)
+                    .range(0..=200)
+                    .speed(0.2),
+            ) {
+                self.send_config_game();
+            }
         });
 
         ui.collapsing("Bones", |ui| {

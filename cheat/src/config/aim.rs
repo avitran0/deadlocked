@@ -47,6 +47,8 @@ pub struct AimbotConfig {
     pub prediction_time: f32,
     pub bones: Vec<Bones>,
     pub targeting_mode: TargetingMode,
+    pub penetration_check: bool,
+    pub minimum_penetration_damage: u32,
 }
 
 impl Default for AimbotConfig {
@@ -74,6 +76,8 @@ impl Default for AimbotConfig {
                 Bones::Hip,
             ],
             targeting_mode: TargetingMode::Fov,
+            penetration_check: false,
+            minimum_penetration_damage: 50,
         }
     }
 }

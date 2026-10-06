@@ -155,8 +155,16 @@ impl CS2 {
         let vdata = local_player.weapon_entity(self)?.vdata(self)?;
         let origin = local_player.eye_position(self);
         let view_angles = local_player.view_angles(self);
-        let pitch = view_angles.x.to_radians();
-        let yaw = view_angles.y.to_radians();
+
+        let aim_punch = if local_player.shots_fired(self) > 0 {
+            local_player.aim_punch(self) * 2.0
+        } else {
+            glam::Vec2::ZERO
+        };
+        let shoot_angles = view_angles + aim_punch;
+
+        let pitch = shoot_angles.x.to_radians();
+        let yaw = shoot_angles.y.to_radians();
         let direction = Vec3::new(
             pitch.cos() * yaw.cos(),
             pitch.cos() * yaw.sin(),
@@ -179,11 +187,11 @@ impl CS2 {
 
         for (distance, hit, target) in candidates {
             let hit_position = origin + direction * distance;
-            // todo: actual hit group modifiers? idk
-            let hitgroup_modifier = if hit.group_id == 1 {
-                vdata.headshot_multiplier
-            } else {
-                1.0
+            let hitgroup_modifier = match hit.group_id {
+                1 => vdata.headshot_multiplier, // Head
+                3 => 1.25,                      // Stomach
+                6 | 7 => 0.75,                  // Legs
+                _ => 1.0,                       // Chest / Arms / other
             };
             if bvh
                 .estimate_penetration_damage(
