@@ -38,7 +38,7 @@ pub fn load_map(map_name: &str, build_date: &str) -> Option<Bvh> {
     let path = bvh_cache_path(map_name);
     let bytes = std::fs::read(path).ok()?;
     let cache: BvhCache = postcard::from_bytes(&bytes).ok()?;
-    if cache.build_date != build_date {
+    if cache.build_date != build_date || cache.bvh.surface_materials().len() <= 1 {
         return None;
     }
     Some(cache.bvh)
