@@ -203,7 +203,7 @@ impl CS2 {
                     vdata.range_modifier,
                 )
                 .is_some_and(|damage| {
-                    damage * hitgroup_modifier > settings.minimum_penetration_damage as f32
+                    damage * hitgroup_modifier >= settings.minimum_penetration_damage as f32
                 })
             {
                 return Some(target);
