@@ -274,7 +274,7 @@ impl AppState {
 
         let player_weapon = &data.local_player.weapon;
         for grenade in grenades {
-            if *player_weapon != grenade.weapon {
+            if !grenade.matches(player_weapon) {
                 continue;
             }
             let distance = (position - grenade.position).length();

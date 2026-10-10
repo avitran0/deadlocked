@@ -57,7 +57,7 @@ impl CS2 {
 
         const MAX_DISTANCE: f32 = 24.0;
         for grenade in grenades {
-            if grenade.weapon != weapon {
+            if !grenade.matches(&weapon) {
                 continue;
             }
 
