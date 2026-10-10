@@ -29,6 +29,15 @@ impl Grenade {
             ..Default::default()
         }
     }
+
+    //shared molotov and incendiary lineups
+    pub fn matches(&self, held: &Weapon) -> bool {
+        self.weapon == *held
+            || matches!(
+                (&self.weapon, held),
+                (Weapon::Molotov, Weapon::Incendiary) | (Weapon::Incendiary, Weapon::Molotov)
+            )
+    }
 }
 
 #[derive(Default, Serialize, Deserialize, Clone)]
