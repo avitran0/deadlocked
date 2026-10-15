@@ -356,13 +356,12 @@ impl AppState {
         let direction = target - screen_center;
         let distance = direction.length();
         
-        let center = if distance > snapline_radius {
+        let origin = if distance > snapline_radius {
             screen_center + direction * (snapline_radius / distance)
-            
         } else {
             target
         };
-        let points = vec![center, target];
+        let points = vec![origin, target];
         painter.line(points, stroke);
     }
 
