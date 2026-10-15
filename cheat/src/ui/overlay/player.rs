@@ -338,7 +338,7 @@ impl AppState {
 
         let stroke = Stroke::new(self.config.hud.line_width, color);
 
-        let target_pos = player.position;
+        let target_pos = player.head;
 
         let y_value = match self.config.player.snapline_anchor {
             SnaplineAnchor::Center => 50.0,
@@ -355,7 +355,7 @@ impl AppState {
 
         let direction = target - screen_center;
         let distance = direction.length();
-        
+
         let origin = if distance > snapline_radius {
             screen_center + direction * (snapline_radius / distance)
         } else {
