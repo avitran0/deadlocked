@@ -350,7 +350,7 @@ impl AppState {
             SnaplineAnchor::Bottom => 100.0,
         };
 
-        let anchor = Pos2::new(
+        let origin = Pos2::new(
             data.window_size.x / 2.0,
             data.window_size.y / 100.0 * y_value,
         );
@@ -358,30 +358,30 @@ impl AppState {
         let snapline_radius = self.config.player.snapline_radius_gap;
         let target = world_to_screen_normalized(&target_pos, data);
 
-        let direction = target - anchor;
+        let direction = target - origin;
         let distance = direction.length();
 
-        let (origin, target) = match self.config.player.snapline_anchor {
+        let (anchor, target) = match self.config.player.snapline_anchor {
             SnaplineAnchor::Center => {
-                let origin = if distance > snapline_radius {
-                    anchor + direction * (snapline_radius / distance)
+                let anchor = if distance > snapline_radius {
+                    origin + direction * (snapline_radius / distance)
                 } else {
                     target
                 };
 
-                (origin, target)
+                (anchor, target)
             }
             SnaplineAnchor::Bottom => {
                 let target = if distance > snapline_radius {
                     target - direction * (snapline_radius / distance)
                 } else {
-                    anchor
+                    origin
                 };
 
-                (anchor, target)
+                (origin, target)
             }
         };
-        let points = vec![origin, target];
+        let points = vec![anchor, target];
         painter.line(points, stroke);
     }
 
