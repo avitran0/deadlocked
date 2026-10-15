@@ -345,14 +345,24 @@ impl AppState {
             SnaplineAnchor::Bottom => 100.0,
         };
 
-        let center = Pos2::new(
+        let screen_center = Pos2::new(
             data.window_size.x / 2.0,
             data.window_size.y / 100.0 * y_value,
         );
         let target = world_to_screen_normalized(&target_pos, data);
 
-        let points = vec![center, target];
+        let snapline_radius = self.config.player.snapline_radius_gap;
 
+        let direction = target - screen_center;
+        let distance = direction.length();
+        
+        let center = if distance > snapline_radius {
+            screen_center + direction * (snapline_radius / distance)
+            
+        } else {
+            target
+        };
+        let points = vec![center, target];
         painter.line(points, stroke);
     }
 
