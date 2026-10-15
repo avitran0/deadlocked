@@ -156,6 +156,16 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if combo_box(
+                ui,
+                "snapline_target",
+                "Target",
+                &mut self.config.player.snapline_target,
+            ) {
+                self.send_config_game();
+            }
+
             if drag(
                 ui,
                 "Radius Gap",
