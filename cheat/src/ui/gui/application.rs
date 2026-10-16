@@ -1,7 +1,11 @@
 use egui::Ui;
 
 use crate::{
-    ui::{app::AppState, gui::helpers::open_url},
+    config::application::write_app_config,
+    ui::{
+        app::AppState,
+        gui::helpers::{checkbox, open_url},
+    },
     update::UpdateStatus,
 };
 
@@ -35,6 +39,13 @@ impl AppState {
                         format!("Update check failed: {err}"),
                     );
                 }
+            }
+
+            ui.separator();
+
+            if checkbox(ui, "Show Overlay", &mut self.overlay_enabled) {
+                self.app_config.overlay_enabled = self.overlay_enabled;
+                write_app_config(&self.app_config);
             }
         });
     }
