@@ -324,16 +324,22 @@ impl App {
 
     pub fn create_window(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let gui = WindowContext::new(event_loop, false, self.state.config.accent_color);
-        let overlay = WindowContext::new(event_loop, true, self.state.config.accent_color);
 
         self.state.config.font.set(gui.egui());
-        self.state.config.font.set(overlay.egui());
-
         self.state.display_scale = gui.window().scale_factor() as f32;
-        self.state.overlay_egui = Some(overlay.egui().clone());
         utils::info!("detected display scale: {}", self.state.display_scale);
-
         self.gui = Some(gui);
+
+        if std::env::args().any(|arg| arg == "--no-overlay") {
+            self.overlay = None;
+            self.state.overlay_egui = None;
+            return;
+        }
+
+        let overlay = WindowContext::new(event_loop, true, self.state.config.accent_color);
+
+        self.state.config.font.set(overlay.egui());
+        self.state.overlay_egui = Some(overlay.egui().clone());
         self.overlay = Some(overlay);
     }
 
