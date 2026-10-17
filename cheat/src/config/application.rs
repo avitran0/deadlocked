@@ -13,6 +13,7 @@ pub struct ApplicationConfig {
     pub first_launch: bool,
     pub radar_uuid: Uuid,
     pub config_name: String,
+    pub overlay_enabled: bool,
 }
 
 impl Default for ApplicationConfig {
@@ -21,6 +22,7 @@ impl Default for ApplicationConfig {
             first_launch: true,
             radar_uuid: Uuid::new_v4(),
             config_name: DEFAULT_CONFIG_NAME.to_owned(),
+            overlay_enabled: true,
         }
     }
 }

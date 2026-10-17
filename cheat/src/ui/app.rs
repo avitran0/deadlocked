@@ -78,6 +78,7 @@ pub struct AppState {
     pub debug_popup: bool,
     pub update_popup: bool,
     pub omarchy_popup: bool,
+    pub overlay_enabled: bool,
     pub overlay_egui: Option<egui::Context>,
     pub model_renderer: Option<Arc<ModelRenderer>>,
     pub bvh: Option<Bvh>,
@@ -135,6 +136,9 @@ impl AppState {
         let update_status = update::check();
         let update_popup = matches!(update_status, UpdateStatus::Available { .. });
 
+        let overlay_enabled =
+            app_config.overlay_enabled && !std::env::args().any(|arg| arg == "--no-overlay");
+
         let audio = Audio::new();
         let mut state = Self {
             channel_game,
@@ -170,6 +174,7 @@ impl AppState {
             debug_popup: cfg!(debug_assertions),
             update_popup,
             omarchy_popup: is_omarchy(),
+            overlay_enabled,
             overlay_egui: None,
             model_renderer: None,
             bvh: None,
@@ -330,9 +335,12 @@ impl App {
         utils::info!("detected display scale: {}", self.state.display_scale);
         self.gui = Some(gui);
 
-        if std::env::args().any(|arg| arg == "--no-overlay") {
-            self.overlay = None;
-            self.state.overlay_egui = None;
+        self.create_overlay(event_loop);
+    }
+
+    /// create the overlay window if enabled in ui.
+    fn create_overlay(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if !self.state.overlay_enabled || self.overlay.is_some() {
             return;
         }
 
@@ -341,6 +349,39 @@ impl App {
         self.state.config.font.set(overlay.egui());
         self.state.overlay_egui = Some(overlay.egui().clone());
         self.overlay = Some(overlay);
+        utils::info!("overlay window created");
+    }
+
+    /// destroy the overlay window, frees the GL resourcess in context.
+    fn destroy_overlay(&mut self) {
+        if self.overlay.is_none() {
+            return;
+        }
+
+        if let Some(renderer) = self.state.model_renderer.take() {
+            if self
+                .overlay
+                .as_ref()
+                .is_some_and(|overlay| overlay.make_current().is_ok())
+            {
+                renderer.destroy();
+            } else {
+                self.state.model_renderer = Some(renderer);
+                return;
+            }
+        }
+
+        self.state.overlay_egui = None;
+        self.overlay = None;
+        utils::info!("overlay window destroyed");
+    }
+
+    fn sync_overlay(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        if self.state.overlay_enabled {
+            self.create_overlay(event_loop);
+        } else {
+            self.destroy_overlay();
+        }
     }
 
     fn frame_duration(&self) -> Duration {
@@ -364,7 +405,9 @@ impl App {
 
     fn render_overlay(&mut self) {
         let state = &mut self.state;
-        let overlay = self.overlay.as_mut().unwrap();
+        let Some(overlay) = self.overlay.as_mut() else {
+            return;
+        };
 
         overlay.window().set_cursor_hittest(false).unwrap();
         {
@@ -464,7 +507,10 @@ impl ApplicationHandler for App {
                     }
                 }
             }
-            WindowEvent::RedrawRequested if is_gui => self.render_gui(),
+            WindowEvent::RedrawRequested if is_gui => {
+                self.render_gui();
+                self.sync_overlay(event_loop);
+            }
             _ if is_gui => {
                 let Some(gui) = self.gui.as_mut() else { return };
                 if let WindowEvent::KeyboardInput {
