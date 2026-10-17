@@ -156,6 +156,26 @@ impl AppState {
             ) {
                 self.send_config_game();
             }
+
+            if combo_box(
+                ui,
+                "snapline_target",
+                "Target",
+                &mut self.config.player.snapline_target,
+            ) {
+                self.send_config_game();
+            }
+
+            if drag(
+                ui,
+                "Radius Gap",
+                DragValue::new(&mut self.config.player.snapline_radius_gap)
+                    .range(0.0..=100.0)
+                    .speed(0.02)
+                    .max_decimals(1),
+            ) {
+                self.send_config_game();
+            }
         });
     }
 

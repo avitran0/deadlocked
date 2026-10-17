@@ -28,6 +28,12 @@ pub enum SnaplineAnchor {
 }
 
 #[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
+pub enum SnaplineTarget {
+    Position,
+    Head,
+}
+
+#[derive(Debug, Clone, PartialEq, EnumIter, Serialize, Deserialize, Display)]
 pub enum BoxMode {
     Gap,
     Full,
@@ -60,6 +66,8 @@ pub struct PlayerConfig {
     pub snaplines: SnaplineMode,
     pub snapline_color: Color32,
     pub snapline_anchor: SnaplineAnchor,
+    pub snapline_target: SnaplineTarget,
+    pub snapline_radius_gap: f32,
     pub draw_skeleton: DrawMode,
     pub skeleton_color: Color32,
     pub draw_model: DrawMode,
@@ -91,6 +99,8 @@ impl Default for PlayerConfig {
             snaplines: SnaplineMode::None,
             snapline_color: Color32::from_rgba_unmultiplied(128, 0, 128, 127),
             snapline_anchor: SnaplineAnchor::Center,
+            snapline_target: SnaplineTarget::Position,
+            snapline_radius_gap: 20.0,
             draw_skeleton: DrawMode::Health,
             skeleton_color: Color32::WHITE,
             draw_model: DrawMode::Health,

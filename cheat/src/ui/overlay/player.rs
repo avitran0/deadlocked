@@ -7,7 +7,9 @@ use egui::{Color32, Painter, Pos2, Stroke, pos2};
 use shared::{Bones, Data, PlayerData, SoundType};
 
 use crate::{
-    config::player::{BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, VisibilityMode},
+    config::player::{
+        BoxMode, DrawMode, SnaplineAnchor, SnaplineMode, SnaplineTarget, VisibilityMode,
+    },
     config::text::TextPosition,
     math::{CYLINDER_SAMPLES, world_to_screen, world_to_screen_normalized},
     ui::{app::AppState, color::Colors},
@@ -338,21 +340,48 @@ impl AppState {
 
         let stroke = Stroke::new(self.config.hud.line_width, color);
 
-        let target_pos = player.position;
+        let target_pos = match self.config.player.snapline_target {
+            SnaplineTarget::Position => player.position,
+            SnaplineTarget::Head => player.head,
+        };
 
         let y_value = match self.config.player.snapline_anchor {
             SnaplineAnchor::Center => 50.0,
             SnaplineAnchor::Bottom => 100.0,
         };
 
-        let center = Pos2::new(
+        let origin = Pos2::new(
             data.window_size.x / 2.0,
             data.window_size.y / 100.0 * y_value,
         );
+
+        let snapline_radius = self.config.player.snapline_radius_gap;
         let target = world_to_screen_normalized(&target_pos, data);
 
-        let points = vec![center, target];
+        let direction = target - origin;
+        let distance = direction.length();
 
+        let (anchor, target) = match self.config.player.snapline_anchor {
+            SnaplineAnchor::Center => {
+                let anchor = if distance > snapline_radius {
+                    origin + direction * (snapline_radius / distance)
+                } else {
+                    target
+                };
+
+                (anchor, target)
+            }
+            SnaplineAnchor::Bottom => {
+                let target = if distance > snapline_radius {
+                    target - direction * (snapline_radius / distance)
+                } else {
+                    origin
+                };
+
+                (origin, target)
+            }
+        };
+        let points = vec![anchor, target];
         painter.line(points, stroke);
     }
 
