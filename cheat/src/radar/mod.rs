@@ -87,8 +87,14 @@ impl Radar {
             return false;
         };
 
-        let Ok(message) = postcard::to_stdvec(self.data.lock().deref()) else {
-            return false;
+        let message = match postcard::to_stdvec(self.data.lock().deref()) {
+            Ok(message) => message,
+            Err(err) => {
+                utils::error!("failed to serialize radar data: {err}");
+                self.state = None;
+                self.send_message(RadarStatus::FailedToConnect);
+                return false;
+            }
         };
 
         if message.len() > MAX_FRAME_SIZE as usize {
@@ -98,9 +104,14 @@ impl Radar {
             return false;
         }
 
-        if state.stream.write_u32(message.len() as u32).is_err()
-            || state.stream.write_all(&message).is_err()
-        {
+        if let Err(err) = state.stream.write_u32(message.len() as u32) {
+            utils::warn!("failed to send radar frame length: {err}");
+            self.state = None;
+            self.send_message(RadarStatus::FailedToConnect);
+            return false;
+        }
+        if let Err(err) = state.stream.write_all(&message) {
+            utils::warn!("failed to send radar data frame: {err}");
             self.state = None;
             self.send_message(RadarStatus::FailedToConnect);
             return false;
@@ -108,7 +119,8 @@ impl Radar {
 
         const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
         if state.last_heartbeat.elapsed() >= HEARTBEAT_INTERVAL {
-            if state.stream.write_u32(HEARTBEAT).is_err() {
+            if let Err(err) = state.stream.write_u32(HEARTBEAT) {
+                utils::warn!("failed to send radar heartbeat: {err}");
                 self.state = None;
                 self.send_message(RadarStatus::FailedToConnect);
                 return false;
@@ -144,8 +156,14 @@ impl Radar {
                 }
             };
 
-            stream.set_read_timeout(Some(TIMEOUT)).ok()?;
-            stream.set_write_timeout(Some(TIMEOUT)).ok()?;
+            if let Err(err) = stream.set_read_timeout(Some(TIMEOUT)) {
+                utils::warn!("failed to set read timeout for radar connection: {err}");
+                return None;
+            }
+            if let Err(err) = stream.set_write_timeout(Some(TIMEOUT)) {
+                utils::warn!("failed to set write timeout for radar connection: {err}");
+                return None;
+            }
 
             Some(stream)
         })

@@ -211,10 +211,9 @@ pub fn check_uinput() -> bool {
         utils::error!("please carefully read the readme before using.");
         return false;
     }
-    if File::options().write(true).open(path).is_err() {
-        utils::error!("user has no write permissions for /dev/uinput.");
-        utils::error!("did you run the setup script?");
-        utils::error!("please carefully read the readme before using.");
+    if let Err(err) = File::options().write(true).open(path) {
+        utils::error!("failed to open /dev/uinput for writing: {err}");
+        utils::error!("check the uinput permissions and whether you ran the setup script.");
         return false;
     }
     true

@@ -43,8 +43,8 @@ async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
 
     let proto_version = match timeout(INACTIVITY_TIMEOUT, stream.read_u32()).await {
         Ok(Ok(proto_version)) => proto_version,
-        Ok(Err(_)) => {
-            utils::error!("failed to receive protocol version");
+        Ok(Err(err)) => {
+            utils::warn!("failed to receive protocol version: {err}");
             return;
         }
         Err(_) => {
@@ -60,8 +60,8 @@ async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
 
     let uuid_value = match timeout(INACTIVITY_TIMEOUT, stream.read_u128()).await {
         Ok(Ok(uuid_value)) => uuid_value,
-        Ok(Err(_)) => {
-            utils::error!("failed to receive session uuid");
+        Ok(Err(err)) => {
+            utils::warn!("failed to receive session uuid: {err}");
             return;
         }
         Err(_) => {
@@ -70,8 +70,8 @@ async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
         }
     };
 
-    if stream.write_u128(uuid_value).await.is_err() {
-        utils::error!("failed to send handshake");
+    if let Err(err) = stream.write_u128(uuid_value).await {
+        utils::warn!("failed to send handshake: {err}");
         return;
     }
 
@@ -82,7 +82,10 @@ async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
     loop {
         let frame_length = match timeout(INACTIVITY_TIMEOUT, stream.read_u32()).await {
             Ok(Ok(frame_length)) => frame_length,
-            Ok(Err(_)) => break,
+            Ok(Err(err)) => {
+                utils::debug!("session {uuid} disconnected while reading frame: {err}");
+                break;
+            }
             Err(_) => {
                 utils::warn!("removed session {uuid} after inactivity timeout");
                 break;
@@ -101,12 +104,16 @@ async fn tcp_handler(mut stream: TcpStream, state: ServerState) {
         }
 
         let mut buf = vec![0u8; frame_length as usize];
-        if timeout(INACTIVITY_TIMEOUT, stream.read_exact(&mut buf))
-            .await
-            .is_err()
-        {
-            utils::warn!("removed session {uuid} after incomplete frame timeout");
-            break;
+        match timeout(INACTIVITY_TIMEOUT, stream.read_exact(&mut buf)).await {
+            Ok(Ok(_)) => {}
+            Ok(Err(err)) => {
+                utils::warn!("failed to read data frame from session {uuid}: {err}");
+                break;
+            }
+            Err(_) => {
+                utils::warn!("removed session {uuid} after incomplete frame timeout");
+                break;
+            }
         }
 
         let data: Data = match postcard::from_bytes(&buf) {

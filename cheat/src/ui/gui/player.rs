@@ -18,7 +18,7 @@ impl AppState {
                 self.player_right(right);
             });
 
-            collapsing_open(ui, "Colors", |ui| {
+            ui.collapsing("Colors", |ui| {
                 if color_picker(
                     ui,
                     "Box (visible)",

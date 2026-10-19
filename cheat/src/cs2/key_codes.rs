@@ -3,6 +3,7 @@ use egui::{Key, Modifiers, PointerButton};
 use serde::{Deserialize, Serialize};
 use strum::EnumIter;
 
+// https://gitlab.com/KittenPopo/csgo-2018-source/-/blob/main/public/inputsystem/ButtonCode.h
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, EnumIter, Serialize, Deserialize)]
 pub enum KeyCode {
     None = 0,

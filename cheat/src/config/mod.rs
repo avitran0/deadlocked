@@ -93,18 +93,28 @@ pub fn parse_config(path: &Path) -> Config {
         return Config::default();
     };
 
-    let config = toml::from_str(&config_string);
-    if config.is_err() {
-        utils::warn!("config file invalid");
-    } else if let Some(file_name) = path.file_name() {
-        utils::info!("loaded config {:?}", file_name);
+    match toml::from_str(&config_string) {
+        Ok(config) => {
+            if let Some(file_name) = path.file_name() {
+                utils::info!("loaded config {:?}", file_name);
+            }
+            config
+        }
+        Err(err) => {
+            utils::warn!("config file invalid: {err}");
+            Config::default()
+        }
     }
-    config.unwrap_or_default()
 }
 
 pub fn write_config(config: &Config, path: &Path) {
-    let out = toml::to_string(&config).unwrap();
-    let _ = std::fs::write(path, out);
+    let Ok(out) = toml::to_string(config) else {
+        utils::warn!("failed to serialize config");
+        return;
+    };
+    if let Err(err) = std::fs::write(path, out) {
+        utils::warn!("failed to write config: {err}");
+    }
 }
 
 pub fn delete_config(path: &Path) {

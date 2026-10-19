@@ -58,6 +58,10 @@ impl Font {
             .unwrap();
         proportional.insert(0, String::from(primary));
         proportional.push(String::from("icons"));
+
+        let monospace = font_defs.families.get_mut(&FontFamily::Monospace).unwrap();
+        monospace.insert(0, String::from(Self::JetBrainsMono.id()));
+
         ctx.set_fonts(font_defs);
     }
 

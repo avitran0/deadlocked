@@ -107,7 +107,7 @@ pub fn text_settings_popup(
     let mut open = true;
     let mut changed = false;
     egui::Window::new(label)
-        .id(egui::Id::new(popup_id))
+        .id(egui::Id::unique(popup_id))
         .collapsible(false)
         .resizable(false)
         .open(&mut open)
@@ -182,7 +182,7 @@ impl<'gui> Keybind<'gui> {
     pub fn new(keycode: &'gui mut KeyCode, id: impl std::fmt::Debug + Hash) -> Self {
         Self {
             keycode,
-            id: egui::Id::new(id),
+            id: egui::Id::unique(id),
         }
     }
 }

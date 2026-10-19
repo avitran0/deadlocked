@@ -28,18 +28,11 @@ compile_error!("only linux is supported.");
 
 fn main() {
     let debug = std::env::args().any(|arg| arg == "--debug");
-    utils::log::init(
+    utils::log::init_ext(
         LoggerOptions::default()
             .level(if debug { Level::Debug } else { Level::Info })
             .file(BASE_PATH.join("deadlocked.log"))
             .truncate(true),
-        |w, rec| {
-            writeln!(
-                w,
-                "[{}] [{}:{}] {}",
-                rec.level, rec.location.file, rec.location.line, rec.args
-            )
-        },
     )
     .expect("failed to initialize logger");
 

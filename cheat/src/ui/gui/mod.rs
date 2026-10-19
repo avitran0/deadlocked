@@ -133,7 +133,7 @@ impl AppState {
         if self.update_popup {
             let mut close = false;
             egui::Window::new("Update Available")
-                .id(egui::Id::new("update_popup"))
+                .id(egui::Id::unique("update_popup"))
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -165,7 +165,7 @@ impl AppState {
         if self.debug_popup {
             let mut close = false;
             egui::Window::new("Debug Mode Warning")
-                .id(egui::Id::new("debug_mode_warning_popup"))
+                .id(egui::Id::unique("debug_mode_warning_popup"))
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
@@ -185,7 +185,7 @@ impl AppState {
         if self.omarchy_popup {
             let mut close = false;
             egui::Window::new("Omarchy Warning")
-                .id(egui::Id::new("omarchy_warning_popup"))
+                .id(egui::Id::unique("omarchy_warning_popup"))
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))

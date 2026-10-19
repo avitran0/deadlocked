@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use tokio::time::interval;
-use utils::log::LoggerOptions;
 
 use crate::{state::ServerState, tcp::tcp_server, ws::websocket_server};
 
@@ -11,10 +10,7 @@ mod ws;
 
 #[tokio::main]
 async fn main() {
-    utils::log::init(LoggerOptions::default(), |w, rec| {
-        writeln!(w, "[{}] {}", rec.level, rec.args)
-    })
-    .unwrap();
+    utils::log::init();
 
     let state = ServerState::default();
     let state_tcp = state.clone();
