@@ -281,7 +281,7 @@ impl AppState {
 
             if drag(
                 ui,
-                "Minumum Damage",
+                "Minimum Damage",
                 DragValue::new(&mut self.weapon_config().triggerbot.minimum_penetration_damage)
                     .range(0..=200)
                     .speed(0.2),
