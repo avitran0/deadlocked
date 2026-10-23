@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::os::process::Process;
 
@@ -47,29 +47,24 @@ impl ModuleScope {
         let name = process.read_string(address + 0x08);
 
         let mut classes = HashMap::new();
-        // has 1024 buckets
-        let hash_vector = address + 0x560 + 0x90;
-        for i in 0..1024 {
-            // first_uncomitted
-            let mut current_element: usize = process.read(hash_vector + (i * 24) + 0x28);
+        // seems to be 256 hash buckets, each 0x48 bytes
+        for bucket in 0..256 {
+            let mut current_element: usize = process.read(address + 0x600 + (bucket * 0x48));
 
             while current_element != 0 {
                 let data: usize = process.read(current_element + 0x10);
-                if data != 0 {
-                    let class = Class::new(process, data);
-                    classes.insert(class.name.clone(), class);
-                }
+                insert_class(process, &mut classes, data);
                 current_element = process.read(current_element + 0x08);
             }
         }
 
-        // free_list (HashAllocatedBlob)
-        let mut current_blob: usize = process.read(address + 0x560 + 0x20);
-        while current_blob != 0 {
+        // free list, since not everything is in the hash buckets (why?)
+        let mut current_blob: usize = process.read(address + 0x580);
+        let mut visited = HashSet::new();
+        while current_blob != 0 && visited.insert(current_blob) && visited.len() <= 0x10000 {
             let data: usize = process.read(current_blob + 0x10);
             if process.data_range.contains(&data) {
-                let class = Class::new(process, data);
-                classes.insert(class.name.clone(), class);
+                insert_class(process, &mut classes, data);
             }
             current_blob = process.read(current_blob);
         }
@@ -91,6 +86,17 @@ impl ModuleScope {
 
     pub fn get_class(&self, class: &str) -> Option<&Class> {
         self.classes.get(class)
+    }
+}
+
+fn insert_class(process: &Process, classes: &mut HashMap<String, Class>, data: usize) {
+    if data == 0 {
+        return;
+    }
+
+    let class = Class::new(process, data);
+    if !class.name.is_empty() {
+        classes.insert(class.name.clone(), class);
     }
 }
 

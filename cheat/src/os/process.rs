@@ -363,18 +363,26 @@ impl Process {
             return None;
         }
 
-        let objects = self.read::<usize>(convar_interface + 0x50);
-        for i in 0..self.read::<u32>(convar_interface + 160) as usize {
-            let object = self.read(objects + i * 16);
-            if object == 0 {
+        // convars stored in a table with an index list of slots
+        // 0xFFFF terminates the list
+        let slots = self.read::<usize>(convar_interface + 0x50);
+        let mut index = self.read::<u16>(convar_interface + 0x58) as usize;
+
+        for _ in 0..0x2000 {
+            if index == 0xffff {
                 break;
             }
 
-            let name_address: usize = self.read(object);
-            let name = self.read_string(name_address);
-            if name == convar_name {
-                return Some(object);
+            let slot = slots + index * 0x10;
+            let object = self.read::<usize>(slot);
+            if object != 0 {
+                let name_address: usize = self.read(object);
+                if self.read_string(name_address) == convar_name {
+                    return Some(object);
+                }
             }
+
+            index = self.read::<u16>(slot + 0xA) as usize;
         }
         utils::warn!("did not find convar {convar_name}");
         None
