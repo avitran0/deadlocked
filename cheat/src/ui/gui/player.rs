@@ -58,6 +58,33 @@ impl AppState {
                 if color_picker(ui, "Tracers", &mut self.config.player.snapline_color) {
                     self.send_config_game();
                 }
+
+                ui.add_enabled_ui(self.config.player.custom_head_color, |ui| {
+                    if color_picker(
+                        ui,
+                        "Head (visible)",
+                        &mut self.config.player.head_visible_color,
+                    ) {
+                        self.send_config_game();
+                    }
+
+                    if color_picker(
+                        ui,
+                        "Head (invisible)",
+                        &mut self.config.player.head_invisible_color,
+                    ) {
+                        self.send_config_game();
+                    }
+                });
+
+                if checkbox_hover(
+                    ui,
+                    "Custom Head Color",
+                    "Fill the head circle with its own color instead of the model color",
+                    &mut self.config.player.custom_head_color,
+                ) {
+                    self.send_config_game();
+                }
             });
         });
     }

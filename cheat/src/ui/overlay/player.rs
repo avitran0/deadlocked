@@ -99,6 +99,47 @@ impl AppState {
         }
     }
 
+    /// color pair (visible, invisible) the player model is rendered with,
+    /// `None` when no model is drawn
+    pub(super) fn model_colors(&self, player: &PlayerData) -> Option<(Color32, Color32)> {
+        match &self.config.player.draw_model {
+            DrawMode::None => None,
+            DrawMode::Color => Some((
+                self.config.player.model_visible_color,
+                self.config.player.model_invisible_color,
+            )),
+            DrawMode::Health => Some((
+                self.health_color(
+                    player.health,
+                    player.max_health,
+                    self.config.player.model_visible_color.a(),
+                ),
+                self.health_color(
+                    player.health,
+                    player.max_health,
+                    self.config.player.model_invisible_color.a(),
+                ),
+            )),
+            DrawMode::PlayerColor => {
+                let color = Self::player_color(player.color);
+                Some((
+                    Color32::from_rgba_unmultiplied(
+                        color.r(),
+                        color.g(),
+                        color.b(),
+                        self.config.player.model_visible_color.a(),
+                    ),
+                    Color32::from_rgba_unmultiplied(
+                        color.r(),
+                        color.g(),
+                        color.b(),
+                        self.config.player.model_invisible_color.a(),
+                    ),
+                ))
+            }
+        }
+    }
+
     fn player_box(&self, painter: &Painter, player: &PlayerData, data: &Data, alpha: Option<f32>) {
         let alpha = match alpha {
             Some(alpha) => alpha.clamp(0.0, 1.0),
@@ -596,6 +637,36 @@ impl AppState {
         };
 
         let radius = (spine.y - neck.y).abs() / 2.4;
+
+        // fill the head circle interior; by default it uses the same color as
+        // the player model, a separate head color can be enabled in the menu
+        let head_visible = player
+            .skeleton
+            .get(Bones::Head.u64() as usize)
+            .map(|bone| bone.visibility >= 0.5)
+            .unwrap_or(player.visible);
+        let fill_color = if self.config.player.custom_head_color {
+            Some(if head_visible {
+                self.config.player.head_visible_color
+            } else {
+                self.config.player.head_invisible_color
+            })
+        } else {
+            self.model_colors(player)
+                .map(|(visible, invisible)| if head_visible { visible } else { invisible })
+        };
+
+        if let Some(fill_color) = fill_color {
+            let fill_alpha = (fill_color.a() as f32 * alpha.unwrap_or(1.0)).clamp(0.0, 255.0);
+            let fill_color = Color32::from_rgba_unmultiplied(
+                fill_color.r(),
+                fill_color.g(),
+                fill_color.b(),
+                fill_alpha as u8,
+            );
+            painter.circle_filled(head, radius, fill_color);
+        }
+
         painter.circle_stroke(head, radius, stroke);
     }
 

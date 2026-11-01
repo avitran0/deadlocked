@@ -187,41 +187,8 @@ impl AppState {
             let renderer = renderer.clone();
             let model_name = player.model_name.clone();
             let skeleton = player.skeleton.clone();
-            let (visible, invisible) = match self.config.player.draw_model {
-                DrawMode::None => (Color32::WHITE, Color32::WHITE),
-                DrawMode::Color => (
-                    self.config.player.model_visible_color,
-                    self.config.player.model_invisible_color,
-                ),
-                DrawMode::Health => (
-                    self.health_color(
-                        player.health,
-                        player.max_health,
-                        self.config.player.model_visible_color.a(),
-                    ),
-                    self.health_color(
-                        player.health,
-                        player.max_health,
-                        self.config.player.model_invisible_color.a(),
-                    ),
-                ),
-                DrawMode::PlayerColor => {
-                    let color = Self::player_color(player.color);
-                    (
-                        Color32::from_rgba_unmultiplied(
-                            color.r(),
-                            color.g(),
-                            color.b(),
-                            self.config.player.model_visible_color.a(),
-                        ),
-                        Color32::from_rgba_unmultiplied(
-                            color.r(),
-                            color.g(),
-                            color.b(),
-                            self.config.player.model_invisible_color.a(),
-                        ),
-                    )
-                }
+            let Some((visible, invisible)) = self.model_colors(player) else {
+                continue;
             };
             let alpha_color = |color: Color32, alpha: f32| {
                 Color32::from_rgba_unmultiplied(
