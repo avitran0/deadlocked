@@ -51,6 +51,12 @@ pub struct NadePredictionConfig {
     pub line_color: Color32,
     pub bounce_color: Color32,
     pub end_color: Color32,
+    /// physics tuning, only needed when the prediction drifts from the real throw
+    pub radius: f32,
+    pub elasticity: f32,
+    pub rest_speed: f32,
+    pub average_gravity: bool,
+    pub bounce_remainder: bool,
 }
 
 impl Default for NadePredictionConfig {
@@ -60,6 +66,11 @@ impl Default for NadePredictionConfig {
             line_color: Color32::WHITE,
             bounce_color: Color32::YELLOW,
             end_color: Color32::RED,
+            radius: 2.0,
+            elasticity: 0.45,
+            rest_speed: 30.0,
+            average_gravity: true,
+            bounce_remainder: true,
         }
     }
 }

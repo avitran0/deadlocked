@@ -103,6 +103,37 @@ impl AppState {
                     self.send_config_game();
                 }
 
+                ui.collapsing("Nade Physics", |ui| {
+                    let physics = &mut self.config.hud.nade_prediction;
+                    let mut changed = false;
+                    changed |= drag(
+                        ui,
+                        "Grenade Radius",
+                        DragValue::new(&mut physics.radius)
+                            .range(0.0..=4.0)
+                            .speed(0.05),
+                    );
+                    changed |= drag(
+                        ui,
+                        "Elasticity",
+                        DragValue::new(&mut physics.elasticity)
+                            .range(0.1..=0.9)
+                            .speed(0.01),
+                    );
+                    changed |= drag(
+                        ui,
+                        "Rest Speed",
+                        DragValue::new(&mut physics.rest_speed)
+                            .range(0.0..=60.0)
+                            .speed(0.5),
+                    );
+                    changed |= checkbox(ui, "Average Gravity", &mut physics.average_gravity);
+                    changed |= checkbox(ui, "Bounce Remainder", &mut physics.bounce_remainder);
+                    if changed {
+                        self.send_config_game();
+                    }
+                });
+
                 if checkbox(
                     ui,
                     "Inferno Polygon",

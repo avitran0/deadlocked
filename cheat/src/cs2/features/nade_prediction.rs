@@ -10,13 +10,9 @@ use crate::{
 const TICK_RATE: f32 = 64.0;
 const DT: f32 = 1.0 / TICK_RATE;
 const GRAVITY: f32 = 800.0 * 0.4;
-const ELASTICITY: f32 = 0.45;
 const MAX_THROW_SPEED: f32 = 750.0;
 const MAX_STEPS: usize = (TICK_RATE * 5.0) as usize;
-// the game stops a grenade on a floor once its speed after a bounce is below 30
-const REST_SPEED_SQ: f32 = 30.0 * 30.0;
 const FLOOR_NORMAL_Z: f32 = 0.7;
-const GRENADE_RADIUS: f32 = 2.0;
 const MAX_COLLISIONS_PER_TICK: usize = 4;
 
 impl CS2 {
@@ -25,6 +21,10 @@ impl CS2 {
         if !config.hud.nade_prediction.enabled {
             return prediction;
         }
+
+        let physics = &config.hud.nade_prediction;
+        let radius = physics.radius.clamp(0.0, 4.0);
+        let rest_speed_sq = physics.rest_speed * physics.rest_speed;
 
         let weapon = local_player.weapon(self);
         if !matches!(
@@ -81,7 +81,7 @@ impl CS2 {
 
         // the game traces a small hull 22 units forward and spawns the grenade 6 units before the hit
         let spawn_distance = bvh
-            .sweep_sphere(start, start + forward * 22.0, GRENADE_RADIUS)
+            .sweep_sphere(start, start + forward * 22.0, radius)
             .map_or(22.0, |(distance, _)| distance);
         start += forward * (spawn_distance - 6.0);
 
@@ -100,9 +100,13 @@ impl CS2 {
         prediction.path.push(position);
         let mut elapsed = 0.0;
         'ticks: for _ in 0..MAX_STEPS {
-            // gravity is applied with the average velocity of the tick
             let new_z = velocity.z - GRAVITY * DT;
-            let mut step = Vec3::new(velocity.x * DT, velocity.y * DT, (velocity.z + new_z) * 0.5 * DT);
+            let step_z = if physics.average_gravity {
+                (velocity.z + new_z) * 0.5
+            } else {
+                new_z
+            };
+            let mut step = Vec3::new(velocity.x * DT, velocity.y * DT, step_z * DT);
             velocity.z = new_z;
             elapsed += DT;
 
@@ -112,7 +116,7 @@ impl CS2 {
                     break;
                 }
                 let Some((distance, normal)) =
-                    bvh.sweep_sphere(position, position + step, GRENADE_RADIUS)
+                    bvh.sweep_sphere(position, position + step, radius)
                 else {
                     position += step;
                     break;
@@ -135,15 +139,25 @@ impl CS2 {
                 if into_surface < 0.0 {
                     velocity -= normal * into_surface;
                 }
-                velocity *= ELASTICITY;
+                velocity *= physics.elasticity;
 
-                if is_floor && velocity.length_squared() < REST_SPEED_SQ {
-                    prediction.end = Some(position);
-                    break 'ticks;
+                let slow = velocity.length_squared() < rest_speed_sq;
+                if slow {
+                    if is_floor {
+                        prediction.end = Some(position);
+                        break 'ticks;
+                    }
+                    // a slow grenade on a wall loses all speed and drops
+                    velocity = Vec3::ZERO;
+                    break;
                 }
 
-                // the rest of the tick continues with the new velocity
-                step = velocity * ((1.0 - fraction) * DT);
+                // only bounces off the floor continue with the rest of the tick
+                if is_floor && physics.bounce_remainder {
+                    step = velocity * ((1.0 - fraction) * DT);
+                } else {
+                    break;
+                }
             }
             prediction.path.push(position);
 
