@@ -324,8 +324,9 @@ impl Bvh {
         self.nodes.len() - 1
     }
 
-    /// nearest hit on the segment `start..end`, returns (distance, surface normal facing the start)
-    pub fn trace_segment(&self, start: Vec3, end: Vec3) -> Option<(f32, Vec3)> {
+    /// sweeps a sphere with the given radius from `start` to `end` through the world.
+    /// returns the travelled distance until first contact (sphere center) and the contact normal
+    pub fn sweep_sphere(&self, start: Vec3, end: Vec3, radius: f32) -> Option<(f32, Vec3)> {
         let ray = end - start;
         let distance = ray.length();
         if !distance.is_finite() || distance <= f32::EPSILON {
@@ -334,44 +335,44 @@ impl Bvh {
         let direction = ray / distance;
         let root = self.root?;
         let mut best: Option<(f32, Vec3)> = None;
-        self.trace_node(root, start, direction, distance, &mut best);
+        self.sweep_node(root, start, direction, distance, radius, &mut best);
         best
     }
 
-    fn trace_node(
+    fn sweep_node(
         &self,
         node_idx: usize,
         origin: Vec3,
         direction: Vec3,
         max_t: f32,
+        radius: f32,
         best: &mut Option<(f32, Vec3)>,
     ) {
+        let limit = best.map_or(max_t, |(t, _)| t.min(max_t));
         let node = &self.nodes[node_idx];
-        if !node.aabb().ray_intersect(origin, direction, max_t) {
+        let aabb = node.aabb();
+        let expanded = Aabb {
+            min: aabb.min - Vec3::splat(radius),
+            max: aabb.max + Vec3::splat(radius),
+        };
+        if !expanded.ray_intersect(origin, direction, limit) {
             return;
         }
         match node {
             BvhNode::Leaf { primitives, .. } => {
                 for &idx in primitives {
-                    let triangle = &self.triangles[idx];
-                    let Some((t, _, _)) = triangle.ray_intersect(origin, direction) else {
-                        continue;
-                    };
-                    if t > max_t || best.is_some_and(|(best_t, _)| best_t <= t) {
-                        continue;
+                    let limit = best.map_or(max_t, |(t, _)| t.min(max_t));
+                    if let Some((t, normal)) =
+                        sweep_sphere_triangle(&self.triangles[idx], origin, direction, limit, radius)
+                        && best.is_none_or(|(best_t, _)| t < best_t)
+                    {
+                        *best = Some((t, normal));
                     }
-                    let mut normal = (triangle.v1 - triangle.v0)
-                        .cross(triangle.v2 - triangle.v0)
-                        .normalize_or_zero();
-                    if normal.dot(direction) > 0.0 {
-                        normal = -normal;
-                    }
-                    *best = Some((t, normal));
                 }
             }
             BvhNode::Branch { left, right, .. } => {
-                self.trace_node(*left, origin, direction, max_t, best);
-                self.trace_node(*right, origin, direction, max_t, best);
+                self.sweep_node(*left, origin, direction, max_t, radius, best);
+                self.sweep_node(*right, origin, direction, max_t, radius, best);
             }
         }
     }
@@ -687,4 +688,116 @@ impl BvhNode {
             BvhNode::Leaf { aabb, .. } => aabb,
         }
     }
+}
+
+fn point_in_triangle(p: Vec3, tri: &Triangle) -> bool {
+    let e1 = tri.v1 - tri.v0;
+    let e2 = tri.v2 - tri.v0;
+    let w = p - tri.v0;
+    let d00 = e1.dot(e1);
+    let d01 = e1.dot(e2);
+    let d11 = e2.dot(e2);
+    let d20 = w.dot(e1);
+    let d21 = w.dot(e2);
+    let denom = d00 * d11 - d01 * d01;
+    if denom.abs() < 1e-9 {
+        return false;
+    }
+    let v = (d11 * d20 - d01 * d21) / denom;
+    let u = (d00 * d21 - d01 * d20) / denom;
+    u >= 0.0 && v >= 0.0 && u + v <= 1.0
+}
+
+/// first contact of a moving sphere (center ray `origin + t * dir`, `dir` normalized)
+/// with a triangle, tested against its face, its three edges and its three corners
+fn sweep_sphere_triangle(
+    tri: &Triangle,
+    origin: Vec3,
+    dir: Vec3,
+    max_t: f32,
+    radius: f32,
+) -> Option<(f32, Vec3)> {
+    // starting slightly inside a surface is tolerated, deeper than this is ignored
+    const PENETRATION_TOLERANCE: f32 = 0.5;
+
+    let mut best: Option<(f32, Vec3)> = None;
+    let mut consider = |t: f32, normal: Vec3| {
+        if (0.0..=max_t).contains(&t)
+            && normal.dot(dir) < 0.0
+            && best.is_none_or(|(best_t, _)| t < best_t)
+        {
+            best = Some((t, normal));
+        }
+    };
+
+    let mut normal = (tri.v1 - tri.v0).cross(tri.v2 - tri.v0).normalize_or_zero();
+    if normal == Vec3::ZERO {
+        return None;
+    }
+    let mut start_distance = (origin - tri.v0).dot(normal);
+    if start_distance < 0.0 {
+        normal = -normal;
+        start_distance = -start_distance;
+    }
+
+    // face
+    let approach = dir.dot(normal);
+    if approach < -1e-6 && start_distance >= radius - PENETRATION_TOLERANCE {
+        let t = ((start_distance - radius) / -approach).max(0.0);
+        let center = origin + dir * t;
+        let plane_distance = start_distance + approach * t;
+        if point_in_triangle(center - normal * plane_distance, tri) {
+            consider(t, normal);
+        }
+    }
+
+    // edges, ray against a cylinder around the edge line
+    for (a, b) in [(tri.v0, tri.v1), (tri.v1, tri.v2), (tri.v2, tri.v0)] {
+        let edge = b - a;
+        let length_sq = edge.length_squared();
+        if length_sq < 1e-9 {
+            continue;
+        }
+        let axis = edge / length_sq.sqrt();
+        let m = origin - a;
+        let d_perp = dir - axis * dir.dot(axis);
+        let m_perp = m - axis * m.dot(axis);
+        let qa = d_perp.length_squared();
+        let qc = m_perp.length_squared() - radius * radius;
+        if qa < 1e-9 || qc <= 0.0 {
+            continue;
+        }
+        let qb = m_perp.dot(d_perp);
+        let disc = qb * qb - qa * qc;
+        if disc < 0.0 {
+            continue;
+        }
+        let t = (-qb - disc.sqrt()) / qa;
+        if t < 0.0 {
+            continue;
+        }
+        let center = origin + dir * t;
+        let s = (center - a).dot(edge) / length_sq;
+        if (0.0..=1.0).contains(&s) {
+            consider(t, (center - (a + edge * s)).normalize_or_zero());
+        }
+    }
+
+    // corners, ray against a sphere around the vertex
+    for vertex in [tri.v0, tri.v1, tri.v2] {
+        let m = origin - vertex;
+        let b = m.dot(dir);
+        let c = m.length_squared() - radius * radius;
+        if c <= 0.0 || b > 0.0 {
+            continue;
+        }
+        let disc = b * b - c;
+        if disc < 0.0 {
+            continue;
+        }
+        let t = -b - disc.sqrt();
+        consider(t, (origin + dir * t - vertex).normalize_or_zero());
+    }
+
+    best
 }

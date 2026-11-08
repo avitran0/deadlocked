@@ -13,9 +13,11 @@ const GRAVITY: f32 = 800.0 * 0.4;
 const ELASTICITY: f32 = 0.45;
 const MAX_THROW_SPEED: f32 = 750.0;
 const MAX_STEPS: usize = (TICK_RATE * 5.0) as usize;
-const REST_SPEED: f32 = 20.0;
+// the game stops a grenade on a floor once its speed after a bounce is below 30
+const REST_SPEED_SQ: f32 = 30.0 * 30.0;
 const FLOOR_NORMAL_Z: f32 = 0.7;
-const SURFACE_OFFSET: f32 = 0.5;
+const GRENADE_RADIUS: f32 = 2.0;
+const MAX_COLLISIONS_PER_TICK: usize = 4;
 
 impl CS2 {
     pub fn nade_prediction(&self, config: &Config, local_player: &Player) -> NadePrediction {
@@ -77,13 +79,11 @@ impl CS2 {
         let mut start = local_player.eye_position(self);
         start.z += strength * 12.0 - 12.0;
 
-        // keep the spawn point out of walls right in front of the player
-        let spawn_target = start + forward * 22.0;
-        if let Some((distance, _)) = bvh.trace_segment(start, spawn_target) {
-            start += forward * (distance - 6.0).max(0.0);
-        } else {
-            start = spawn_target - forward * 6.0;
-        }
+        // the game traces a small hull 22 units forward and spawns the grenade 6 units before the hit
+        let spawn_distance = bvh
+            .sweep_sphere(start, start + forward * 22.0, GRENADE_RADIUS)
+            .map_or(22.0, |(distance, _)| distance);
+        start += forward * (spawn_distance - 6.0);
 
         let throw_speed = ((90.0 - pitch) * 6.0).clamp(15.0, MAX_THROW_SPEED);
         let throw_speed = throw_speed * (strength * 0.7 + 0.3);
@@ -99,35 +99,53 @@ impl CS2 {
         let mut position = start;
         prediction.path.push(position);
         let mut elapsed = 0.0;
-        for _ in 0..MAX_STEPS {
-            velocity.z -= GRAVITY * DT;
-            let next = position + velocity * DT;
+        'ticks: for _ in 0..MAX_STEPS {
+            // gravity is applied with the average velocity of the tick
+            let new_z = velocity.z - GRAVITY * DT;
+            let mut step = Vec3::new(velocity.x * DT, velocity.y * DT, (velocity.z + new_z) * 0.5 * DT);
+            velocity.z = new_z;
             elapsed += DT;
 
-            if let Some((distance, normal)) = bvh.trace_segment(position, next) {
-                let step = next - position;
+            for _ in 0..MAX_COLLISIONS_PER_TICK {
                 let length = step.length();
-                position += step.normalize_or_zero() * distance.min(length);
-                position += normal * SURFACE_OFFSET;
+                if length <= 1e-4 {
+                    break;
+                }
+                let Some((distance, normal)) =
+                    bvh.sweep_sphere(position, position + step, GRENADE_RADIUS)
+                else {
+                    position += step;
+                    break;
+                };
+
+                let fraction = (distance / length).clamp(0.0, 1.0);
+                position += step * fraction;
                 prediction.path.push(position);
 
                 let is_floor = normal.z > FLOOR_NORMAL_Z;
                 if matches!(weapon, Weapon::Molotov | Weapon::Incendiary) && is_floor {
                     prediction.end = Some(position);
-                    break;
+                    break 'ticks;
                 }
 
                 prediction.bounces.push(position);
+                // reflect (overbounce 2.0), never keep moving into the surface, then lose energy
                 velocity -= normal * (2.0 * velocity.dot(normal));
-                velocity *= ELASTICITY;
-                if is_floor && velocity.length() < REST_SPEED {
-                    prediction.end = Some(position);
-                    break;
+                let into_surface = velocity.dot(normal);
+                if into_surface < 0.0 {
+                    velocity -= normal * into_surface;
                 }
-            } else {
-                position = next;
-                prediction.path.push(position);
+                velocity *= ELASTICITY;
+
+                if is_floor && velocity.length_squared() < REST_SPEED_SQ {
+                    prediction.end = Some(position);
+                    break 'ticks;
+                }
+
+                // the rest of the tick continues with the new velocity
+                step = velocity * ((1.0 - fraction) * DT);
             }
+            prediction.path.push(position);
 
             if elapsed >= fuse {
                 prediction.end = Some(position);
