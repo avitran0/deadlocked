@@ -165,6 +165,8 @@ pub struct QuakeSounds {
     /// kill count of the running multi kill chain and when it started
     multi_chain: Option<(u64, Instant)>,
     spree: u64,
+    /// when each sound was queued last, used to enforce the cooldown
+    last_played: HashMap<QuakeSound, Instant>,
 }
 
 impl QuakeSounds {
@@ -191,6 +193,7 @@ impl QuakeSounds {
             first_blood_done: false,
             multi_chain: None,
             spree: 0,
+            last_played: HashMap::new(),
         };
         state.reload();
         state.write_template();
@@ -310,16 +313,30 @@ impl QuakeSounds {
             }
         }
 
-        // queued last so announcements play after the kill itself
         if knife_count > 0 {
             events.push(QuakeSound::Humiliation);
         }
-        if headshot_count > 0 {
+
+        // the headshot is the weakest announcement, it only plays when none of
+        // first blood, multi kill, spree or humiliation fired for these kills
+        if events.is_empty() && headshot_count > 0 {
             events.push(QuakeSound::Headshot);
         }
 
+        let cooldown = config.cooldown.max(0.0);
         for event in events {
+            // the same sound stays silent while it is cooling down, this keeps
+            // long streaks from stacking the identical announcement over and over
+            if cooldown > 0.0
+                && self
+                    .last_played
+                    .get(&event)
+                    .is_some_and(|played| now.duration_since(*played).as_secs_f32() < cooldown)
+            {
+                continue;
+            }
             if let Some(bytes) = self.sounds.get(&event) {
+                self.last_played.insert(event, now);
                 audio.queue(bytes, config.volume);
             }
         }

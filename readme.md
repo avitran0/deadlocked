@@ -114,6 +114,9 @@ cargo run --release --bin deadlocked
 - First Blood, Headshot, Humiliation (knife kills)
 - Multi Kills (Double Kill, Triple Kill, Multi Kill, Monster Kill)
 - Kill Sprees (Killing Spree, Rampage, Dominating, Unstoppable, Godlike)
+- Headshot is the lowest priority announcement, it only plays when no other
+  event fired for the same kills
+- Cooldown per sound keeps streaks from stacking the same announcement
 - Own sound files are optional and override the built in ones
 - Sequential playback queue, own kills only
 - Read-only memory access, nothing is written to or injected into the game
@@ -162,7 +165,7 @@ Each event plays the first matching file, any of `wav`, `mp3`, `ogg` or `flac` w
 | File name | Event |
 | --- | --- |
 | `firstblood.*` | first own kill of a round (also on your first kill after joining) |
-| `headshot.*` | kill by headshot |
+| `headshot.*` | kill by headshot, only when no other event fired for these kills |
 | `humiliation.*` | kill with the knife |
 | `doublekill.*` | 2 kills within the multi kill window |
 | `triplekill.*` | 3 kills within the multi kill window |
@@ -174,14 +177,20 @@ Each event plays the first matching file, any of `wav`, `mp3`, `ogg` or `flac` w
 | `unstoppable.*` | 9 kills without dying |
 | `godlike.*` | 11 kills without dying |
 
-The multi kill window (default 3 seconds) as well as the volume can be changed
-in the `[hud.quake_sounds]` section of your config:
+First Blood, Multi Kills, Kill Sprees and Humiliation take priority over the
+Headshot announcement: a headshot that happens alongside them stays silent, so
+fast streaks tell your ramp up instead of stacking headshot sounds. On top of
+that each sound has a cooldown and plays at most once per `cooldown` seconds.
+
+The multi kill window, the cooldown and the volume can be changed in the
+`[hud.quake_sounds]` section of your config:
 
 ```toml
 [hud.quake_sounds]
 enabled = false
 volume = 1.0
 multi_kill_window = 3.0
+cooldown = 5.0
 ```
 
 Triggered sounds are played one after another (queue). Dying or a new round

@@ -51,6 +51,8 @@ pub struct QuakeSoundsConfig {
     pub volume: f32,
     /// maximum time between kills for a multi kill chain, in seconds
     pub multi_kill_window: f32,
+    /// minimum time between two plays of the same sound, in seconds
+    pub cooldown: f32,
 }
 
 impl Default for QuakeSoundsConfig {
@@ -59,6 +61,7 @@ impl Default for QuakeSoundsConfig {
             enabled: false,
             volume: 1.0,
             multi_kill_window: 3.0,
+            cooldown: 5.0,
         }
     }
 }

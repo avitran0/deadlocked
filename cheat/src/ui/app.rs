@@ -57,6 +57,7 @@ pub struct AppState {
     pub last_kill_sequence: u64,
     pub hitmarker_started: Option<Instant>,
     pub hitmarker_kill: bool,
+
     pub quake_sounds: QuakeSounds,
 
     pub grenades: GrenadeList,
