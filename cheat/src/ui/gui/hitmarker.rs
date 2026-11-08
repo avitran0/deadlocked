@@ -2,6 +2,7 @@ use egui::{DragValue, RichText, Ui};
 
 use crate::{
     config::hud::HitmarkerSound,
+    quake_sounds::QuakeSound,
     ui::{
         app::AppState,
         color::Colors,
@@ -17,6 +18,8 @@ impl AppState {
                 self.hitmarker_right(&mut columns[1]);
             });
 
+            self.quake_sounds_settings(ui);
+
             collapsing_open(ui, "Colors", |ui| {
                 if color_picker(ui, "Hit Color", &mut self.config.hud.hitmarker.color) {
                     self.send_config_game();
@@ -25,6 +28,38 @@ impl AppState {
                     self.send_config_game();
                 }
             });
+        });
+    }
+
+    fn quake_sounds_settings(&mut self, ui: &mut Ui) {
+        collapsing_open(ui, "Quake Sounds", |ui| {
+            if checkbox(
+                ui,
+                "Enable Quake Sounds",
+                &mut self.config.hud.quake_sounds.enabled,
+            ) {
+                self.send_config_game();
+            }
+
+            let total = QuakeSound::ALL.len();
+            let overrides = self.quake_sounds.folder_overrides();
+            if overrides > 0 {
+                ui.label(
+                    RichText::new(format!(
+                        "All {total} sounds built in, {overrides} overridden by folder"
+                    ))
+                    .color(Colors::GREEN),
+                );
+            } else {
+                ui.label(
+                    RichText::new(format!("All {total} sounds built in")).color(Colors::GREEN),
+                );
+            }
+
+            ui.label(format!(
+                "Folder: {} (optional overrides)",
+                self.quake_sounds.sounds_path().display()
+            ));
         });
     }
 

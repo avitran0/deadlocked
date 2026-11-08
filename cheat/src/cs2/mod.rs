@@ -1,7 +1,7 @@
 use std::time::{Duration, Instant};
 
 use glam::{IVec2, Mat4, Vec2, Vec3};
-use shared::{Bones, Data, EntityInfo, PlayerData, Weapon, WeaponInfo};
+use shared::{Bones, Data, EntityInfo, PlayerData, Weapon, WeaponClass, WeaponInfo};
 
 use crate::{
     config::{
@@ -63,6 +63,7 @@ pub struct CS2 {
     last_cache: Instant,
     previous_hits: Option<i32>,
     previous_kills: Option<i32>,
+    previous_headshot_kills: Option<i32>,
 }
 
 impl CS2 {
@@ -163,6 +164,7 @@ impl CS2 {
         let Some(local_player) = Player::local_player(self) else {
             self.previous_hits = None;
             self.previous_kills = None;
+            self.previous_headshot_kills = None;
             data.weapon = Weapon::default();
             data.in_game = false;
             return;
@@ -173,6 +175,7 @@ impl CS2 {
         {
             self.previous_hits = None;
             self.previous_kills = None;
+            self.previous_headshot_kills = None;
             data.weapon = Weapon::default();
             data.in_game = false;
             data.esp_active = false;
@@ -183,15 +186,38 @@ impl CS2 {
 
         let current_hits = local_player.total_hits(self);
         let current_kills = local_player.round_kills(self);
+        let current_headshot_kills = local_player.round_kills_headshots(self);
+
+        // a shrinking per-round kill counter means a new round started
+        if let (Some(previous), Some(current)) = (self.previous_kills, current_kills)
+            && current < previous
+        {
+            data.round_sequence = data.round_sequence.saturating_add(1);
+        }
+
         Self::update_counter(
             &mut self.previous_hits,
             current_hits,
             &mut data.hit_sequence,
         );
+        let kills_before = data.kill_sequence;
         Self::update_counter(
             &mut self.previous_kills,
             current_kills,
             &mut data.kill_sequence,
+        );
+
+        // kills scored while holding a knife count as humiliation kills, the
+        // weapon is sampled when the kill counter ticks which is close enough
+        // to the actual kill for everyday use
+        let knife_kills = data.kill_sequence.saturating_sub(kills_before);
+        if knife_kills > 0 && local_player.weapon_class(self) == WeaponClass::Knife {
+            data.knife_sequence = data.knife_sequence.saturating_add(knife_kills);
+        }
+        Self::update_counter(
+            &mut self.previous_headshot_kills,
+            current_headshot_kills,
+            &mut data.headshot_sequence,
         );
         let is_ffa = self.is_ffa();
         let active_pawn = observer.pawn;
@@ -357,6 +383,7 @@ impl CS2 {
             last_cache: Instant::now(),
             previous_hits: None,
             previous_kills: None,
+            previous_headshot_kills: None,
         }
     }
 

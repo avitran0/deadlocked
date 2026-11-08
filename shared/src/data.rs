@@ -54,6 +54,13 @@ pub struct Data {
     pub hit_sequence: u64,
     #[serde(skip)]
     pub kill_sequence: u64,
+    #[serde(skip)]
+    pub headshot_sequence: u64,
+    #[serde(skip)]
+    pub round_sequence: u64,
+    /// subset of kills that were scored with a knife
+    #[serde(skip)]
+    pub knife_sequence: u64,
 }
 
 #[derive(Default, Serialize, Deserialize)]

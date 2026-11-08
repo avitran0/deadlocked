@@ -19,6 +19,7 @@ mod math;
 mod message;
 mod os;
 mod parser;
+mod quake_sounds;
 mod radar;
 mod ui;
 mod update;

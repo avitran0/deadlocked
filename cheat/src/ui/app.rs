@@ -26,6 +26,7 @@ use crate::{
     message::{GameMessage, GameStatus, RadarMessage, RadarStatus, UiMessage},
     os::is_omarchy,
     parser::bvh::Bvh,
+    quake_sounds::QuakeSounds,
     ui::{
         grenades::{Grenade, GrenadeList, read_grenades},
         gui::{Tab, aimbot::AimbotTab},
@@ -56,6 +57,7 @@ pub struct AppState {
     pub last_kill_sequence: u64,
     pub hitmarker_started: Option<Instant>,
     pub hitmarker_kill: bool,
+    pub quake_sounds: QuakeSounds,
 
     pub grenades: GrenadeList,
     pub new_grenade: Grenade,
@@ -163,6 +165,7 @@ impl AppState {
             last_kill_sequence: 0,
             hitmarker_started: None,
             hitmarker_kill: false,
+            quake_sounds: QuakeSounds::new(),
             grenades,
             new_grenade: Grenade::new(),
             current_grenade: None,
@@ -437,6 +440,39 @@ impl App {
         while let Ok(message) = self.state.channel_radar.try_receive() {
             self.state.radar_status = message;
         }
+
+        let state = &mut self.state;
+        let (
+            in_game,
+            map_name,
+            kill_sequence,
+            headshot_sequence,
+            knife_sequence,
+            round_sequence,
+            local_health,
+        ) = {
+            let data = state.data.lock();
+            (
+                data.in_game,
+                data.map_name.clone(),
+                data.kill_sequence,
+                data.headshot_sequence,
+                data.knife_sequence,
+                data.round_sequence,
+                data.local_player.health,
+            )
+        };
+        state.quake_sounds.update(
+            &state.audio,
+            &state.config.hud.quake_sounds,
+            in_game,
+            &map_name,
+            kill_sequence,
+            headshot_sequence,
+            knife_sequence,
+            round_sequence,
+            local_health,
+        );
     }
 }
 
