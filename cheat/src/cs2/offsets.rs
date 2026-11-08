@@ -321,6 +321,10 @@ schema! {
             clip_primary: schema("C_BasePlayerWeapon", "m_iClip1"),
             reserve_ammo: schema("C_BasePlayerWeapon", "m_pReserveAmmo"),
         }
+        grenade: GrenadeOffsets {
+            pin_pulled: schema("C_BaseCSGrenade", "m_bPinPulled"),
+            throw_strength: schema("C_BaseCSGrenade", "m_flThrowStrength"),
+        }
         planted_c4: PlantedC4Offsets {
             is_ticking: schema("C_PlantedC4", "m_bBombTicking"),
             blow_time: schema("C_PlantedC4", "m_flC4Blow"),

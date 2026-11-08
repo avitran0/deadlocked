@@ -73,6 +73,38 @@ impl AppState {
 
                 if checkbox(
                     ui,
+                    "Nade Prediction",
+                    &mut self.config.hud.nade_prediction.enabled,
+                ) {
+                    self.send_config_game();
+                }
+
+                if color_picker(
+                    ui,
+                    "Nade Path Color",
+                    &mut self.config.hud.nade_prediction.line_color,
+                ) {
+                    self.send_config_game();
+                }
+
+                if color_picker(
+                    ui,
+                    "Nade Bounce Color",
+                    &mut self.config.hud.nade_prediction.bounce_color,
+                ) {
+                    self.send_config_game();
+                }
+
+                if color_picker(
+                    ui,
+                    "Nade Landing Color",
+                    &mut self.config.hud.nade_prediction.end_color,
+                ) {
+                    self.send_config_game();
+                }
+
+                if checkbox(
+                    ui,
                     "Inferno Polygon",
                     &mut self.config.hud.grenade_trails.inferno_poly,
                 ) {

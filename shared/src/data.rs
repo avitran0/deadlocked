@@ -17,6 +17,15 @@ pub enum SoundType {
     Weapon,
 }
 
+/// predicted flight path of the currently held grenade
+#[derive(Default, Clone)]
+pub struct NadePrediction {
+    pub path: Vec<Vec3>,
+    pub bounces: Vec<Vec3>,
+    pub end: Option<Vec3>,
+    pub weapon: Weapon,
+}
+
 // lots of stuff is skipped, that is only for tcp postcard serialization
 #[derive(Default, Serialize, Deserialize)]
 pub struct Data {
@@ -50,6 +59,8 @@ pub struct Data {
     pub grenade_align_active: bool,
     #[serde(skip)]
     pub esp_active: bool,
+    #[serde(skip)]
+    pub nade_prediction: NadePrediction,
     #[serde(skip)]
     pub hit_sequence: u64,
     #[serde(skip)]

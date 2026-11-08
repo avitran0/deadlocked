@@ -324,6 +324,58 @@ impl Bvh {
         self.nodes.len() - 1
     }
 
+    /// nearest hit on the segment `start..end`, returns (distance, surface normal facing the start)
+    pub fn trace_segment(&self, start: Vec3, end: Vec3) -> Option<(f32, Vec3)> {
+        let ray = end - start;
+        let distance = ray.length();
+        if !distance.is_finite() || distance <= f32::EPSILON {
+            return None;
+        }
+        let direction = ray / distance;
+        let root = self.root?;
+        let mut best: Option<(f32, Vec3)> = None;
+        self.trace_node(root, start, direction, distance, &mut best);
+        best
+    }
+
+    fn trace_node(
+        &self,
+        node_idx: usize,
+        origin: Vec3,
+        direction: Vec3,
+        max_t: f32,
+        best: &mut Option<(f32, Vec3)>,
+    ) {
+        let node = &self.nodes[node_idx];
+        if !node.aabb().ray_intersect(origin, direction, max_t) {
+            return;
+        }
+        match node {
+            BvhNode::Leaf { primitives, .. } => {
+                for &idx in primitives {
+                    let triangle = &self.triangles[idx];
+                    let Some((t, _, _)) = triangle.ray_intersect(origin, direction) else {
+                        continue;
+                    };
+                    if t > max_t || best.is_some_and(|(best_t, _)| best_t <= t) {
+                        continue;
+                    }
+                    let mut normal = (triangle.v1 - triangle.v0)
+                        .cross(triangle.v2 - triangle.v0)
+                        .normalize_or_zero();
+                    if normal.dot(direction) > 0.0 {
+                        normal = -normal;
+                    }
+                    *best = Some((t, normal));
+                }
+            }
+            BvhNode::Branch { left, right, .. } => {
+                self.trace_node(*left, origin, direction, max_t, best);
+                self.trace_node(*right, origin, direction, max_t, best);
+            }
+        }
+    }
+
     pub fn has_line_of_sight(&self, start: Vec3, end: Vec3) -> bool {
         let ray = end - start;
         let distance = ray.length();

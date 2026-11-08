@@ -15,6 +15,7 @@ pub struct HudConfig {
     pub keybind_list: bool,
     pub spectator_list: bool,
     pub grenade_trails: TrailConfig,
+    pub nade_prediction: NadePredictionConfig,
     pub text_outline: bool,
     pub line_width: f32,
     pub debug: bool,
@@ -33,11 +34,32 @@ impl Default for HudConfig {
             keybind_list: false,
             spectator_list: false,
             grenade_trails: TrailConfig::default(),
+            nade_prediction: NadePredictionConfig::default(),
             text_outline: true,
             line_width: 2.0,
             debug: false,
             bvh_debug: BvhDebugConfig::default(),
             overlay_text: OverlayTextConfig::default(),
+        }
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(default)]
+pub struct NadePredictionConfig {
+    pub enabled: bool,
+    pub line_color: Color32,
+    pub bounce_color: Color32,
+    pub end_color: Color32,
+}
+
+impl Default for NadePredictionConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            line_color: Color32::WHITE,
+            bounce_color: Color32::YELLOW,
+            end_color: Color32::RED,
         }
     }
 }

@@ -301,6 +301,12 @@ impl CS2 {
             });
         }
 
+        data.nade_prediction = if spectator_target.is_none() {
+            self.nade_prediction(config, &local_player)
+        } else {
+            shared::NadePrediction::default()
+        };
+
         data.weapon = local_player.weapon(self);
         data.in_game = true;
         data.is_ffa = is_ffa;
