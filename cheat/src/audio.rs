@@ -42,12 +42,19 @@ impl Audio {
             utils::warn!("failed to decode quake sound");
             return;
         };
+        // clear() pauses the player, revive it so appended sounds stay audible
+        self.quake_player.play();
         self.quake_player
             .append(source.amplify(volume.clamp(0.0, 10.0)));
     }
 
     pub fn clear_queue(&self) {
-        self.quake_player.clear();
+        if self.quake_player.len() > 0 {
+            self.quake_player.clear();
+            // clear() pauses the player, undo that right away so the next
+            // queued sound does not end up on a paused player
+            self.quake_player.play();
+        }
     }
 
     pub fn validate(bytes: Vec<u8>) -> Result<(), String> {
@@ -69,5 +76,24 @@ pub fn builtin_sound(sound: HitmarkerSound) -> &'static [u8] {
         HitmarkerSound::WaterDrip => include_bytes!("../assets/audio/water_drip.wav"),
         HitmarkerSound::Wood => include_bytes!("../assets/audio/wood.mp3"),
         HitmarkerSound::Custom => include_bytes!("../assets/audio/water_drip.wav"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use rodio::Player;
+
+    /// rodio's `clear()` pauses the player and `append()` does not resume it,
+    /// the quake queue relies on `play()` being called around both operations
+    #[test]
+    fn clear_pauses_player() {
+        let player = Player::new().0;
+        assert!(!player.is_paused());
+
+        player.clear();
+        assert!(player.is_paused());
+
+        player.play();
+        assert!(!player.is_paused());
     }
 }
