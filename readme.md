@@ -108,7 +108,7 @@ cargo run --release --bin deadlocked
 - Triggerbot
 - RCS
 
-## Web Radar
+### Web Radar
 
 - Web radar
 - Follow player
